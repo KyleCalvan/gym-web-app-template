@@ -12,16 +12,16 @@ export const MEMBERS = [
 ];
 
 export const TRAINERS = [
-  {id:'T-01', name:'James Reyes', specialty:'Strength & Conditioning', certs:'NASM-CPT, CSCS', rating:4.9, sessionsWeek:14, status:'Active', sessionPrice:900},
-  {id:'T-02', name:'Diane Cruz', specialty:'Yoga & Mobility', certs:'RYT-500', rating:4.8, sessionsWeek:11, status:'Active', sessionPrice:800},
-  {id:'T-03', name:'Marco Villa', specialty:'HIIT & Fat Loss', certs:'ACE-CPT', rating:4.7, sessionsWeek:9, status:'Active', sessionPrice:850},
-  {id:'T-04', name:'Sofia Lim', specialty:'Powerlifting', certs:'USAPL Coach', rating:5.0, sessionsWeek:6, status:'On Leave', sessionPrice:1100},
+  {id:'T-01', name:'James Reyes', specialty:'Strength & Conditioning', certs:'NASM-CPT, CSCS', rating:4.9, sessionsWeek:14, status:'Active', sessionPrice:900, reviews:[]},
+  {id:'T-02', name:'Diane Cruz', specialty:'Yoga & Mobility', certs:'RYT-500', rating:4.8, sessionsWeek:11, status:'Active', sessionPrice:800, reviews:[]},
+  {id:'T-03', name:'Marco Villa', specialty:'HIIT & Fat Loss', certs:'ACE-CPT', rating:4.7, sessionsWeek:9, status:'Active', sessionPrice:850, reviews:[]},
+  {id:'T-04', name:'Sofia Lim', specialty:'Powerlifting', certs:'USAPL Coach', rating:5.0, sessionsWeek:6, status:'On Leave', sessionPrice:1100, reviews:[]},
 ];
 
 export const PLANS = [
-  {name:'Basic', price:1499, period:'mo', members:214, perks:['Gym floor access','Locker access','1 free assessment'], featured:false},
-  {name:'Premium', price:2499, period:'mo', members:356, perks:['Everything in Basic','Group classes','2 PT sessions / mo','Sauna access'], featured:true},
-  {name:'Elite', price:3999, period:'mo', members:98, perks:['Everything in Premium','Unlimited PT sessions','Nutrition plan','Priority booking'], featured:false},
+  {name:'Basic', price:1499, period:'mo', members:214, perks:['Gym floor access','Locker access','1 free assessment'], featured:false, status:'Active', category:'Membership'},
+  {name:'Premium', price:2499, period:'mo', members:356, perks:['Everything in Basic','Group classes','2 PT sessions / mo','Sauna access'], featured:true, status:'Active', category:'Membership'},
+  {name:'Elite', price:3999, period:'mo', members:98, perks:['Everything in Premium','Unlimited PT sessions','Nutrition plan','Priority booking'], featured:false, status:'Active', category:'Membership'},
 ];
 
 export const TRANSACTIONS = [
@@ -39,6 +39,8 @@ export const SESSIONS = [
   {id:'S-403', member:'Carlo Reyes', trainer:'Marco Villa', date:'Aug 20, 2026', time:'5:30 PM', type:'HIIT', status:'Pending', paid:false, amount:850},
   {id:'S-404', member:'Angela Torres', trainer:'James Reyes', date:'Aug 21, 2026', time:'6:00 PM', type:'Strength', status:'Confirmed', paid:true, amount:900},
   {id:'S-405', member:'Maria Santos', trainer:'Sofia Lim', date:'Aug 22, 2026', time:'8:00 AM', type:'Powerlifting', status:'Cancelled', paid:false, amount:1100},
+  {id:'S-396', member:'Juan Dela Cruz', trainer:'James Reyes', date:'Aug 12, 2026', time:'6:30 AM', type:'Strength', status:'Completed', paid:true, amount:900, rated:true, rating:5},
+  {id:'S-393', member:'Juan Dela Cruz', trainer:'Diane Cruz', date:'Aug 14, 2026', time:'10:00 AM', type:'Yoga', status:'Completed', paid:true, amount:800, rated:false},
 ];
 
 export const REVENUE_TREND = [

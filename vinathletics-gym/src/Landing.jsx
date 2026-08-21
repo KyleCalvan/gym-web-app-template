@@ -1,21 +1,8 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, useMotionValue, useTransform } from 'framer-motion';
-import { dur, ease, stagger, Ticker } from './motion.jsx';
+import { dur, ease, stagger } from './motion.jsx';
 
-export default function Landing({ onLogin, members, setMembers, toast }){
-  const [authTab, setAuthTab] = useState('login');
-  const [role, setRole] = useState('member');
-
-  // Login form
-  const [email, setEmail] = useState('member@vinathletics.gym');
-  const [password, setPassword] = useState('password');
-  // Register form
-  const [regName, setRegName] = useState('');
-  const [regEmail, setRegEmail] = useState('');
-  const [regPhone, setRegPhone] = useState('');
-  const [regPassword, setRegPassword] = useState('');
-
-  // Membership card mouse parallax (±8 y / ±4 x).
+export default function Landing({ onLogin, plans, promotions, trainers, onNavigate }){
   const heroRef = useRef(null);
   const mx = useMotionValue(0);
   const my = useMotionValue(0);
@@ -37,42 +24,85 @@ export default function Landing({ onLogin, members, setMembers, toast }){
     transition: { delay: 0.08 + i * stagger.tile, duration: dur.base, ease: ease.out },
   });
 
-  const handleLogin = (e) => {
-    e.preventDefault();
-    if (!/^\S+@\S+\.\S+$/.test(email)) { toast('Please enter a valid email'); return; }
-    if (password.length < 6) { toast('Password must be at least 6 characters'); return; }
-    onLogin(role);
-  };
+  const whyTiles = [
+    {ic:'📋', title:'All-in-One Management',     body:'Handle memberships, billing, attendance, and reporting in one seamless system.'},
+    {ic:'📅', title:'Smarter Schedules & Coaching', body:'Easily manage classes, sessions, and trainer availability.'},
+    {ic:'📊', title:'Real-Time Reporting',       body:'Track performance, member engagement, and business growth in real time.'},
+    {ic:'🏦', title:'Secure & Reliable',         body:'Your data is safe with us, so you can focus on what matters most.'},
+  ];
 
-  const handleRegister = (e) => {
-    e.preventDefault();
-    if (!regName.trim()) { toast('Name is required'); return; }
-    if (!/^\S+@\S+\.\S+$/.test(regEmail)) { toast('Please enter a valid email'); return; }
-    if (regPassword.length < 8) { toast('Password must be at least 8 characters'); return; }
-    const id = 'M-' + (1042 + members.length);
-    setMembers(prev => [...prev, {
-      id,
-      name: regName.trim(),
-      email: regEmail.trim(),
-      phone: regPhone.trim(),
-      plan: 'Premium',
-      status: 'Active',
-      joined: new Date().toLocaleDateString('en-US', {month:'short', day:'2-digit', year:'numeric'}),
-    }]);
-    toast('Welcome, ' + regName.trim() + '! Your member ID is ' + id);
-    onLogin('member', id);
+  const navLinks = [
+    {label:'Promotions',       href:'#promotions'},
+    {label:'Membership Plans', href:'#plans'},
+    {label:'Trainers',         href:'#trainers'},
+    {label:'Contact',          href:'#contact'},
+  ];
+
+  // Section refs for scroll-spy
+  const refs = {
+    promotions: useRef(null),
+    plans:      useRef(null),
+    trainers:   useRef(null),
+    contact:    useRef(null),
   };
+  const [activeSection, setActiveSection] = useState(null);
+  const [stuck, setStuck] = useState(false);
+
+  useEffect(()=>{
+    const onScroll = ()=> setStuck(window.scrollY > 60);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  useEffect(()=>{
+    const obs = new IntersectionObserver(
+      entries => entries.forEach(e => { if (e.isIntersecting) setActiveSection(e.target.id); }),
+      { rootMargin: '-30% 0px -50% 0px', threshold: 0 }
+    );
+    Object.values(refs).forEach(r => r.current && obs.observe(r.current));
+    return () => obs.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const activePromos = (promotions || []).filter(p => p.status === 'Published').slice(0, 4);
+  const activePlans  = (plans || []).filter(p => p.status !== 'Inactive');
+  const activeTrainers = (trainers || []).filter(t => t.status !== 'On Leave');
 
   return (
     <div className="landing">
       <motion.nav
-        className="landing-nav"
+        className={"landing-nav" + (stuck ? " stuck" : "")}
         initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: dur.base, ease: ease.out }}
       >
         <div className="brand"><span className="brand-mark">🏋</span> VinAthletics</div>
-        <a href="#login-section" className="btn btn-signal btn-sm">Member Login</a>
+        <div className="landing-nav-links">
+          {navLinks.map(l => (
+            <a
+              key={l.href}
+              href={l.href}
+              className={"nav-link" + (activeSection === l.href.slice(1) ? " active" : "")}
+              onClick={(e)=>{
+                // Smooth scroll handled by CSS; this just ensures the section id exists
+                const id = l.href.slice(1);
+                const el = document.getElementById(id);
+                if (el) { e.preventDefault(); el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+              }}
+            >{l.label}</a>
+          ))}
+        </div>
+        <div style={{display:'flex', gap:8, alignItems:'center'}}>
+          <button
+            className="btn btn-outline btn-sm"
+            onClick={() => onNavigate && onNavigate('/login?flow=register')}
+          >Join Now</button>
+          <button
+            className="btn btn-signal btn-sm"
+            onClick={() => onNavigate && onNavigate('/login')}
+          >Member Login</button>
+        </div>
       </motion.nav>
 
       <div
@@ -81,179 +111,214 @@ export default function Landing({ onLogin, members, setMembers, toast }){
         onMouseMove={onHeroMove}
         onMouseLeave={onHeroLeave}
       >
-        <div>
-          <motion.div className="eyebrow" style={{marginBottom:14}} {...heroItem(0)}>
-            Gym Management, Squared Away
-          </motion.div>
-          <motion.h1 {...heroItem(1)}>
-            Run your gym like a{' '}
-            <span className="accent-word">
-              champion&nbsp;runs
-              <motion.span
-                className="vm-underline"
-                initial={{ scaleX: 0 }}
-                animate={{ scaleX: 1 }}
-                transition={{ duration: 0.5, delay: 0.3, ease: ease.out }}
-                style={{ transformOrigin: 'left center' }}
-              />
-            </span>{' '}
-            a season.
-          </motion.h1>
-          <motion.p className="lede" {...heroItem(2)}>
-            Memberships, coaching schedules, point-of-sale and reporting — one ledger for admins, staff, trainers and members alike.
-          </motion.p>
-          <motion.div className="btn-group" style={{display:'flex', gap:12}} {...heroItem(3)}>
-            <a href="#login-section" className="btn btn-signal">Get Started</a>
-            <a href="#promotions" className="btn btn-outline">View Promotions</a>
-          </motion.div>
-          <div className="stat-row">
-            <motion.div {...heroItem(4)}>
-              <div className="n"><Ticker to={668} /></div>
-              <div className="l">Active Members</div>
+        <div className="hero-blob hero-blob-1" />
+        <div className="hero-blob hero-blob-2" />
+        <div className="landing-hero-inner">
+          <div>
+            <motion.div className="eyebrow" style={{marginBottom:14}} {...heroItem(0)}>
+              Gym Management, Squared Away
             </motion.div>
-            <motion.div {...heroItem(5)}>
-              <div className="n"><Ticker to={4} /></div>
-              <div className="l">Certified Trainers</div>
+            <motion.h1 {...heroItem(1)}>
+              Run your gym like a{' '}
+              <span className="accent-word">
+                champion&nbsp;runs
+                <motion.span
+                  className="vm-underline"
+                  initial={{ scaleX: 0 }}
+                  animate={{ scaleX: 1 }}
+                  transition={{ duration: 0.5, delay: 0.3, ease: ease.out }}
+                  style={{ transformOrigin: 'left center' }}
+                />
+              </span>{' '}
+              a season.
+            </motion.h1>
+            <motion.p className="lede" {...heroItem(2)}>
+              Memberships, coaching schedules, point-of-sale and reporting — one ledger for admins, staff, trainers and members alike.
+            </motion.p>
+            <motion.div className="btn-group" style={{display:'flex', gap:12}} {...heroItem(3)}>
+              <button
+                className="btn btn-signal"
+                onClick={() => onNavigate && onNavigate('/login')}
+              >Get Started</button>
+              <a
+                href="#promotions"
+                className="btn btn-outline"
+                onClick={(e)=>{
+                  const el = document.getElementById('promotions');
+                  if (el) { e.preventDefault(); el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+                }}
+              >View Promotions</a>
             </motion.div>
-            <motion.div {...heroItem(6)}>
-              <div className="n"><Ticker to={512} prefix="₱" suffix="k" /></div>
-              <div className="l">Revenue / mo</div>
+            <motion.div className="hero-stats" {...heroItem(4)}>
+              <span className="stat"><span className="dot" /> 1,200+ Active Members</span>
+              <span className="stat"><span className="dot" /> 50+ Classes Weekly</span>
+              <span className="stat"><span className="dot" /> 4.8★ Avg Rating</span>
             </motion.div>
           </div>
+          <motion.div
+            className="membership-card"
+            style={{ x: cardX, y: cardY }}
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: dur.slow, delay: 0.15, ease: ease.out }}
+          >
+            <div className="mc-top">
+              <div className="mc-org">VinAthletics Gym</div>
+              <div className="mc-chip"></div>
+            </div>
+            <div className="mc-name">Juan Dela Cruz</div>
+            <div className="mc-row">
+              <div>Plan<b>Premium</b></div>
+              <div>Member ID<b>M-1042</b></div>
+              <div>Valid Thru<b>09/2026</b></div>
+            </div>
+          </motion.div>
         </div>
-        <motion.div
-          className="membership-card"
-          style={{ x: cardX, y: cardY }}
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: dur.slow, delay: 0.15, ease: ease.out }}
-        >
-          <div className="mc-top">
-            <div className="mc-org">VinAthletics Gym</div>
-            <div className="mc-chip"></div>
-          </div>
-          <div className="mc-name">Juan Dela Cruz</div>
-          <div className="mc-row">
-            <div>Plan<b>Premium</b></div>
-            <div>Member ID<b>M-1042</b></div>
-            <div>Valid Thru<b>09/2026</b></div>
-          </div>
-        </motion.div>
       </div>
 
-      <section className="promo-strip" id="promotions">
-        <h2>Current Promotions</h2>
-        <p className="sub">Take advantage of our limited-time offers</p>
-        <div className="promo-grid">
-          {[
-            {tag:'20% OFF', title:'New Member Special', body:'Sign up today and get 20% off your first 3 months, plus a free fitness assessment.', valid:'Dec 31, 2026'},
-            {tag:'BUY 1 GET 1', title:'Personal Training', body:'Book 10 personal training sessions and get 5 more free with certified trainers.', valid:'Nov 30, 2026'},
-            {tag:'30% OFF', title:'Bring a Friend', body:'Refer a friend — both of you enjoy 30% off annual memberships.', valid:'Oct 15, 2026'},
-            {tag:'15% OFF', title:'Early Bird Membership', body:'Join the morning crew for special off-peak rates and full equipment access.', valid:'Jan 31, 2027'},
-          ].map((p,i)=>(
-            <motion.div
-              className="promo-card"
-              key={i}
-              initial={{ opacity: 0, y: 12 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, amount: 0.2 }}
-              transition={{ duration: dur.base, delay: i * stagger.list, ease: ease.out }}
-              whileHover={{ y: -2, boxShadow: '6px 6px 0 rgba(22,36,31,0.18)' }}
-            >
-              <span className="tag">{p.tag}</span>
-              <h3>{p.title}</h3>
-              <p>{p.body}</p>
-              <div className="valid">VALID UNTIL {p.valid.toUpperCase()}</div>
-            </motion.div>
-          ))}
+      <section className="hero-cards-row">
+        <div className="hero-cards-row-inner">
+          <h2>Why Members Pick VinAthletics</h2>
+          <p className="sub">Everything you need under one roof — from world-class equipment to certified coaches.</p>
+          <div className="hero-cards-grid">
+            {whyTiles.map((c,i)=>(
+              <motion.div
+                className="hero-card"
+                key={i}
+                initial={{ opacity: 0, y: 12 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.2 }}
+                transition={{ duration: dur.base, delay: i * stagger.list, ease: ease.out }}
+              >
+                <div className="ic">{c.ic}</div>
+                <h3>{c.title}</h3>
+                <p>{c.body}</p>
+              </motion.div>
+            ))}
+          </div>
+          <div style={{textAlign:'center', marginTop:36}}>
+            <button className="btn btn-outline btn-sm">Learn More</button>
+          </div>
         </div>
       </section>
 
-      <section className="feature-strip">
-        {[
-          {n:'01', t:'Easy Payments', d:'Multiple payment options, receipts and history tracking.'},
-          {n:'02', t:'Smart Scheduling', d:'Book coaching sessions and manage trainer availability.'},
-          {n:'03', t:'Reports & Analytics', d:'Track revenue, members and performance in real time.'},
-          {n:'04', t:'Notifications', d:'Stay updated on bookings, payments and announcements.'},
-        ].map((f,i)=>(
-          <motion.div
-            className="feature"
-            key={i}
-            initial={{ opacity: 0, y: 8 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.3 }}
-            transition={{ duration: dur.base, delay: i * stagger.list, ease: ease.out }}
-            whileHover={{ y: -2 }}
-          >
-            <div className="num">{f.n}</div>
-            <h4>{f.t}</h4>
-            <p>{f.d}</p>
-          </motion.div>
-        ))}
-      </section>
-
-      <section className="auth-wrap-dark" id="login-section">
-        <div className="auth-wrap">
-          <motion.div
-            className="side-note"
-            initial={{ opacity: 0, x: -10 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true, amount: 0.3 }}
-            transition={{ duration: dur.slow, ease: ease.out }}
-          >
-            <div className="eyebrow" style={{color:'#7E9186'}}>Sign in</div>
-            <h2>Welcome back to the floor.</h2>
-            <p>Pick your role and sign in to reach your dashboard — admins oversee the gym, staff run the front desk, trainers manage sessions, and members track their own progress.</p>
-          </motion.div>
-          <motion.div
-            className="auth-card"
-            initial={{ opacity: 0, y: 12 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.3 }}
-            transition={{ duration: dur.slow, ease: ease.out }}
-          >
-            <h2 style={{fontSize:20, textTransform:'uppercase'}}>{authTab==='login' ? 'Sign In' : 'Create Account'}</h2>
-            <p style={{color:'var(--steel)', fontSize:13, margin:'4px 0 0'}}>
-              {authTab==='login' ? 'Access your dashboard' : 'Join VinAthletics Gym today'}
-            </p>
-            <div className="auth-tabs">
-              <button className={authTab==='login'?'active':''} onClick={()=>setAuthTab('login')}>Login</button>
-              <button className={authTab==='register'?'active':''} onClick={()=>setAuthTab('register')}>Register</button>
-            </div>
-
-            {authTab==='login' ? (
-              <form onSubmit={handleLogin}>
-                <div className="form-group">
-                  <label>Login As</label>
-                  <div className="role-grid">
-                    {['admin','staff','trainer','member'].map(r=>(
-                      <div key={r} className={"role-pick"+(role===r?' active':'')} onClick={()=>setRole(r)} style={{cursor:'pointer'}}>
-                        {r}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div className="form-group">
-                  <label>Email</label>
-                  <input className="form-control" type="email" placeholder="you@example.com" value={email} onChange={e=>setEmail(e.target.value)} required />
-                </div>
-                <div className="form-group">
-                  <label>Password</label>
-                  <input className="form-control" type="password" placeholder="••••••••" value={password} onChange={e=>setPassword(e.target.value)} required />
-                </div>
-                <button type="submit" className="btn btn-signal btn-block">Sign In as {role[0].toUpperCase()+role.slice(1)}</button>
-              </form>
-            ) : (
-              <form onSubmit={handleRegister}>
-                <div className="form-group"><label>Full Name</label><input className="form-control" placeholder="Juan Dela Cruz" value={regName} onChange={e=>setRegName(e.target.value)} required/></div>
-                <div className="form-group"><label>Email</label><input className="form-control" type="email" placeholder="you@example.com" value={regEmail} onChange={e=>setRegEmail(e.target.value)} required/></div>
-                <div className="form-group"><label>Phone</label><input className="form-control" placeholder="+63 9XX XXX XXXX" value={regPhone} onChange={e=>setRegPhone(e.target.value)} required/></div>
-                <div className="form-group"><label>Password</label><input className="form-control" type="password" placeholder="At least 8 characters" value={regPassword} onChange={e=>setRegPassword(e.target.value)} required/></div>
-                <button type="submit" className="btn btn-signal btn-block">Create Account</button>
-              </form>
+      <section className="promo-strip" id="promotions" ref={refs.promotions}>
+        <div className="promo-strip-inner">
+          <h2>Current Promotions</h2>
+          <p className="sub">Take advantage of our limited-time offers</p>
+          <div className="promo-grid">
+            {activePromos.map((p,i)=>(
+              <motion.div
+                className="promo-card"
+                key={p.id}
+                initial={{ opacity: 0, y: 12 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.2 }}
+                transition={{ duration: dur.base, delay: i * stagger.list, ease: ease.out }}
+                whileHover={{ y: -2, boxShadow: '6px 6px 0 rgba(22,36,31,0.18)' }}
+              >
+                <span className="tag">
+                  {p.discountType === 'Percentage' ? (p.discount + ' OFF') :
+                   p.discountType === 'Bundle'     ? 'BUNDLE DEAL' :
+                   p.discountType === 'Fixed'      ? ('₱' + p.discount + ' OFF') :
+                   (p.discountType ? p.discountType.toUpperCase() : 'SPECIAL')}
+                </span>
+                <h3>{p.title}</h3>
+                <p>{p.code ? 'Use code ' + p.code + ' at checkout.' : 'Limited time offer.'}</p>
+                <div className="valid">VALID UNTIL {p.validUntil.toUpperCase()}</div>
+              </motion.div>
+            ))}
+            {activePromos.length === 0 && (
+              <div className="empty-state">No active promotions right now.</div>
             )}
-          </motion.div>
+          </div>
         </div>
+      </section>
+
+      <section className="plans-strip" id="plans" ref={refs.plans}>
+        <div className="plans-strip-inner">
+          <h2>Membership Plans</h2>
+          <p className="sub">Pick a plan that fits your goals — switch or cancel anytime.</p>
+          <div className="grid grid-3">
+            {activePlans.map(p=>(
+              <div className={"plan-card"+(p.featured?' featured':'')} key={p.name}>
+                {p.featured && <span className="ribbon">Most Popular</span>}
+                <h3 style={{fontSize:18}}>{p.name}</h3>
+                <div className="price">₱{p.price.toLocaleString('en-PH')}<span>/{p.period}</span></div>
+                <ul>{p.perks.map((perk,i)=><li key={i}>✓ {perk}</li>)}</ul>
+                <button
+                  className={"btn btn-sm btn-block "+(p.featured?'btn-signal':'btn-outline')}
+                  onClick={() => onNavigate && onNavigate('/login')}
+                >Choose {p.name}</button>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="trainers-strip" id="trainers" ref={refs.trainers}>
+        <div className="trainers-strip-inner">
+          <h2>Meet Our Trainers</h2>
+          <p className="sub">Certified coaches who specialize in strength, mobility, and conditioning.</p>
+          <div className="trainers-grid">
+            {activeTrainers.map(t=>(
+              <motion.div
+                className="trainer-card"
+                key={t.id}
+                initial={{ opacity: 0, y: 12 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.2 }}
+                transition={{ duration: dur.base, ease: ease.out }}
+              >
+                <div className="avatar">{t.name.split(' ').map(w=>w[0]).slice(0,2).join('')}</div>
+                <div className="spec">{t.specialty}</div>
+                <h3>{t.name}</h3>
+                <div className="meta">
+                  <div className="row"><span>Certifications</span><b>{t.certs}</b></div>
+                  <div className="row"><span>Rating</span><b className="mono">★ {t.rating}</b></div>
+                </div>
+                <button
+                  className="btn btn-outline btn-sm"
+                  style={{marginTop:10}}
+                  onClick={() => onNavigate && onNavigate('/login')}
+                >Book a Session</button>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="contact-strip" id="contact" ref={refs.contact}>
+        <div className="contact-strip-inner">
+          <h2>Visit or Get in Touch</h2>
+          <p className="sub">Drop by, call, or message us — we're happy to help you start.</p>
+          <div className="contact-grid">
+            <div className="contact-card">
+              <div className="ic">📍</div>
+              <div className="label">Location</div>
+              <div className="value">123 Bonifacio St., Makati</div>
+            </div>
+            <div className="contact-card">
+              <div className="ic">�</div>
+              <div className="label">Phone</div>
+              <div className="value">+63 917 555 0142</div>
+            </div>
+            <div className="contact-card">
+              <div className="ic">✉️</div>
+              <div className="label">Email</div>
+              <div className="value">hello@vinathletics.gym</div>
+            </div>
+            <div className="contact-card">
+              <div className="ic">⏰</div>
+              <div className="label">Hours</div>
+              <div className="value">Mon–Sun · 5AM – 11PM</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="cta-band">
+        <h2>BUILT FOR GYMS. DESIGNED FOR <span className="accent-word">CHAMPIONS.</span></h2>
       </section>
 
       <footer className="site-footer">© 2026 VinAthletics Gym Management System. All rights reserved.</footer>

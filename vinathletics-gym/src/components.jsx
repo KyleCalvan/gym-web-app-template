@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, Fragment } from 'react';
+import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { dur, ease, stagger, spring, Ticker, drawDonut, growBar, fadeUp } from './motion.jsx';
 
@@ -114,7 +115,7 @@ export function Badge({status}){
   const map = {
     Active:'ok', Paid:'ok', Confirmed:'ok', Approved:'ok', Completed:'ok', Published:'ok',
     Pending:'warn', Expiring:'warn', 'On Leave':'warn', Draft:'warn',
-    Frozen:'mute', Expired:'bad', Refunded:'bad', Cancelled:'bad', Void:'bad',
+    Frozen:'mute', Expired:'bad', Refunded:'bad', Cancelled:'bad', Declined:'bad', Void:'bad',
   };
   return (
     <AnimatePresence mode="wait" initial={false}>
@@ -235,7 +236,7 @@ export function Modal({title, onClose, children, wide}){
     window.addEventListener('keydown', onKey);
     return ()=>window.removeEventListener('keydown', onKey);
   },[]);
-  return (
+  return createPortal(
     <motion.div
       className="modal-overlay"
       onMouseDown={e=>{if(e.target===e.currentTarget) onClose();}}
@@ -258,7 +259,8 @@ export function Modal({title, onClose, children, wide}){
         </div>
         {children}
       </motion.div>
-    </motion.div>
+    </motion.div>,
+    document.body
   );
 }
 

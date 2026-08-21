@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { motion, useAnimationControls } from 'framer-motion';
 import { dur, ease, stagger } from './motion.jsx';
+import { Modal } from './components.jsx';
 
 // Search + multi-select section filters, shown above the nav list.
 // Used by roles that manage a lot of nav items (admin, staff) so
@@ -50,6 +51,7 @@ function SidebarSearch({ sections, onQueryChange, onFiltersChange }){
 export default function Sidebar({ role, brand, nav, active, onNav, onLogout, searchable, bell }){
   const [query, setQuery] = useState('');
   const [filters, setFilters] = useState([]);
+  const [confirmLogout, setConfirmLogout] = useState(false);
   const bellControls = useAnimationControls();
 
   const sectionNames = useMemo(()=>nav.map(s=>s.section), [nav]);
@@ -132,8 +134,22 @@ export default function Sidebar({ role, brand, nav, active, onNav, onLogout, sea
 
       <div className="nav-section">
         <div className="head">Session</div>
-        <button className="nav-item" onClick={onLogout}><span className="ic">←</span>Log Out</button>
+        <button className="nav-item" onClick={()=>setConfirmLogout(true)}><span className="ic">←</span>Log Out</button>
       </div>
+
+      {confirmLogout && (
+        <Modal title="Confirm Log Out" onClose={()=>setConfirmLogout(false)}>
+          <div style={{padding:'0 24px 24px'}}>
+            <p style={{margin:'0 0 18px', color:'var(--steel)', fontSize:14, lineHeight:1.5}}>
+              Are you sure you want to log out? You'll need to sign in again to access your account.
+            </p>
+            <div style={{display:'flex', gap:8, justifyContent:'flex-end'}}>
+              <button className="btn btn-outline" type="button" onClick={()=>setConfirmLogout(false)}>Cancel</button>
+              <button className="btn btn-signal" type="button" onClick={()=>{ setConfirmLogout(false); onLogout(); }}>Log Out</button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </aside>
   );
 }

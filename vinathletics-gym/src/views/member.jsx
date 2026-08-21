@@ -12,7 +12,7 @@ export const MEMBER_NAV = [
   {section:'Other', items:[{id:'notifications', label:'Notifications', ic:'◆'}, {id:'profile', label:'Profile', ic:'�'}]},
 ];
 
-function MemberDashboard({ members, sessions, bookings, currentUserId, plans, onNav }){
+function MemberDashboard({ members, sessions, bookings, currentUserId, plans, onNav, toast }){
   const me = members.find(m => m.id === currentUserId) || members[0];
   const upcoming = bookings.length > 0 ? bookings : sessions.filter(s => s.member === (me?.name || 'Juan Dela Cruz')).slice(0, 3);
   const [showRenew, setShowRenew] = useState(false);
@@ -28,7 +28,32 @@ function MemberDashboard({ members, sessions, bookings, currentUserId, plans, on
     toast('Pick a plan on the membership page to confirm renewal');
   };
 
-  const toast = (msg) => { /* placeholder — handled by parent */ };
+  // ---- Metrics tracker (weight / height / BMI) ----
+  // Seeded from member record (if any) so dashboard always shows real numbers.
+  const [metrics, setMetrics] = useState(() => ({
+    weightKg: me?.weightKg ?? 72,
+    heightCm: me?.heightCm ?? 172,
+  }));
+  const [editingMetrics, setEditingMetrics] = useState(false);
+  const [draft, setDraft] = useState(metrics);
+
+  const heightM = metrics.heightCm / 100;
+  const bmi = heightM > 0 ? metrics.weightKg / (heightM * heightM) : 0;
+  const bmiCategory =
+    bmi < 18.5 ? {label:'Underweight', tone:'warn'} :
+    bmi < 25   ? {label:'Healthy', tone:'ok'} :
+    bmi < 30   ? {label:'Overweight', tone:'warn'} :
+                 {label:'Obese', tone:'warn'};
+
+  const saveMetrics = (e) => {
+    e.preventDefault();
+    const w = Number(draft.weightKg);
+    const h = Number(draft.heightCm);
+    if (!w || !h || w < 20 || h < 50) { toast('Please enter realistic values'); return; }
+    setMetrics({weightKg:w, heightCm:h});
+    setEditingMetrics(false);
+    toast('Metrics updated — BMI ' + (w / Math.pow(h/100, 2)).toFixed(1));
+  };
 
   return (
     <>
@@ -57,7 +82,34 @@ function MemberDashboard({ members, sessions, bookings, currentUserId, plans, on
       </div>
       <div style={{height:18}}></div>
       <div className="grid grid-2">
-        <TabbedCard label="Progress" title="🏆 Your Progress">
+        <TabbedCard
+          label="Progress"
+          title="🏆 Your Progress"
+          right={
+            <button className="btn btn-outline btn-sm" onClick={()=>{setDraft(metrics); setEditingMetrics(true);}}>
+              Update Metrics
+            </button>
+          }
+        >
+          {/* Metrics tracker — weight, height, BMI */}
+          <div className="metrics-tracker">
+            <div className="metric-tile">
+              <div className="lbl">Weight</div>
+              <div className="val">{metrics.weightKg.toFixed(1)}<span style={{fontSize:12, color:'var(--steel)', marginLeft:4}}>kg</span></div>
+              <div className="sub">Last entry: today</div>
+            </div>
+            <div className="metric-tile">
+              <div className="lbl">Height</div>
+              <div className="val">{metrics.heightCm.toFixed(0)}<span style={{fontSize:12, color:'var(--steel)', marginLeft:4}}>cm</span></div>
+              <div className="sub">{(metrics.heightCm/100).toFixed(2)} m</div>
+            </div>
+            <div className={"metric-tile "+bmiCategory.tone}>
+              <div className="lbl">BMI</div>
+              <div className="val">{bmi.toFixed(1)}</div>
+              <div className="sub">{bmiCategory.label}</div>
+            </div>
+          </div>
+          <hr style={{border:'none', borderTop:'1px solid var(--line)', margin:'14px 0'}}/>
           <div style={{marginBottom:12}}>
             <div style={{display:'flex', justifyContent:'space-between', fontSize:12, marginBottom:5}}><span>Monthly check-in goal</span><span className="mono">18/20</span></div>
             <div className="progress-bar"><div style={{width:'90%'}}></div></div>
@@ -71,6 +123,27 @@ function MemberDashboard({ members, sessions, bookings, currentUserId, plans, on
           <BarChart data={[{d:'Wk1',v:5},{d:'Wk2',v:7},{d:'Wk3',v:4},{d:'Wk4',v:6}]} valueKey="v" labelKey="d" />
         </TabbedCard>
       </div>
+
+      {editingMetrics && (
+        <Modal title="Update Metrics" onClose={()=>setEditingMetrics(false)}>
+          <form onSubmit={saveMetrics}>
+            <div className="grid grid-2">
+              <Field label="Weight (kg)">
+                <input className="form-control" type="number" step="0.1" required
+                  value={draft.weightKg} onChange={e=>setDraft(d=>({...d, weightKg:e.target.value}))} />
+              </Field>
+              <Field label="Height (cm)">
+                <input className="form-control" type="number" step="0.5" required
+                  value={draft.heightCm} onChange={e=>setDraft(d=>({...d, heightCm:e.target.value}))} />
+              </Field>
+            </div>
+            <p style={{fontSize:11.5, color:'var(--steel)', marginTop:6, marginBottom:14}}>
+              BMI is calculated automatically: weight ÷ (height in m)².
+            </p>
+            <button type="submit" className="btn btn-signal btn-block">Save Metrics</button>
+          </form>
+        </Modal>
+      )}
 
       {showBook && (
         <BookingCheckoutModal onClose={()=>setShowBook(false)} onComplete={()=>{setShowBook(false);}} />
@@ -375,10 +448,13 @@ function MemberMembership({ members, setMembers, plans, transactions, setTransac
   );
 }
 
-function MemberCoaching({ bookings, setBookings, sessions, setSessions, transactions, setTransactions, trainers, currentUserId, members, today, toast }){
+function MemberCoaching({ bookings, setBookings, sessions, setSessions, transactions, setTransactions, trainers, setTrainers, currentUserId, members, today, toast }){
   const [showBooking, setShowBooking] = useState(false);
   const [bookingTrainer, setBookingTrainer] = useState(null);
   const [editing, setEditing] = useState(null);
+  const [rateTarget, setRateTarget] = useState(null);
+  const [stars, setStars] = useState(0);
+  const [comment, setComment] = useState('');
   const me = members.find(m => m.id === currentUserId) || members[0];
 
   const openBookingFor = (trainerName) => { setBookingTrainer(trainerName); setShowBooking(true); };
@@ -386,8 +462,8 @@ function MemberCoaching({ bookings, setBookings, sessions, setSessions, transact
   // Keystone: booking persists across navigation by mutating bookings + sessions + transactions.
   const handlePersistBooking = ({ id, trainer, date, time, amount, method }) => {
     const memberName = me?.name || 'Juan Dela Cruz';
-    setBookings(prev => [...prev, {id, member: memberName, trainer, date, time, type:'Coaching', status:'Confirmed', paid:true, amount}]);
-    setSessions(prev => [...prev, {id, member: memberName, trainer, date, time, type:'Coaching', status:'Confirmed', paid:true, amount}]);
+    setBookings(prev => [...prev, {id, member: memberName, trainer, date, time, type:'Coaching', status:'Pending', paid:true, amount}]);
+    setSessions(prev => [...prev, {id, member: memberName, trainer, date, time, type:'Coaching', status:'Pending', paid:true, amount}]);
     setTransactions(prev => [{
       id: 'TXN-' + (8821 + prev.length),
       member: memberName,
@@ -408,6 +484,23 @@ function MemberCoaching({ bookings, setBookings, sessions, setSessions, transact
     setBookings(prev => prev.map(b => b.id===id ? {...b, status:'Cancelled'} : b));
     setSessions(prev => prev.map(s => s.id===id ? {...s, status:'Cancelled'} : s));
     toast('Booking cancelled');
+  };
+
+  const submitRating = () => {
+    if (!rateTarget || stars === 0) { toast('Pick a star rating'); return; }
+    const trainer = trainers.find(t => t.name === rateTarget.trainer);
+    const review = { member: me?.name || 'You', stars, comment: comment.trim(), date: today };
+    if (trainer) {
+      const allReviews = [...(trainer.reviews || []), review];
+      const avg = allReviews.reduce((a,r)=>a+r.stars,0) / allReviews.length;
+      const rounded = Math.round(avg * 10) / 10;
+      setTrainers(prev => prev.map(t => t.id === trainer.id ? { ...t, reviews: allReviews, rating: rounded } : t));
+    }
+    setBookings(prev => prev.map(b => b.id === rateTarget.id ? { ...b, rated: true, rating: stars } : b));
+    toast('Thanks for rating ' + rateTarget.trainer + '!');
+    setRateTarget(null);
+    setStars(0);
+    setComment('');
   };
 
   return (
@@ -434,7 +527,20 @@ function MemberCoaching({ bookings, setBookings, sessions, setSessions, transact
           <Table columns={['Date','Time','Trainer','Type','Status','']} rows={bookings} renderRow={s=>(
             <tr key={s.id}>
               <td className="mono">{s.date}</td><td className="mono">{s.time}</td><td>{s.trainer}</td><td>{s.type}</td><td><Badge status={s.status}/></td>
-              <td><button className="btn btn-ghost btn-sm" onClick={()=>setEditing(s)}>Edit</button></td>
+              <td style={{display:'flex', gap:6}}>
+                {(s.status === 'Pending' || s.status === 'Confirmed') && (
+                  <>
+                    <button className="btn btn-ghost btn-sm" onClick={()=>setEditing(s)}>Edit</button>
+                    <button className="btn btn-ghost btn-sm" onClick={()=>cancelBooking(s.id)}>Cancel</button>
+                  </>
+                )}
+                {s.status === 'Completed' && !s.rated && (
+                  <button className="btn btn-signal btn-sm" onClick={()=>{ setRateTarget(s); setStars(0); setComment(''); }}>Rate Session</button>
+                )}
+                {s.status === 'Completed' && s.rated && (
+                  <span className="badge ok" style={{fontSize:11}}>Rated ★{s.rating}</span>
+                )}
+              </td>
             </tr>
           )} />
         )}
@@ -455,6 +561,30 @@ function MemberCoaching({ bookings, setBookings, sessions, setSessions, transact
           onSave={saveEdit}
           onCancelBooking={cancelBooking}
         />
+      )}
+
+      {rateTarget && (
+        <Modal title={`Rate Session — ${rateTarget.trainer}`} onClose={()=>setRateTarget(null)}>
+          <div style={{padding:'0 24px 24px'}}>
+            <div style={{display:'flex', gap:6, justifyContent:'center', marginBottom:16}}>
+              {[1,2,3,4,5].map(n => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={()=>setStars(n)}
+                  style={{fontSize:34, background:'none', border:'none', cursor:'pointer', color: n<=stars ? 'var(--signal)' : 'var(--steel)', lineHeight:1, padding:0}}
+                >★</button>
+              ))}
+            </div>
+            <Field label="Comment (optional)">
+              <TextInput placeholder="How was the session?" value={comment} onChange={setComment} />
+            </Field>
+            <div style={{display:'flex', gap:8, justifyContent:'flex-end', marginTop:8}}>
+              <button className="btn btn-outline" type="button" onClick={()=>setRateTarget(null)}>Cancel</button>
+              <button className="btn btn-signal" type="button" onClick={submitRating} disabled={stars===0}>Submit Rating</button>
+            </div>
+          </div>
+        </Modal>
       )}
     </>
   );

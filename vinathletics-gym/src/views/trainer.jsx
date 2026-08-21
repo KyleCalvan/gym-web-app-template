@@ -74,6 +74,14 @@ function TrainerSessions({ sessions, setSessions, currentUserId, trainers, toast
     setSessions(prev => prev.map(s => s.id===id ? {...s, status:'Cancelled'} : s));
     toast('Session ' + id + ' cancelled');
   };
+  const accept = (id) => {
+    setSessions(prev => prev.map(s => s.id===id ? {...s, status:'Confirmed'} : s));
+    toast('Session ' + id + ' accepted');
+  };
+  const decline = (id) => {
+    setSessions(prev => prev.map(s => s.id===id ? {...s, status:'Declined'} : s));
+    toast('Session ' + id + ' declined');
+  };
 
   return (
     <>
@@ -86,8 +94,21 @@ function TrainerSessions({ sessions, setSessions, currentUserId, trainers, toast
               <td className="mono">{s.id}</td><td>{s.member}</td><td className="mono">{s.date}</td><td className="mono">{s.time}</td><td>{s.type}</td>
               <td><Badge status={s.status}/></td>
               <td style={{display:'flex', gap:6}}>
-                <button className="btn btn-ghost btn-sm" onClick={()=>complete(s.id)} disabled={s.status==='Completed' || s.status==='Cancelled'}>Complete</button>
-                <button className="btn btn-ghost btn-sm" onClick={()=>cancel(s.id)} disabled={s.status==='Completed' || s.status==='Cancelled'}>Cancel</button>
+                {s.status === 'Pending' && (
+                  <>
+                    <button className="btn btn-signal btn-sm" onClick={()=>accept(s.id)}>Accept</button>
+                    <button className="btn btn-ghost btn-sm" onClick={()=>decline(s.id)}>Decline</button>
+                  </>
+                )}
+                {s.status === 'Confirmed' && (
+                  <>
+                    <button className="btn btn-ghost btn-sm" onClick={()=>complete(s.id)}>Complete</button>
+                    <button className="btn btn-ghost btn-sm" onClick={()=>cancel(s.id)}>Cancel</button>
+                  </>
+                )}
+                {s.status === 'Completed' && <span style={{fontSize:11, color:'var(--steel)'}}>Completed</span>}
+                {s.status === 'Cancelled' && <span style={{fontSize:11, color:'var(--steel)'}}>Cancelled</span>}
+                {s.status === 'Declined'  && <span style={{fontSize:11, color:'var(--steel)'}}>Declined</span>}
               </td>
             </tr>
           )} />

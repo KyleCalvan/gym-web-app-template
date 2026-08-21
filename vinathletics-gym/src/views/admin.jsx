@@ -310,6 +310,8 @@ function AdminMembers({ members, setMembers, plans, transactions, setTransaction
 
 function AdminPlans({ plans, setPlans, toast }){
   const [form, setForm] = useState({name:'', price:'', cycle:'Monthly', perks:''});
+  const [editingPlan, setEditingPlan] = useState(null); // null = closed; {mode, plan} when open
+
   const deactivate = (name) => {
     setPlans(prev => prev.map(p => p.name===name ? {...p, members:0, status:'Inactive'} : p));
     toast(name + ' deactivated');
@@ -318,21 +320,43 @@ function AdminPlans({ plans, setPlans, toast }){
     setPlans(prev => prev.map(p => p.name===name ? {...p, status:'Active', members: Math.max(p.members, 1)} : p));
     toast(name + ' reactivated');
   };
+
+  const openCreate = () => {
+    setForm({name:'', price:'', cycle:'Monthly', perks:''});
+    setEditingPlan({mode:'create'});
+  };
+
+  const openEdit = (p) => {
+    setForm({
+      name: p.name,
+      price: String(p.price),
+      cycle: p.period === 'yr' ? 'Annual' : (p.period === 'qtr' ? 'Quarterly' : 'Monthly'),
+      perks: p.perks.join(', '),
+    });
+    setEditingPlan({mode:'edit', plan: p});
+  };
+
+  const closeModal = () => setEditingPlan(null);
+
   const submitPlan = (e) => {
     e.preventDefault();
     if (!form.name.trim() || !form.price) { toast('Name and price are required'); return; }
-    const newPlan = {
+    const data = {
       name: form.name.trim(),
       price: Number(form.price),
       period: form.cycle === 'Annual' ? 'yr' : (form.cycle === 'Quarterly' ? 'qtr' : 'mo'),
-      members: 0,
       perks: form.perks.split(',').map(s=>s.trim()).filter(Boolean),
-      featured: false,
-      status: 'Active',
     };
-    setPlans(prev => [...prev, newPlan]);
-    setForm({name:'', price:'', cycle:'Monthly', perks:''});
-    toast('Plan saved — ' + newPlan.name);
+    if (editingPlan && editingPlan.mode === 'edit') {
+      const original = editingPlan.plan.name;
+      setPlans(prev => prev.map(p => p.name === original ? { ...p, ...data } : p));
+      toast('Plan updated — ' + data.name);
+    } else {
+      const newPlan = { ...data, members: 0, featured: false, status: 'Active' };
+      setPlans(prev => [...prev, newPlan]);
+      toast('Plan created — ' + newPlan.name);
+    }
+    closeModal();
   };
   return (
     <>
@@ -348,7 +372,7 @@ function AdminPlans({ plans, setPlans, toast }){
               <div className="price">{peso(p.price)}<span>/{p.period}</span></div>
               <ul>{p.perks.map((perk,i)=><li key={i}>✓ {perk}</li>)}</ul>
               <div style={{display:'flex', gap:8}}>
-                <button className={"btn btn-sm "+(isFeatured?'btn-signal':'btn-outline')} onClick={()=>toast(p.name+' plan viewed — make changes below')}>Edit Plan</button>
+                <button className={"btn btn-sm "+(isFeatured?'btn-signal':'btn-outline')} onClick={()=>openEdit(p)}>Edit Plan</button>
                 {isInactive
                   ? <button className="btn btn-ghost btn-sm" style={{color:isFeatured?'#fff':undefined}} onClick={()=>activate(p.name)}>Reactivate</button>
                   : <button className="btn btn-ghost btn-sm" style={{color:isFeatured?'#fff':undefined}} onClick={()=>deactivate(p.name)}>Deactivate</button>
@@ -358,21 +382,44 @@ function AdminPlans({ plans, setPlans, toast }){
           );
         })}
       </div>
-      <TabbedCard label="Plans" title="Create / Update Plan">
-        <form onSubmit={submitPlan}>
-          <div className="grid grid-3">
-            <Field label="Plan Name"><TextInput required placeholder="e.g. Student" value={form.name} onChange={v=>setForm(f=>({...f, name:v}))} /></Field>
-            <Field label="Price (₱ / period)"><TextInput type="number" required placeholder="1999" value={form.price} onChange={v=>setForm(f=>({...f, price:v}))} /></Field>
-            <Field label="Billing Cycle">
-              <Select value={form.cycle} onChange={v=>setForm(f=>({...f, cycle:v}))}>
-                <option>Monthly</option><option>Quarterly</option><option>Annual</option>
-              </Select>
-            </Field>
-          </div>
-          <Field label="Perks (comma separated)"><TextInput placeholder="Gym floor access, Locker access…" value={form.perks} onChange={v=>setForm(f=>({...f, perks:v}))} /></Field>
-          <button className="btn btn-signal" type="submit">Save Plan</button>
-        </form>
+      <TabbedCard
+        label="Plans"
+        title="Plan Management"
+        right={
+          <button className="btn btn-signal btn-sm" onClick={openCreate}>+ Create Plan</button>
+        }
+      >
+        <div style={{fontSize:13, color:'var(--steel)', padding:'4px 0'}}>
+          Click <b>+ Create Plan</b> to add a new membership tier, or use the <b>Edit Plan</b> button on any card above to update an existing one.
+        </div>
       </TabbedCard>
+
+      {editingPlan && (
+        <Modal
+          title={editingPlan.mode === 'edit' ? `Edit Plan — ${editingPlan.plan.name}` : 'Create Plan'}
+          onClose={closeModal}
+          wide
+        >
+          <form onSubmit={submitPlan}>
+            <div className="grid grid-3">
+              <Field label="Plan Name"><TextInput required placeholder="e.g. Student" value={form.name} onChange={v=>setForm(f=>({...f, name:v}))} /></Field>
+              <Field label="Price (₱ / period)"><TextInput type="number" required placeholder="1999" value={form.price} onChange={v=>setForm(f=>({...f, price:v}))} /></Field>
+              <Field label="Billing Cycle">
+                <Select value={form.cycle} onChange={v=>setForm(f=>({...f, cycle:v}))}>
+                  <option>Monthly</option><option>Quarterly</option><option>Annual</option>
+                </Select>
+              </Field>
+            </div>
+            <Field label="Perks (comma separated)"><TextInput placeholder="Gym floor access, Locker access…" value={form.perks} onChange={v=>setForm(f=>({...f, perks:v}))} /></Field>
+            <div style={{display:'flex', gap:8}}>
+              <button className="btn btn-signal" type="submit">
+                {editingPlan.mode === 'edit' ? 'Save Changes' : 'Create Plan'}
+              </button>
+              <button className="btn btn-outline" type="button" onClick={closeModal}>Cancel</button>
+            </div>
+          </form>
+        </Modal>
+      )}
     </>
   );
 }
@@ -708,6 +755,8 @@ function AdminPromotions({ promotions, setPromotions, plans, toast }){
   const [editing, setEditing] = useState(null);
   const [editForm, setEditForm] = useState(null);
   const [pubForm, setPubForm] = useState({promoId:'', action:'Publish'});
+  const [showCreate, setShowCreate] = useState(false);
+  const [detailPromo, setDetailPromo] = useState(null);
 
   const togglePublish = (id) => {
     setPromotions(prev => prev.map(p => p.id===id ? {...p, status: p.status==='Published' ? 'Draft' : 'Published'} : p));
@@ -735,6 +784,7 @@ function AdminPromotions({ promotions, setPromotions, plans, toast }){
     setPromotions(prev => [...prev, newPromo]);
     toast('Promotion created — ' + newPromo.title);
     setForm({title:'', discountType:'Percentage', discountValue:'', validFrom:'', validUntil:'', applicablePlan:'Any Plan', description:'', maxRedemptions:'', minSpend:'', code:''});
+    setShowCreate(false);
   };
 
   const startEdit = (p) => {
@@ -759,60 +809,59 @@ function AdminPromotions({ promotions, setPromotions, plans, toast }){
 
   return (
     <>
-      <TabbedCard label="Operations" title="Create / Edit Promotion">
-        <form onSubmit={submitNew}>
-          <div className="grid grid-3">
-            <Field label="Promotion Title *"><TextInput required placeholder="e.g. Summer Body Special" value={form.title} onChange={v=>setForm(f=>({...f, title:v}))} /></Field>
-            <Field label="Discount Type">
-              <Select value={form.discountType} onChange={v=>setForm(f=>({...f, discountType:v}))}>
-                <option>Percentage</option><option>Fixed Amount</option><option>Bundle</option>
-              </Select>
-            </Field>
-            <Field label="Discount Value"><TextInput placeholder="20% or ₱500" value={form.discountValue} onChange={v=>setForm(f=>({...f, discountValue:v}))} /></Field>
-          </div>
-          <div className="grid grid-3">
-            <Field label="Valid From *"><TextInput type="date" required value={form.validFrom} onChange={v=>setForm(f=>({...f, validFrom:v}))} /></Field>
-            <Field label="Valid Until *"><TextInput type="date" required value={form.validUntil} onChange={v=>setForm(f=>({...f, validUntil:v}))} /></Field>
-            <Field label="Applicable Plan">
-              <Select value={form.applicablePlan} onChange={v=>setForm(f=>({...f, applicablePlan:v}))}>
-                <option>Any Plan</option>
-                {plans.map(p=><option key={p.name}>{p.name}</option>)}
-              </Select>
-            </Field>
-          </div>
-          <Field label="Description"><textarea className="form-control" rows="2" placeholder="Short description shown to members…" value={form.description} onChange={e=>setForm(f=>({...f, description:e.target.value}))} /></Field>
-          <div className="grid grid-3">
-            <Field label="Max Redemptions"><TextInput type="number" placeholder="100" value={form.maxRedemptions} onChange={v=>setForm(f=>({...f, maxRedemptions:v}))} /></Field>
-            <Field label="Min. Spend"><TextInput type="number" placeholder="0" value={form.minSpend} onChange={v=>setForm(f=>({...f, minSpend:v}))} /></Field>
-            <Field label="Promo Code"><TextInput placeholder="SUMMER20" value={form.code} onChange={v=>setForm(f=>({...f, code:v}))} /></Field>
-          </div>
+      <div className="grid grid-4" style={{marginBottom:18}}>
+        <StatTile label="Total Promotions" value={promotions.length} />
+        <StatTile label="Published" value={promotions.filter(p=>p.status==='Published').length} tone="court" />
+        <StatTile label="Drafts" value={promotions.filter(p=>p.status==='Draft').length} tone="amber" />
+        <StatTile label="Total Redemptions" value={promotions.reduce((a,p)=>a+p.redemptions,0)} tone="steel" />
+      </div>
+
+      {/* Resource management panel — matches the See Resources card pattern. */}
+      <TabbedCard
+        label="Operations"
+        title="Promotion Resources"
+        right={
           <div style={{display:'flex', gap:8}}>
-            <button className="btn btn-signal" type="submit">Save Promotion</button>
-            <button className="btn btn-outline" type="reset" onClick={()=>setForm({title:'', discountType:'Percentage', discountValue:'', validFrom:'', validUntil:'', applicablePlan:'Any Plan', description:'', maxRedemptions:'', minSpend:'', code:''})}>Cancel</button>
+            <button className="btn btn-outline btn-sm" onClick={()=>setShowCreate(true)}>+ New Promotion</button>
           </div>
-        </form>
+        }
+      >
+        {promotions.length === 0 ? (
+          <div style={{fontSize:13, color:'var(--steel)', padding:'10px 0'}}>
+            No promotion resources yet. Click <b>+ New Promotion</b> to add the first one.
+          </div>
+        ) : (
+          <div className="resource-grid">
+            {promotions.map(p=>(
+              <div className="resource-card" key={p.id} onClick={()=>setDetailPromo(p)}>
+                <div className="head">
+                  <div>
+                    <div className="ttl">{p.title}</div>
+                    <div className="mono" style={{fontSize:10.5, color:'var(--steel)', marginTop:2}}>{p.id} · {p.code}</div>
+                  </div>
+                  <Badge status={p.status}/>
+                </div>
+                <div className="desc">
+                  {p.discount} off · {p.plan}
+                </div>
+                <div className="meta">
+                  <span className="pill">{p.discount}</span>
+                  <span className="pill">{p.plan}</span>
+                  <span className="pill">{p.redemptions}/{p.maxRedemptions} used</span>
+                </div>
+                <div className="foot">
+                  <span>Valid until {p.validUntil}</span>
+                  <span className="open">See Resources →</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </TabbedCard>
 
       <div style={{height:18}}></div>
-      <TabbedCard label="Operations" title="Active Promotions">
-        <Table columns={['ID','Title','Discount','Valid Until','Redemptions','Status','Actions']} rows={promotions} renderRow={p=>(
-          <tr key={p.id}>
-            <td className="mono">{p.id}</td>
-            <td>{p.title}<div className="mono" style={{fontSize:10.5, color:'var(--steel)'}}>{p.code}</div></td>
-            <td>{p.discount}</td>
-            <td className="mono">{p.validUntil}</td>
-            <td className="mono">{p.redemptions}/{p.maxRedemptions}</td>
-            <td><Badge status={p.status}/></td>
-            <td style={{display:'flex', gap:6}}>
-              <button className="btn btn-ghost btn-sm" onClick={()=>startEdit(p)}>Edit</button>
-              <button className="btn btn-ghost btn-sm" onClick={()=>togglePublish(p.id)}>{p.status==='Published' ? 'Unpublish' : 'Publish'}</button>
-            </td>
-          </tr>
-        )} />
-      </TabbedCard>
 
-      <div style={{height:18}}></div>
-      <TabbedCard label="Operations" title="Publish / Unpublish">
+      <TabbedCard label="Operations" title="Bulk Publish / Unpublish">
         <div className="grid grid-3">
           <Field label="Promotion">
             <Select value={pubForm.promoId} onChange={v=>setPubForm(f=>({...f, promoId:v}))}>
@@ -830,6 +879,87 @@ function AdminPromotions({ promotions, setPromotions, plans, toast }){
           </div>
         </div>
       </TabbedCard>
+
+      {/* Detail modal — opened from "See Resources →" on a card. */}
+      {detailPromo && (
+        <Modal title={detailPromo.title} onClose={()=>setDetailPromo(null)} wide>
+          <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14}}>
+            <div>
+              <div className="eyebrow">Promotion</div>
+              <div className="mono" style={{fontSize:13, marginTop:2}}>{detailPromo.id} · {detailPromo.code}</div>
+            </div>
+            <Badge status={detailPromo.status}/>
+          </div>
+          <div className="resource-detail-row">
+            <span className="lbl">Discount</span>
+            <span className="val">{detailPromo.discount} {detailPromo.discountType ? `(${detailPromo.discountType})` : ''}</span>
+          </div>
+          <div className="resource-detail-row">
+            <span className="lbl">Applicable Plan</span>
+            <span className="val">{detailPromo.plan}</span>
+          </div>
+          <div className="resource-detail-row">
+            <span className="lbl">Valid From</span>
+            <span className="val">{detailPromo.validFrom}</span>
+          </div>
+          <div className="resource-detail-row">
+            <span className="lbl">Valid Until</span>
+            <span className="val">{detailPromo.validUntil}</span>
+          </div>
+          <div className="resource-detail-row">
+            <span className="lbl">Min. Spend</span>
+            <span className="val">₱{detailPromo.minSpend?.toLocaleString('en-PH') || 0}</span>
+          </div>
+          <div className="resource-detail-row">
+            <span className="lbl">Redemptions</span>
+            <span className="val">{detailPromo.redemptions} / {detailPromo.maxRedemptions}</span>
+          </div>
+          <div style={{display:'flex', gap:8, marginTop:18}}>
+            <button className="btn btn-outline btn-sm" onClick={()=>{startEdit(detailPromo); setDetailPromo(null);}}>Edit</button>
+            <button className="btn btn-signal btn-sm" onClick={()=>{togglePublish(detailPromo.id); setDetailPromo(p=>({...p, status: p.status==='Published'?'Draft':'Published'}));}}>
+              {detailPromo.status === 'Published' ? 'Unpublish' : 'Publish'}
+            </button>
+            <button className="btn btn-ghost btn-sm" onClick={()=>setDetailPromo(null)}>Close</button>
+          </div>
+        </Modal>
+      )}
+
+      {/* Create promotion modal */}
+      {showCreate && (
+        <Modal title="New Promotion" onClose={()=>setShowCreate(false)} wide>
+          <form onSubmit={submitNew}>
+            <div className="grid grid-3">
+              <Field label="Promotion Title *"><TextInput required placeholder="e.g. Summer Body Special" value={form.title} onChange={v=>setForm(f=>({...f, title:v}))} /></Field>
+              <Field label="Discount Type">
+                <Select value={form.discountType} onChange={v=>setForm(f=>({...f, discountType:v}))}>
+                  <option>Percentage</option><option>Fixed Amount</option><option>Bundle</option>
+                </Select>
+              </Field>
+              <Field label="Discount Value"><TextInput placeholder="20% or ₱500" value={form.discountValue} onChange={v=>setForm(f=>({...f, discountValue:v}))} /></Field>
+            </div>
+            <div className="grid grid-3">
+              <Field label="Valid From *"><TextInput type="date" required value={form.validFrom} onChange={v=>setForm(f=>({...f, validFrom:v}))} /></Field>
+              <Field label="Valid Until *"><TextInput type="date" required value={form.validUntil} onChange={v=>setForm(f=>({...f, validUntil:v}))} /></Field>
+              <Field label="Applicable Plan">
+                <Select value={form.applicablePlan} onChange={v=>setForm(f=>({...f, applicablePlan:v}))}>
+                  <option>Any Plan</option>
+                  {plans.map(p=><option key={p.name}>{p.name}</option>)}
+                </Select>
+              </Field>
+            </div>
+            <Field label="Description"><textarea className="form-control" rows="2" placeholder="Short description shown to members…" value={form.description} onChange={e=>setForm(f=>({...f, description:e.target.value}))} /></Field>
+            <div className="grid grid-3">
+              <Field label="Max Redemptions"><TextInput type="number" placeholder="100" value={form.maxRedemptions} onChange={v=>setForm(f=>({...f, maxRedemptions:v}))} /></Field>
+              <Field label="Min. Spend"><TextInput type="number" placeholder="0" value={form.minSpend} onChange={v=>setForm(f=>({...f, minSpend:v}))} /></Field>
+              <Field label="Promo Code"><TextInput placeholder="SUMMER20" value={form.code} onChange={v=>setForm(f=>({...f, code:v}))} /></Field>
+            </div>
+            <div style={{display:'flex', gap:8}}>
+              <button className="btn btn-signal" type="submit">Save Promotion</button>
+              <button className="btn btn-outline" type="button" onClick={()=>setShowCreate(false)}>Cancel</button>
+            </div>
+          </form>
+        </Modal>
+      )}
 
       {editing && editForm && (
         <Modal title="Edit Promotion" onClose={()=>{setEditing(null); setEditForm(null);}}>

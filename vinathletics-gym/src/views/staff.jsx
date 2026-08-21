@@ -97,18 +97,13 @@ function StaffMembers({ members, setMembers, plans, checkIns, setCheckIns, today
   );
 }
 
-function StaffPOS({ transactions, setTransactions, members, toast }){
+function StaffPOS({ transactions, setTransactions, members, plans, toast }){
   const [cart, setCart] = useState([]);
   const [method, setMethod] = useState('GCash');
   const [memberId, setMemberId] = useState(members[0]?.id || '');
-  const items = [
-    {name:'Basic Membership', price:1499},
-    {name:'Premium Membership', price:2499},
-    {name:'Elite Membership', price:3999},
-    {name:'PT Session (1x)', price:900},
-    {name:'Protein Shake', price:250},
-    {name:'Gym Towel', price:150},
-  ];
+  const items = (plans || [])
+    .filter(p => p.status !== 'Inactive')
+    .map(p => ({ id: 'PLAN-'+p.name, name: p.name + ' Membership', price: p.price }));
   const total = cart.reduce((a,c)=>a+c.price,0);
   const member = members.find(m => m.id === memberId) || members[0];
 

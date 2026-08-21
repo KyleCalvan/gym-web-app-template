@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Landing from './Landing.jsx';
+import LoginPage from './LoginPage.jsx';
 import Sidebar from './Sidebar.jsx';
 import { useToast } from './components.jsx';
 import {
@@ -60,29 +61,51 @@ export default function App(){
   const [sessions, setSessions]         = useState(() => [...SESSIONS]);
   const [promotions, setPromotions]     = useState(() => [...PROMOTIONS]);
   const [notifications, setNotifications] = useState(() => NOTIFICATIONS.map(n => ({...n})));
-  const [bookings, setBookings]         = useState(() => SESSIONS.filter(s => s.member === CURRENT.member.name).slice(0, 3));
+  const [bookings, setBookings]         = useState(() => SESSIONS.filter(s => s.member === CURRENT.member.name && s.status !== 'Cancelled'));
   const [currentUserId, setCurrentUserId] = useState(null);
   const [checkIns, setCheckIns]         = useState({ count: 86, today: today() });
   const [notifPrefs, setNotifPrefs]     = useState({ email: true, sms: false, reminders: true, promos: false });
 
   // ---- App-level UI state ----
-  const [loggedIn, setLoggedIn]       = useState(false);
-  const [role, setRole]               = useState('member');
-  const [view, setView]               = useState('dashboard');
+  const [route, setRoute] = useState('landing'); // 'landing' | '/login' | 'app'
+  const [loginFlow, setLoginFlow] = useState('member');
+  const [loggedIn, setLoggedIn] = useState(false);
+  const [role, setRole] = useState('member');
+  const [view, setView] = useState('dashboard');
   const [showNotifModal, setShowNotifModal] = useState(false);
 
   // Single toast slot for the whole app.
   const [toastNode, fireToast] = useToast();
 
+  const navigate = (r) => {
+    if (r === '/login' || r === '/login?flow=login') {
+      setRoute('/login');
+      setLoginFlow({role:'member', tab:'login'});
+      window.scrollTo(0, 0);
+    } else if (r === '/login?flow=register') {
+      setRoute('/login');
+      setLoginFlow({role:'member', tab:'register'});
+      window.scrollTo(0, 0);
+    } else if (r === '/admin-login') {
+      setRoute('/login');
+      setLoginFlow({role:'admin', tab:'login'});
+      window.scrollTo(0, 0);
+    } else if (r === 'landing') {
+      setRoute('landing');
+      window.scrollTo(0, 0);
+    }
+  };
+
   const handleLogin = (r, userId) => {
     setRole(r);
     setView('dashboard');
     setLoggedIn(true);
+    setRoute('app');
     if (r === 'member') setCurrentUserId(userId || 'M-1042');
     else if (r === 'trainer') setCurrentUserId(userId || 'T-01');
     else setCurrentUserId(null);
     // Reset bookings/notifications on each login for a clean session.
-    setBookings(SESSIONS.filter(s => s.member === CURRENT[r].name).slice(0, 3));
+    setBookings(SESSIONS.filter(s => s.member === CURRENT[r].name && s.status !== 'Cancelled'));
     setNotifications(NOTIFICATIONS.map(n => ({...n})));
   };
 
@@ -90,6 +113,7 @@ export default function App(){
     setLoggedIn(false);
     setView('dashboard');
     setCurrentUserId(null);
+    setRoute('landing');
   };
 
   const handleSwitchRole = (r) => {
@@ -108,10 +132,37 @@ export default function App(){
     setView(id);
   };
 
-  if (!loggedIn) {
-    return <Landing onLogin={handleLogin} members={members} setMembers={setMembers} toast={fireToast} />;
+  // Landing page
+  if (route === 'landing') {
+    return (
+      <Landing
+        onLogin={handleLogin}
+        members={members}
+        setMembers={setMembers}
+        plans={plans}
+        promotions={promotions}
+        trainers={trainers}
+        onNavigate={navigate}
+      />
+    );
   }
 
+  // Dedicated login route
+  if (route === '/login') {
+    return (
+      <LoginPage
+        onLogin={handleLogin}
+        members={members}
+        setMembers={setMembers}
+        plans={plans}
+        defaultRole={loginFlow.role}
+        defaultTab={loginFlow.tab}
+        onBack={() => navigate('landing')}
+      />
+    );
+  }
+
+  // Authenticated app shell
   const ViewComp = (VIEWS[role] && VIEWS[role][view]) || (() => <div className="empty-state">View not available.</div>);
 
   const unread = notifications.filter(n => n.unread).length;
