@@ -46,10 +46,7 @@ function MemberMembership({ members, setMembers, plans, setTransactions, current
     setShowSwitch(false);
   };
 
-  const freeze = () => {
-    setMembers(prev => prev.map(m => m.id === me.id ? {...m, status:'Frozen'} : m));
-    toast('Membership frozen — ' + me.name);
-  };
+  const isFrozen = me?.status === 'Frozen';
 
   return (
     <>
@@ -58,10 +55,14 @@ function MemberMembership({ members, setMembers, plans, setTransactions, current
         <div className="price">{me?.plan || 'Premium'}</div>
         <div style={{fontSize:13, color:'#B9C7BF'}}>Renews Sep 12, 2026 · {peso((plans.find(p=>p.name===me?.plan)||{}).price || 2499)}/mo</div>
         <Badge status={me?.status || 'Active'} />
+        {isFrozen && (
+          <div style={{marginTop:12, padding:'10px 12px', background:'rgba(0,0,0,.18)', borderRadius:3, fontSize:12.5, color:'#fff'}}>
+            Your membership is currently <b>frozen</b>. Renewal and plan switching are paused until an admin unfreezes your account.
+          </div>
+        )}
         <div style={{display:'flex', gap:8, marginTop:16}}>
-          <button className="btn btn-signal btn-sm" onClick={()=>setShowRenew(true)}>Renew Now</button>
-          <button className="btn btn-outline btn-sm" style={{color:'#fff', borderColor:'#fff'}} onClick={()=>setShowSwitch(true)}>Switch Plan</button>
-          <button className="btn btn-outline btn-sm" style={{color:'#fff', borderColor:'#fff'}} onClick={freeze} disabled={me?.status==='Frozen'}>Freeze Membership</button>
+          <button className="btn btn-signal btn-sm" onClick={()=>setShowRenew(true)} disabled={isFrozen}>Renew Now</button>
+          <button className="btn btn-outline btn-sm" style={{color:'#fff', borderColor:'#fff'}} onClick={()=>setShowSwitch(true)} disabled={isFrozen}>Switch Plan</button>
         </div>
       </div>
       <TabbedCard label="Plans" title="Available Plans">

@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { StatTile, Badge, Table, Modal, Field, TabbedCard } from '../shared';
 import { peso } from '../data.ts';
 
-function AdminPayments({ transactions, setTransactions, today, toast }){
+function AdminPayments({ transactions, setTransactions, today, toast, addAudit }){
   const [showRefund, setShowRefund] = useState(null);
   const [reason, setReason] = useState('');
   const [showReceipts, setShowReceipts] = useState(false);
@@ -13,6 +13,7 @@ function AdminPayments({ transactions, setTransactions, today, toast }){
     if (!showRefund) return;
     setTransactions(prev => prev.map(t => t.id===showRefund.id ? {...t, status:'Refunded', reason} : t));
     toast('Transaction ' + showRefund.id + ' refunded — ' + peso(showRefund.amount));
+    addAudit?.('warn', 'Transaction refunded', showRefund.id + ' — ' + showRefund.member + ' (' + peso(showRefund.amount) + ')');
     setReason('');
     setShowRefund(null);
   };

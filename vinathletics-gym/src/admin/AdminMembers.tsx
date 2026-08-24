@@ -1,9 +1,9 @@
 // @ts-nocheck
 import { useState } from 'react';
-import { StatTile, Badge, Table, Modal, Field, TextInput, Select, TabbedCard } from '../shared';
-import { INITIALS, peso } from '../data.ts';
+import { StatTile, Badge, Table, Modal, Field, TextInput, Select, TabbedCard, Avatar } from '../shared';
+import { peso } from '../data.ts';
 
-function AdminMembers({ members, setMembers, plans, setTransactions, today, toast }){
+function AdminMembers({ members, setMembers, plans, setTransactions, today, toast, addAudit }){
   const [q, setQ] = useState('');
   const [statusF, setStatusF] = useState('All');
   const [showRegister, setShowRegister] = useState(false);
@@ -18,6 +18,7 @@ function AdminMembers({ members, setMembers, plans, setTransactions, today, toas
     const id = 'M-' + (1042 + members.length);
     setMembers(prev => [...prev, {...reg, id, status:'Active', joined: today}]);
     toast('Member registered — ' + reg.name + ' (' + id + ')');
+    addAudit?.('info', 'Member registered', reg.name + ' (' + id + ')');
     setReg({name:'', email:'', phone:'', plan:'Basic'});
     setShowRegister(false);
   };
@@ -33,6 +34,7 @@ function AdminMembers({ members, setMembers, plans, setTransactions, today, toas
     setSelected(s => ({...s, ...edit}));
     setEditing(false);
     toast('Member updated — ' + edit.name);
+    addAudit?.('info', 'Member updated', edit.name + ' (' + selected.id + ')');
   };
 
   const [renewPlan, setRenewPlan] = useState(plans[0]?.name || 'Premium');
@@ -53,12 +55,27 @@ function AdminMembers({ members, setMembers, plans, setTransactions, today, toas
     setSelected(s => ({...s, status:'Active', plan: renewPlan}));
     setRenewing(false);
     toast('Renewal processed — ' + peso(amount));
+    addAudit?.('info', 'Membership renewed', selected.name + ' → ' + renewPlan);
   };
 
-  const freezeAccount = () => {
-    setMembers(prev => prev.map(m => m.id===selected.id ? {...m, status:'Frozen'} : m));
-    setSelected(s => ({...s, status:'Frozen'}));
-    toast('Account frozen — ' + selected.name);
+  // Freeze / Unfreeze flow — modal-deferred so the destructive action has a confirmation step.
+  const [pendingFreeze, setPendingFreeze] = useState(null);
+  const [pendingUnfreeze, setPendingUnfreeze] = useState(null);
+  const applyFreeze = () => {
+    if (!pendingFreeze) return;
+    setMembers(prev => prev.map(m => m.id===pendingFreeze.id ? {...m, status:'Frozen'} : m));
+    setSelected(s => s && s.id===pendingFreeze.id ? {...s, status:'Frozen'} : s);
+    toast('Account frozen — ' + pendingFreeze.name);
+    addAudit?.('warn', 'Account frozen', pendingFreeze.name + ' (' + pendingFreeze.id + ')');
+    setPendingFreeze(null);
+  };
+  const applyUnfreeze = () => {
+    if (!pendingUnfreeze) return;
+    setMembers(prev => prev.map(m => m.id===pendingUnfreeze.id ? {...m, status:'Active'} : m));
+    setSelected(s => s && s.id===pendingUnfreeze.id ? {...s, status:'Active'} : s);
+    toast('Account unfrozen — ' + pendingUnfreeze.name);
+    addAudit?.('info', 'Account unfrozen', pendingUnfreeze.name + ' (' + pendingUnfreeze.id + ')');
+    setPendingUnfreeze(null);
   };
 
   const filtered = members.filter(m =>
@@ -90,7 +107,7 @@ function AdminMembers({ members, setMembers, plans, setTransactions, today, toas
         </div>
         <Table columns={['Member','Contact','Plan','Status','Joined','']} rows={filtered} renderRow={m=>(
           <tr key={m.id}>
-            <td><span className="avatar-sm">{INITIALS(m.name)}</span>{m.name}<div className="mono" style={{fontSize:10.5, color:'var(--steel)'}}>{m.id}</div></td>
+            <td><Avatar src={m.avatarUrl} name={m.name} />{m.name}<div className="mono" style={{fontSize:10.5, color:'var(--steel)'}}>{m.id}</div></td>
             <td>{m.email}<div style={{fontSize:11.5, color:'var(--steel)'}}>{m.phone}</div></td>
             <td>{m.plan}</td>
             <td><Badge status={m.status} /></td>
@@ -119,7 +136,7 @@ function AdminMembers({ members, setMembers, plans, setTransactions, today, toas
       {selected && !editing && !renewing && (
         <Modal title="Member Profile" onClose={()=>setSelected(null)}>
           <div style={{display:'flex', alignItems:'center', gap:14, marginBottom:16}}>
-            <span className="avatar-sm" style={{width:44, height:44, fontSize:15}}>{INITIALS(selected.name)}</span>
+            <Avatar src={selected.avatarUrl} name={selected.name} size={44} />
             <div><h3 style={{fontSize:18}}>{selected.name}</h3><Badge status={selected.status}/></div>
           </div>
           <div className="grid grid-2" style={{fontSize:13, marginBottom:16}}>
@@ -131,8 +148,12 @@ function AdminMembers({ members, setMembers, plans, setTransactions, today, toas
           </div>
           <div style={{display:'flex', gap:8, flexWrap:'wrap'}}>
             <button className="btn btn-outline btn-sm" onClick={startEdit}>Edit Details</button>
-            <button className="btn btn-outline btn-sm" onClick={()=>setRenewing(true)}>Renew Plan</button>
-            <button className="btn btn-danger btn-sm" onClick={freezeAccount} disabled={selected.status==='Frozen'}>Freeze Account</button>
+            <button className="btn btn-outline btn-sm" onClick={()=>setRenewing(true)} disabled={selected.status==='Frozen'}>Renew Plan</button>
+            {selected.status === 'Frozen' ? (
+              <button className="btn btn-signal btn-sm" onClick={()=>setPendingUnfreeze(selected)}>Unfreeze Account</button>
+            ) : (
+              <button className="btn btn-danger btn-sm" onClick={()=>setPendingFreeze(selected)}>Freeze Account</button>
+            )}
           </div>
         </Modal>
       )}
@@ -171,6 +192,30 @@ function AdminMembers({ members, setMembers, plans, setTransactions, today, toas
             </Field>
             <button className="btn btn-signal btn-block" type="submit">Confirm Renewal — {peso((plans.find(p=>p.name===renewPlan)||{}).price||0)}</button>
           </form>
+        </Modal>
+      )}
+
+      {pendingFreeze && (
+        <Modal title="Freeze Account?" onClose={()=>setPendingFreeze(null)}>
+          <p style={{fontSize:13, color:'var(--steel)', marginBottom:14}}>
+            You're about to freeze <b>{pendingFreeze.name}</b>. They won't be able to check in or renew until unfrozen.
+          </p>
+          <div style={{display:'flex', gap:8, justifyContent:'flex-end'}}>
+            <button className="btn btn-outline" type="button" onClick={()=>setPendingFreeze(null)}>Cancel</button>
+            <button className="btn btn-danger" type="button" onClick={applyFreeze}>Freeze</button>
+          </div>
+        </Modal>
+      )}
+
+      {pendingUnfreeze && (
+        <Modal title="Unfreeze Account?" onClose={()=>setPendingUnfreeze(null)}>
+          <p style={{fontSize:13, color:'var(--steel)', marginBottom:14}}>
+            You're about to unfreeze <b>{pendingUnfreeze.name}</b>. Their access will be restored.
+          </p>
+          <div style={{display:'flex', gap:8, justifyContent:'flex-end'}}>
+            <button className="btn btn-outline" type="button" onClick={()=>setPendingUnfreeze(null)}>Cancel</button>
+            <button className="btn btn-signal" type="button" onClick={applyUnfreeze}>Unfreeze</button>
+          </div>
         </Modal>
       )}
     </>

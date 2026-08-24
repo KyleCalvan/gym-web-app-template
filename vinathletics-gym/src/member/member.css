@@ -9,3 +9,38 @@
 .metric-tile .sub{font-family:var(--font-mono);font-size:10px;color:var(--court);margin-top:2px;}
 .metric-tile.warn{border-left:4px solid var(--amber);}
 .metric-tile.ok{border-left:4px solid var(--court);}
+
+/* ===== Check-in calendar (Activity page) ===== */
+.cal-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.cal-title{font-family:var(--font-display);font-size:14px;text-transform:uppercase;letter-spacing:.5px;font-weight:600;}
+.check-calendar{
+  display:grid;grid-template-columns:repeat(7,1fr);gap:6px;
+  background:var(--paper);border:2px solid var(--ink);border-radius:4px;padding:10px;
+}
+.check-calendar .cal-head{
+  font-family:var(--font-mono);font-size:10px;letter-spacing:1px;text-transform:uppercase;
+  color:var(--steel);text-align:center;padding-bottom:4px;
+}
+.check-calendar .cal-cell{
+  aspect-ratio:1/1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  border:1.5px solid var(--line);border-radius:3px;background:var(--surface);
+  font-family:var(--font-mono);font-size:12px;color:var(--ink);position:relative;padding:0;
+  transition:border-color .15s ease, background-color .15s ease;
+}
+.check-calendar .cal-cell.empty{background:transparent;border-color:transparent;}
+.check-calendar .cal-cell .cal-day{line-height:1;}
+.check-calendar .cal-cell .cal-dot{
+  width:6px;height:6px;border-radius:50%;background:var(--court);margin-top:4px;display:block;
+}
+.check-calendar .cal-cell.checked{
+  background:var(--court);color:#fff;border-color:var(--ink);
+}
+.check-calendar .cal-cell.checked .cal-dot{background:#fff;}
+.check-calendar .cal-cell.today{outline:2px solid var(--signal);outline-offset:-2px;}
+.check-calendar .cal-cell:hover{border-color:var(--signal);}
+.cal-legend{
+  display:flex;align-items:center;gap:8px;margin-top:10px;
+  font-family:var(--font-mono);font-size:10.5px;color:var(--steel);
+  letter-spacing:.5px;text-transform:uppercase;
+}
+.cal-legend .cal-legend-dot{width:8px;height:8px;border-radius:50%;background:var(--court);display:inline-block;}

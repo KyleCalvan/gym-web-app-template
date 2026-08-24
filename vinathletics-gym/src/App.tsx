@@ -16,16 +16,21 @@ import {
   SESSIONS,
   PROMOTIONS,
   STAFF,
+  ADMINS,
   NOTIFICATIONS,
+  SEED_AUDIT_LOG,
+  SEED_SESSIONS,
 } from './data.ts';
 import { ADMIN_NAV, ADMIN_VIEWS } from './admin';
 import { STAFF_NAV, STAFF_VIEWS } from './staff';
 import { TRAINER_NAV, TRAINER_VIEWS } from './trainer';
 import { MEMBER_NAV, MEMBER_VIEWS, NotificationsModal } from './member';
+import { SUPERADMIN_NAV, SUPERADMIN_VIEWS } from './superadmin';
 import { dur, ease } from './motion.tsx';
 import type {
-  Member, NavSection, Notification, NotifPrefs, Plan, Promotion, Role, Session,
-  Staff, Trainer, Transaction, ViewProps, CheckIns,
+  ActiveSession, Admin, AuditLogEntry, AuditLevel, CheckInRecord, Member, NavSection,
+  Notification, NotifPrefs, Plan, Promotion, Role, Session, Staff, Trainer,
+  Transaction, ViewProps, CheckIns,
 } from './types.ts';
 
 const NAV_BY_ROLE: Record<Role, NavSection[]> = {
@@ -33,18 +38,49 @@ const NAV_BY_ROLE: Record<Role, NavSection[]> = {
   staff: STAFF_NAV,
   trainer: TRAINER_NAV,
   member: MEMBER_NAV,
+  superadmin: SUPERADMIN_NAV,
 };
 
 const VIEWS: Record<Role, Record<string, ComponentType<ViewProps>>> = {
-  admin:   ADMIN_VIEWS   as unknown as Record<string, ComponentType<ViewProps>>,
-  staff:   STAFF_VIEWS   as unknown as Record<string, ComponentType<ViewProps>>,
-  trainer: TRAINER_VIEWS as unknown as Record<string, ComponentType<ViewProps>>,
-  member:  MEMBER_VIEWS  as unknown as Record<string, ComponentType<ViewProps>>,
+  admin:      ADMIN_VIEWS      as unknown as Record<string, ComponentType<ViewProps>>,
+  staff:      STAFF_VIEWS      as unknown as Record<string, ComponentType<ViewProps>>,
+  trainer:    TRAINER_VIEWS    as unknown as Record<string, ComponentType<ViewProps>>,
+  member:     MEMBER_VIEWS     as unknown as Record<string, ComponentType<ViewProps>>,
+  superadmin: SUPERADMIN_VIEWS as unknown as Record<string, ComponentType<ViewProps>>,
 };
 
-const SEARCHABLE_ROLES: Role[] = ['admin', 'staff'];
+const SEARCHABLE_ROLES: Role[] = ['admin', 'staff', 'superadmin'];
 
 const today = (): string => new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+
+const toISODate = (d: Date): string => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+};
+
+// Deterministic seed: produces 8-12 check-ins in the last 28 days for a given memberId.
+const seedCheckIns = (memberId: string): CheckInRecord[] => {
+  const seed = memberId.length + (memberId.charCodeAt(0) || 0);
+  const count = 8 + (seed % 5);
+  const out: CheckInRecord[] = [];
+  const now = new Date();
+  // Use a stable pattern so dates don't shift every render.
+  const offsets = [0, 2, 4, 5, 7, 9, 11, 13, 14, 16, 18, 20, 22, 24, 26];
+  const times = ['06:42', '07:15', '08:00', '17:30', '18:10', '19:00', '20:05'];
+  for (let i = 0; i < count && i < offsets.length; i++) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - offsets[i] - ((seed + i) % 3));
+    out.push({
+      id: `CKI-${memberId}-${i}`,
+      memberId,
+      date: toISODate(d),
+      time: times[(seed + i) % times.length],
+    });
+  }
+  return out;
+};
 
 export default function App() {
   const [members, setMembers]               = useState<Member[]>(() => [...MEMBERS]);
@@ -54,11 +90,18 @@ export default function App() {
   const [sessions, setSessions]             = useState<Session[]>(() => [...SESSIONS]);
   const [promotions, setPromotions]         = useState<Promotion[]>(() => [...PROMOTIONS]);
   const [staff, setStaff]                   = useState<Staff[]>(() => [...STAFF]);
+  const [admins, setAdmins]                 = useState<Admin[]>(() => [...ADMINS]);
+  const [auditLog, setAuditLog]             = useState<AuditLogEntry[]>(() => [...SEED_AUDIT_LOG]);
+  const [activeSessions, setActiveSessions] = useState<ActiveSession[]>(() => [...SEED_SESSIONS]);
   const [notifications, setNotifications]   = useState<Notification[]>(() => NOTIFICATIONS.map((n) => ({ ...n })));
   const [bookings, setBookings]             = useState<Session[]>(() => SESSIONS.filter((s) => s.member === CURRENT.member.name && s.status !== 'Cancelled'));
   const [currentUserId, setCurrentUserId]   = useState<string | null>(null);
   const [checkIns, setCheckIns]             = useState<CheckIns>({ count: 86, today: today() });
+  const [checkInHistory, setCheckInHistory] = useState<CheckInRecord[]>(() => seedCheckIns('M-1042'));
   const [notifPrefs, setNotifPrefs]         = useState<NotifPrefs>({ email: true, sms: false, reminders: true, promos: false });
+
+  // Current superadmin session id (used by Sessions view to exclude self).
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
 
   const [route, setRoute]                   = useState<'landing' | '/login' | 'app'>('landing');
   const [loginFlow, setLoginFlow]           = useState<{ role: Role; tab: 'login' | 'register' }>({ role: 'member', tab: 'login' });
@@ -88,6 +131,23 @@ export default function App() {
     }
   };
 
+  // Audit-log writer — caps in-memory log at 500 entries to keep memory bounded.
+  const addAudit = (level: AuditLevel, action: string, details?: string) => {
+    setAuditLog((prev) => {
+      const entry: AuditLogEntry = {
+        id: 'LOG-' + (prev.length + 1000),
+        at: new Date().toISOString(),
+        level,
+        actor: role === 'superadmin' ? CURRENT.superadmin.name : CURRENT[role].name,
+        actorRole: role,
+        action,
+        details,
+      };
+      const next = [entry, ...prev];
+      return next.length > 500 ? next.slice(0, 500) : next;
+    });
+  };
+
   const handleLogin = (r: Role, userId?: string) => {
     setRole(r);
     setView('dashboard');
@@ -98,9 +158,23 @@ export default function App() {
     else setCurrentUserId(null);
     setBookings(SESSIONS.filter((s) => s.member === CURRENT[r].name && s.status !== 'Cancelled'));
     setNotifications(NOTIFICATIONS.map((n) => ({ ...n })));
+
+    // Audit + active session registration.
+    const name = CURRENT[r].name;
+    addAudit('info', 'Logged in', name);
+    const sessionId = 'SESS-' + Date.now();
+    setCurrentSessionId(sessionId);
+    setActiveSessions((prev) => [
+      ...prev.filter((s) => s.userId !== (userId || name)),
+      { id: sessionId, userId: userId || name, userName: name, role: r, loginAt: new Date().toISOString(), lastActiveAt: new Date().toISOString() },
+    ]);
   };
 
   const handleLogout = () => {
+    const name = CURRENT[role].name;
+    addAudit('info', 'Logged out', name);
+    setActiveSessions((prev) => prev.filter((s) => s.userName !== name));
+    if (currentSessionId) setCurrentSessionId(null);
     setLoggedIn(false);
     setView('dashboard');
     setCurrentUserId(null);
@@ -108,6 +182,9 @@ export default function App() {
   };
 
   const handleSwitchRole = (r: Role) => {
+    const fromName = CURRENT[role].name;
+    const toName = CURRENT[r].name;
+    addAudit('warn', 'Role switched', `${fromName} → ${toName}`);
     setRole(r);
     setView('dashboard');
     if (r === 'member') setCurrentUserId('M-1042');
@@ -172,7 +249,7 @@ export default function App() {
         bell={role === 'member' ? { count: unread, onClick: () => setShowNotifModal(true) } : null}
       />
       <div>
-        <Topbar role={role} view={view} />
+        <Topbar role={role} view={view} onNav={handleNav} />
         <div className="content">
           <AnimatePresence mode="wait">
             <motion.div
@@ -191,13 +268,19 @@ export default function App() {
                 sessions={sessions} setSessions={setSessions}
                 promotions={promotions} setPromotions={setPromotions}
                 staff={staff} setStaff={setStaff}
+                admins={admins} setAdmins={setAdmins}
                 notifications={notifications} setNotifications={setNotifications}
                 bookings={bookings} setBookings={setBookings}
                 currentUserId={currentUserId}
                 checkIns={checkIns} setCheckIns={setCheckIns}
+                checkInHistory={checkInHistory} setCheckInHistory={setCheckInHistory}
                 notifPrefs={notifPrefs} setNotifPrefs={setNotifPrefs}
+                auditLog={auditLog} setAuditLog={setAuditLog}
+                activeSessions={activeSessions} setActiveSessions={setActiveSessions}
+                currentSessionId={currentSessionId}
                 toast={fireToast}
                 today={today()}
+                addAudit={addAudit}
               />
             </motion.div>
           </AnimatePresence>

@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Badge, BarChart, Table, TabbedCard, Modal, Field } from '../shared';
 import BookingCheckoutModal from './BookingCheckoutModal.tsx';
 
-function MemberDashboard({ members, sessions, bookings, currentUserId, plans, onNav, toast }){
+function MemberDashboard({ members, sessions, bookings, currentUserId, plans, onNav, toast, checkInHistory }){
   const me = members.find(m => m.id === currentUserId) || members[0];
   const upcoming = bookings.length > 0 ? bookings : sessions.filter(s => s.member === (me?.name || 'Juan Dela Cruz')).slice(0, 3);
   const [showBook, setShowBook] = useState(false);
@@ -33,6 +33,39 @@ function MemberDashboard({ members, sessions, bookings, currentUserId, plans, on
     setEditingMetrics(false);
     toast('Metrics updated — BMI ' + (w / Math.pow(h/100, 2)).toFixed(1));
   };
+
+  // Real data: this month's check-ins + session count.
+  const myId = me?.id || 'M-1042';
+  const monthCheckIns = (checkInHistory || []).filter(r => {
+    if (r.memberId !== myId) return false;
+    const now = new Date();
+    const ym = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+    return r.date.startsWith(ym);
+  }).length;
+  const monthCheckPct = Math.min(100, Math.round((monthCheckIns / 20) * 100));
+  const mySessionsCount = sessions.filter(s => s.member === (me?.name || 'Juan Dela Cruz')).length;
+  const sessionGoal = 10;
+  const sessionPct = Math.min(100, Math.round((mySessionsCount / sessionGoal) * 100));
+
+  // Weekly chart derived from real check-ins.
+  const weeklyData = (() => {
+    const now = new Date();
+    const buckets = [0, 0, 0, 0];
+    (checkInHistory || []).forEach(r => {
+      if (r.memberId !== myId) return;
+      const d = new Date(r.date);
+      const diffDays = Math.floor((now - d) / (1000 * 60 * 60 * 24));
+      if (diffDays < 0 || diffDays > 28) return;
+      const idx = Math.min(3, Math.floor(diffDays / 7));
+      buckets[idx]++;
+    });
+    return [
+      { d: 'Wk1', v: buckets[0] },
+      { d: 'Wk2', v: buckets[1] },
+      { d: 'Wk3', v: buckets[2] },
+      { d: 'Wk4', v: buckets[3] },
+    ];
+  })();
 
   return (
     <>
@@ -85,16 +118,16 @@ function MemberDashboard({ members, sessions, bookings, currentUserId, plans, on
           </div>
           <hr style={{border:'none', borderTop:'1px solid var(--line)', margin:'14px 0'}}/>
           <div style={{marginBottom:12}}>
-            <div style={{display:'flex', justifyContent:'space-between', fontSize:12, marginBottom:5}}><span>Monthly check-in goal</span><span className="mono">18/20</span></div>
-            <div className="progress-bar"><div style={{width:'90%'}}></div></div>
+            <div style={{display:'flex', justifyContent:'space-between', fontSize:12, marginBottom:5}}><span>Monthly check-in goal</span><span className="mono">{monthCheckIns}/20 ({monthCheckPct}%)</span></div>
+            <div className="progress-bar"><div style={{width:`${monthCheckPct}%`}}></div></div>
           </div>
           <div>
-            <div style={{display:'flex', justifyContent:'space-between', fontSize:12, marginBottom:5}}><span>PT sessions used</span><span className="mono">6/10</span></div>
-            <div className="progress-bar"><div style={{width:'60%'}}></div></div>
+            <div style={{display:'flex', justifyContent:'space-between', fontSize:12, marginBottom:5}}><span>PT sessions used</span><span className="mono">{mySessionsCount}/{sessionGoal} ({sessionPct}%)</span></div>
+            <div className="progress-bar"><div style={{width:`${sessionPct}%`}}></div></div>
           </div>
         </TabbedCard>
         <TabbedCard label="Activity" title="Activity This Month">
-          <BarChart data={[{d:'Wk1',v:5},{d:'Wk2',v:7},{d:'Wk3',v:4},{d:'Wk4',v:6}]} valueKey="v" labelKey="d" />
+          <BarChart data={weeklyData} valueKey="v" labelKey="d" />
         </TabbedCard>
       </div>
 

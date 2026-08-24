@@ -21,10 +21,11 @@ interface RoleCred {
 }
 
 const ROLE_CREDS: Record<Role, RoleCred> = {
-  member:  { email: 'member@vinathletics.gym',  password: 'member123',  label: 'Member',  hint: 'Demo: member@vinathletics.gym / member123' },
-  staff:   { email: 'staff@vinathletics.gym',   password: 'staff123',   label: 'Staff',   hint: 'Demo: staff@vinathletics.gym / staff123' },
-  trainer: { email: 'trainer@vinathletics.gym', password: 'trainer123', label: 'Trainer', hint: 'Demo: trainer@vinathletics.gym / trainer123' },
-  admin:   { email: 'admin@vinathletics.gym',   password: 'admin123',   label: 'Admin',   hint: 'Demo: admin@vinathletics.gym / admin123' },
+  member:     { email: 'member@vinathletics.gym',     password: 'member123',  label: 'Member',      hint: 'Demo: member@vinathletics.gym / member123' },
+  staff:      { email: 'staff@vinathletics.gym',      password: 'staff123',   label: 'Staff',       hint: 'Demo: staff@vinathletics.gym / staff123' },
+  trainer:    { email: 'trainer@vinathletics.gym',    password: 'trainer123', label: 'Trainer',     hint: 'Demo: trainer@vinathletics.gym / trainer123' },
+  admin:      { email: 'admin@vinathletics.gym',      password: 'admin123',   label: 'Admin',       hint: 'Demo: admin@vinathletics.gym / admin123' },
+  superadmin: { email: 'superadmin@vinathletics.gym', password: 'super123',   label: 'Super Admin', hint: 'Demo: superadmin@vinathletics.gym / super123' },
 };
 
 export interface LoginPageProps {
@@ -91,6 +92,7 @@ export default function LoginPage({
     onLogin('member', id);
   };
 
+
   const item = (i: number) => ({
     initial: { opacity: 0, y: 8 },
     animate: { opacity: 1, y: 0 },
@@ -116,6 +118,7 @@ export default function LoginPage({
             <li><b>Staff</b> — front desk, point of sale, day-to-day ops.</li>
             <li><b>Trainer</b> — assigned sessions and availability.</li>
             <li><b>Admin</b> — full access to members, plans, reports, promotions.</li>
+            <li><b>Super Admin</b> — user management, audit logs, backups, sessions.</li>
           </ul>
         </motion.div>
 
@@ -125,9 +128,9 @@ export default function LoginPage({
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: dur.slow, ease: ease.out }}
         >
-          {/* Role selector — 4 roles (Member / Staff / Trainer / Admin) */}
+          {/* Role selector — 5 roles (Member / Staff / Trainer / Admin / Super Admin) */}
           <div className="role-grid" style={{ marginBottom: 18 }}>
-            {(['member','staff','trainer','admin'] as const).map((r) => (
+            {(['member','staff','trainer','admin','superadmin'] as const).map((r) => (
               <div
                 key={r}
                 className={"role-pick" + (role === r ? ' active' : '')}

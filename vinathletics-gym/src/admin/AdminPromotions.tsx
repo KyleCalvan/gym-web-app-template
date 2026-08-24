@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { useState } from 'react';
 import { StatTile, Badge, TabbedCard, Modal, Field, TextInput, Select } from '../shared';
+import { onPickImage } from '../shared/imageUpload.ts';
 
 const formatDate = (iso) => {
   if (!iso) return '';
@@ -9,21 +10,7 @@ const formatDate = (iso) => {
   return d.toLocaleDateString('en-US', {month:'short', day:'2-digit', year:'numeric'});
 };
 
-const readFileAsDataUrl = (file) => new Promise((resolve, reject) => {
-  if (!file.type.startsWith('image/')) { reject(new Error('Please choose an image file.')); return; }
-  if (file.size > 1.5 * 1024 * 1024) { reject(new Error('Image must be under 1.5 MB.')); return; }
-  const fr = new FileReader();
-  fr.onload = () => resolve(fr.result);
-  fr.onerror = () => reject(new Error('Could not read file.'));
-  fr.readAsDataURL(file);
-});
-
-const onPickImage = async (file, setter, toast) => {
-  try { const url = await readFileAsDataUrl(file); setter(url); }
-  catch (err) { toast(err.message); }
-};
-
-function AdminPromotions({ promotions, setPromotions, plans, toast }){
+function AdminPromotions({ promotions, setPromotions, plans, toast, addAudit }){
   const [form, setForm] = useState({
     title:'', discountType:'Percentage', discountValue:'', validFrom:'', validUntil:'',
     applicablePlan:'Any Plan', description:'', maxRedemptions:'', minSpend:'', code:'',
@@ -61,6 +48,7 @@ function AdminPromotions({ promotions, setPromotions, plans, toast }){
     };
     setPromotions(prev => [...prev, newPromo]);
     toast('Promotion created — ' + newPromo.title);
+    addAudit?.('info', 'Promotion created', newPromo.title + ' (' + id + ')');
     setForm({title:'', discountType:'Percentage', discountValue:'', validFrom:'', validUntil:'', applicablePlan:'Any Plan', description:'', maxRedemptions:'', minSpend:'', code:'', imageUrl:''});
     setShowCreate(false);
   };
@@ -73,6 +61,7 @@ function AdminPromotions({ promotions, setPromotions, plans, toast }){
     e.preventDefault();
     setPromotions(prev => prev.map(p => p.id===editing.id ? {...p, ...editForm} : p));
     toast('Promotion updated — ' + editForm.title);
+    addAudit?.('info', 'Promotion updated', editForm.title + ' (' + editing.id + ')');
     setEditing(null); setEditForm(null);
   };
 
@@ -83,6 +72,7 @@ function AdminPromotions({ promotions, setPromotions, plans, toast }){
     const nextStatus = pubForm.action === 'Publish' ? 'Published' : 'Draft';
     setPromotions(prev => prev.map(p => p.id===pubForm.promoId ? {...p, status:nextStatus} : p));
     toast(pubForm.action + ' applied to ' + target.title);
+    addAudit?.('info', pubForm.action === 'Publish' ? 'Promotion published' : 'Promotion unpublished', target.title);
   };
 
   return (

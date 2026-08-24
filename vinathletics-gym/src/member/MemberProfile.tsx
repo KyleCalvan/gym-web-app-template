@@ -1,9 +1,9 @@
 // @ts-nocheck
 import { useState } from 'react';
-import { TabbedCard, Field, TextInput } from '../shared';
-import { INITIALS } from '../data.ts';
+import { Avatar, Badge, TabbedCard, Field, TextInput } from '../shared';
+import { onPickImage } from '../shared/imageUpload.ts';
 
-function MemberProfile({ members, setMembers, currentUserId, toast }){
+function MemberProfile({ members, setMembers, currentUserId, toast, addAudit }){
   const me = members.find(m => m.id === currentUserId) || members[0];
   const [info, setInfo] = useState({
     name: me?.name || '',
@@ -16,14 +16,49 @@ function MemberProfile({ members, setMembers, currentUserId, toast }){
     e.preventDefault();
     setMembers(prev => prev.map(m => m.id === me.id ? {...m, ...info} : m));
     toast('Profile updated');
+    addAudit?.('info', 'Profile updated', me?.id || 'member');
   };
+
+  const handleAvatarFile = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    onPickImage(file, url => {
+      setMembers(prev => prev.map(m => m.id === me.id ? {...m, avatarUrl: url} : m));
+      toast('Photo updated');
+      addAudit?.('info', 'Profile photo updated', me?.id || 'member');
+    }, msg => toast(msg));
+    e.target.value = '';
+  };
+
+  const isFrozen = me?.status === 'Frozen';
 
   return (
     <div className="grid grid-1-2">
       <TabbedCard label="Profile" title={me?.name || 'Member'}>
         <div style={{textAlign:'center', marginBottom:14}}>
-          <span className="avatar-sm" style={{width:64, height:64, fontSize:20}}>{INITIALS(me?.name || 'JD')}</span>
+          <Avatar src={me?.avatarUrl} name={me?.name || 'Member'} size={64} />
+          <div style={{marginTop:10}}>
+            <button
+              type="button"
+              className="btn btn-outline btn-sm"
+              onClick={() => document.getElementById('member-avatar-input')?.click()}
+            >
+              Change Photo
+            </button>
+            <input
+              id="member-avatar-input"
+              type="file"
+              accept="image/*"
+              style={{display:'none'}}
+              onChange={handleAvatarFile}
+            />
+          </div>
         </div>
+        {isFrozen && (
+          <div style={{padding:'8px 10px', background:'var(--paper)', border:'1.5px solid var(--amber)', borderRadius:3, fontSize:12, color:'var(--steel)', marginBottom:10}}>
+            <Badge status="Frozen" /> &nbsp;Account frozen — admin must unfreeze to resume activity.
+          </div>
+        )}
         <div style={{fontSize:12.5}}>
           <div className="eyebrow">Member ID</div><p className="mono">{me?.id || 'M-1042'}</p>
           <div className="eyebrow">Plan</div><p>{me?.plan || 'Premium'}</p>

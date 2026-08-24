@@ -1,9 +1,8 @@
 // @ts-nocheck
 import { useState } from 'react';
-import { TabbedCard, Table, Badge, Modal, Field, TextInput, Select } from '../shared';
-import { INITIALS } from '../data.ts';
+import { TabbedCard, Table, Badge, Modal, Field, TextInput, Select, Avatar } from '../shared';
 
-function StaffMembers({ members, setMembers, plans, setCheckIns, today, toast }) {
+function StaffMembers({ members, setMembers, plans, setCheckIns, today, toast, addAudit }) {
   const [q, setQ] = useState('');
   const [statusF, setStatusF] = useState('All');
   const [showRegister, setShowRegister] = useState(false);
@@ -15,13 +14,16 @@ function StaffMembers({ members, setMembers, plans, setCheckIns, today, toast })
     const id = 'M-' + (1042 + members.length);
     setMembers(prev => [...prev, {...reg, id, status:'Active', joined: today}]);
     toast('Member registered — ' + reg.name + ' (' + id + ')');
+    addAudit?.('info', 'Member registered', reg.name + ' (' + id + ')');
     setReg({name:'', email:'', phone:'', plan:'Premium'});
     setShowRegister(false);
   };
 
   const checkIn = (m) => {
+    if (m.status === 'Frozen') { toast('Frozen accounts cannot check in'); return; }
     setCheckIns(c => ({...c, count: c.count + 1}));
     toast(m.name + ' checked in');
+    addAudit?.('info', 'Member checked in', m.name + ' (' + m.id + ')');
   };
 
   const filtered = members.filter(m =>
@@ -40,9 +42,18 @@ function StaffMembers({ members, setMembers, plans, setCheckIns, today, toast })
         </div>
         <Table columns={['Member','Plan','Status','Joined','']} rows={filtered} renderRow={m=>(
           <tr key={m.id}>
-            <td><span className="avatar-sm">{INITIALS(m.name)}</span>{m.name}<div className="mono" style={{fontSize:10.5, color:'var(--steel)'}}>{m.id}</div></td>
+            <td><Avatar src={m.avatarUrl} name={m.name} />{m.name}<div className="mono" style={{fontSize:10.5, color:'var(--steel)'}}>{m.id}</div></td>
             <td>{m.plan}</td><td><Badge status={m.status}/></td><td className="mono">{m.joined}</td>
-            <td><button className="btn btn-ghost btn-sm" onClick={()=>checkIn(m)}>Check In</button></td>
+            <td>
+              <button
+                className="btn btn-ghost btn-sm"
+                onClick={()=>checkIn(m)}
+                disabled={m.status === 'Frozen'}
+                title={m.status === 'Frozen' ? 'Frozen accounts cannot check in' : ''}
+              >
+                Check In
+              </button>
+            </td>
           </tr>
         )} />
       </TabbedCard>

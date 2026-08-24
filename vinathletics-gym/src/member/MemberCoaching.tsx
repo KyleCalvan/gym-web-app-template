@@ -1,11 +1,11 @@
 // @ts-nocheck
 import { useState } from 'react';
-import { Badge, Table, TabbedCard, Modal, Field, TextInput } from '../shared';
-import { INITIALS, peso } from '../data.ts';
+import { Avatar, Badge, Table, TabbedCard, Modal, Field, TextInput } from '../shared';
+import { peso } from '../data.ts';
 import BookingCheckoutModal from './BookingCheckoutModal.tsx';
 import EditBookingModal from './EditBookingModal.tsx';
 
-function MemberCoaching({ bookings, setBookings, sessions, setSessions, setTransactions, trainers, setTrainers, currentUserId, members, today, toast }){
+function MemberCoaching({ bookings, setBookings, sessions, setSessions, setTransactions, trainers, setTrainers, currentUserId, members, today, toast, addAudit }){
   const [showBooking, setShowBooking] = useState(false);
   const [bookingTrainer, setBookingTrainer] = useState(null);
   const [editing, setEditing] = useState(null);
@@ -29,17 +29,20 @@ function MemberCoaching({ bookings, setBookings, sessions, setSessions, setTrans
       status: 'Paid',
     }, ...prev]);
     toast('Session booked and paid — ' + peso(amount));
+    addAudit?.('info', 'Session booked', trainer + ' — ' + peso(amount));
   };
 
   const saveEdit = (id, changes) => {
     setBookings(prev => prev.map(b => b.id===id ? {...b, ...changes} : b));
     setSessions(prev => prev.map(s => s.id===id ? {...s, ...changes} : s));
     toast('Booking updated');
+    addAudit?.('info', 'Booking updated', id);
   };
   const cancelBooking = (id) => {
     setBookings(prev => prev.map(b => b.id===id ? {...b, status:'Cancelled'} : b));
     setSessions(prev => prev.map(s => s.id===id ? {...s, status:'Cancelled'} : s));
     toast('Booking cancelled');
+    addAudit?.('warn', 'Booking cancelled', id);
   };
 
   const submitRating = () => {
@@ -66,7 +69,7 @@ function MemberCoaching({ bookings, setBookings, sessions, setSessions, setTrans
           {trainers.map(t=>(
             <div className="card" key={t.id}>
               <div style={{display:'flex', gap:10}}>
-                <span className="avatar-sm" style={{width:36,height:36}}>{INITIALS(t.name)}</span>
+                <Avatar src={t.avatarUrl} name={t.name} size={36} />
                 <div><b>{t.name}</b><div style={{fontSize:12, color:'var(--steel)'}}>{t.specialty}</div></div>
               </div>
               <div className="mono" style={{fontSize:11.5, color:'var(--steel)', marginTop:10}}>Next opening: Tomorrow, 7:00 AM · {peso(t.sessionPrice)}/session</div>

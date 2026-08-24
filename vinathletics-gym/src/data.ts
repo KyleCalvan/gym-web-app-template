@@ -1,6 +1,7 @@
 import type {
-  CurrentUser, DayDatum, LabeledDatum, Member, MonthDatum, Notification,
-  Plan, Promotion, Role, Session, Staff, Transaction, Trainer,
+  ActiveSession, Admin, AuditLogEntry, CurrentUser, DayDatum, LabeledDatum,
+  Member, MonthDatum, Notification, Plan, Promotion, Role, Session,
+  Staff, Transaction, Trainer,
 } from './types.ts';
 
 /* ===== Mock data ===== */
@@ -93,11 +94,35 @@ export const PROMOTIONS: Promotion[] = [
   { id: 'PROMO-04', title: 'Early Bird Membership', discountType: 'Percentage', discount: '15%',         validFrom: 'Sep 01, 2026', validUntil: 'Jan 31, 2027', plan: 'Basic, Premium', code: 'EARLY15', maxRedemptions: 300, redemptions: 0,   minSpend: 0,    status: 'Draft',     imageUrl: '/promo-4.png' },
 ];
 
+export const ADMINS: Admin[] = [
+  { id: 'SA-01', name: 'Andrea Cruz',     email: 'andrea.cruz@vinathletics.gym',    status: 'Active',   createdAt: 'Jan 15, 2024' },
+  { id: 'SA-02', name: 'Roberto Garcia',  email: 'roberto.garcia@vinathletics.gym', status: 'Active',   createdAt: 'Mar 02, 2025' },
+  { id: 'SA-03', name: 'Patricia Lim',    email: 'patricia.lim@vinathletics.gym',   status: 'Inactive', createdAt: 'Sep 08, 2022' },
+];
+
 export const CURRENT: Record<Role, CurrentUser> = {
-  admin:   { name: 'Admin User',     role: 'Administrator',   initials: 'AU' },
-  staff:   { name: 'Liza Manalo',    role: 'Front Desk Staff', initials: 'LM' },
-  trainer: { name: 'James Reyes',    role: 'Trainer',          initials: 'JR' },
-  member:  { name: 'Juan Dela Cruz', role: 'Premium Member',   initials: 'JD' },
+  admin:      { name: 'Admin User',     role: 'Administrator',      initials: 'AU' },
+  staff:      { name: 'Liza Manalo',    role: 'Front Desk Staff',   initials: 'LM' },
+  trainer:    { name: 'James Reyes',    role: 'Trainer',            initials: 'JR' },
+  member:     { name: 'Juan Dela Cruz', role: 'Premium Member',     initials: 'JD' },
+  superadmin: { name: 'Root Operator',  role: 'Super Administrator',initials: 'RO' },
 };
+
+export const SEED_AUDIT_LOG: AuditLogEntry[] = [
+  { id: 'LOG-001', at: '2026-08-25T08:42:00.000Z', level: 'info',  actor: 'System',          actorRole: 'superadmin', action: 'System startup',                 details: 'Daily service initialization' },
+  { id: 'LOG-002', at: '2026-08-25T09:03:12.000Z', level: 'info',  actor: 'Admin User',      actorRole: 'admin',      action: 'Member registered',              details: 'Maria Santos (M-1043)' },
+  { id: 'LOG-003', at: '2026-08-25T09:21:48.000Z', level: 'info',  actor: 'Admin User',      actorRole: 'admin',      action: 'Promotion published',            details: 'Bring a Friend — 30% off' },
+  { id: 'LOG-004', at: '2026-08-25T10:05:30.000Z', level: 'warn',  actor: 'Liza Manalo',     actorRole: 'staff',      action: 'Check-in rejected',              details: 'Miguel Ramos — account is Frozen' },
+  { id: 'LOG-005', at: '2026-08-25T10:48:09.000Z', level: 'info',  actor: 'Admin User',      actorRole: 'admin',      action: 'Trainer deactivated',            details: 'Sofia Lim' },
+  { id: 'LOG-006', at: '2026-08-25T11:15:22.000Z', level: 'error', actor: 'System',          actorRole: 'superadmin', action: 'Payment gateway timeout',        details: 'Retry queued — TXN-8822' },
+  { id: 'LOG-007', at: '2026-08-25T12:02:55.000Z', level: 'info',  actor: 'Juan Dela Cruz',  actorRole: 'member',     action: 'Logged in' },
+];
+
+export const SEED_SESSIONS: ActiveSession[] = [
+  { id: 'SESS-A1', userId: 'admin-1',     userName: 'Admin User',     role: 'admin',   loginAt: '2026-08-25T08:30:00.000Z', lastActiveAt: '2026-08-25T10:42:11.000Z' },
+  { id: 'SESS-A2', userId: 'staff-1',     userName: 'Liza Manalo',    role: 'staff',   loginAt: '2026-08-25T09:15:00.000Z', lastActiveAt: '2026-08-25T11:08:23.000Z' },
+  { id: 'SESS-A3', userId: 'trainer-1',   userName: 'James Reyes',    role: 'trainer', loginAt: '2026-08-25T07:00:00.000Z', lastActiveAt: '2026-08-25T10:33:54.000Z' },
+  { id: 'SESS-A4', userId: 'member-1042', userName: 'Juan Dela Cruz', role: 'member',  loginAt: '2026-08-25T11:55:00.000Z', lastActiveAt: '2026-08-25T12:01:09.000Z' },
+];
 
 export const peso = (n: number): string => '₱' + Number(n).toLocaleString('en-PH');

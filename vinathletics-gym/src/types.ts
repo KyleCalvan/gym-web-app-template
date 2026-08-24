@@ -1,7 +1,7 @@
 // Shared domain types. Single source of truth for the data shapes
 // used across the gym management dashboard.
 
-export type Role = 'admin' | 'staff' | 'trainer' | 'member';
+export type Role = 'admin' | 'staff' | 'trainer' | 'member' | 'superadmin';
 
 export type MemberStatus = 'Active' | 'Expiring' | 'Frozen' | 'Expired';
 export type TrainerStatus = 'Active' | 'On Leave' | 'Inactive';
@@ -19,6 +19,18 @@ export interface Member {
   plan: string;
   status: MemberStatus;
   joined: string;
+  avatarUrl?: string;
+}
+
+export type AdminStatus = 'Active' | 'Inactive';
+
+export interface Admin {
+  id: string;
+  name: string;
+  email: string;
+  status: AdminStatus;
+  createdAt: string;
+  avatarUrl?: string;
 }
 
 export interface TrainerReview {
@@ -36,6 +48,7 @@ export interface Trainer {
   status: TrainerStatus;
   sessionPrice: number;
   reviews: TrainerReview[];
+  avatarUrl?: string;
 }
 
 export interface Plan {
@@ -102,6 +115,7 @@ export interface Staff {
   email: string;
   phone: string;
   hireDate: string;
+  avatarUrl?: string;
 }
 
 export interface Notification {
@@ -116,6 +130,7 @@ export interface CurrentUser {
   name: string;
   role: string;
   initials: string;
+  avatarUrl?: string;
 }
 
 // Navigation
@@ -149,6 +164,34 @@ export interface CheckIns {
   today: string;
 }
 
+export interface CheckInRecord {
+  id: string;
+  memberId: string;
+  date: string;       // ISO yyyy-mm-dd
+  time: string;       // HH:MM
+}
+
+export type AuditLevel = 'info' | 'warn' | 'error';
+
+export interface AuditLogEntry {
+  id: string;
+  at: string;                 // ISO timestamp
+  level: AuditLevel;
+  actor: string;
+  actorRole: Role;
+  action: string;
+  details?: string;
+}
+
+export interface ActiveSession {
+  id: string;
+  userId: string;
+  userName: string;
+  role: Role;
+  loginAt: string;
+  lastActiveAt: string;
+}
+
 export interface NotifPrefs {
   email: boolean;
   sms: boolean;
@@ -177,6 +220,8 @@ export interface ViewProps {
   setPromotions: Setter<Promotion[]>;
   staff: Staff[];
   setStaff: Setter<Staff[]>;
+  admins: Admin[];
+  setAdmins: Setter<Admin[]>;
   notifications: Notification[];
   setNotifications: Setter<Notification[]>;
   bookings: Session[];
@@ -184,8 +229,16 @@ export interface ViewProps {
   currentUserId: string | null;
   checkIns: CheckIns;
   setCheckIns: Setter<CheckIns>;
+  checkInHistory: CheckInRecord[];
+  setCheckInHistory: Setter<CheckInRecord[]>;
   notifPrefs: NotifPrefs;
   setNotifPrefs: Setter<NotifPrefs>;
+  auditLog: AuditLogEntry[];
+  setAuditLog: Setter<AuditLogEntry[]>;
+  activeSessions: ActiveSession[];
+  setActiveSessions: Setter<ActiveSession[]>;
+  currentSessionId: string | null;
   toast: (msg: string) => void;
   today: string;
+  addAudit: (level: AuditLevel, action: string, details?: string) => void;
 }

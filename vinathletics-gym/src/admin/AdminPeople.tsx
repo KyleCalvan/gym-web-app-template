@@ -1,10 +1,9 @@
 // @ts-nocheck
 import { useState } from 'react';
-import { Badge, Table, TabbedCard, Modal, Field, TextInput, Select } from '../shared';
-import { INITIALS } from '../data.ts';
+import { Avatar, Badge, Table, TabbedCard, Modal, Field, TextInput, Select } from '../shared';
 import type { Staff, StaffRole, StaffShift, StaffStatus } from '../types.ts';
 
-function AdminPeople({ trainers, setTrainers, staff, setStaff, members, sessions, setSessions, toast }){
+function AdminPeople({ trainers, setTrainers, staff, setStaff, members, sessions, setSessions, toast, addAudit }){
   // ===== Trainer state =====
   const [editing, setEditing] = useState(null);
   const [editForm, setEditForm] = useState(null);
@@ -23,6 +22,7 @@ function AdminPeople({ trainers, setTrainers, staff, setStaff, members, sessions
     e.preventDefault();
     setTrainers(prev => prev.map(t => t.id===editing.id ? {...t, ...editForm, sessionPrice: Number(editForm.sessionPrice)} : t));
     toast('Trainer updated — ' + editForm.name);
+    addAudit?.('info', 'Trainer updated', editForm.name);
     setEditing(null); setEditForm(null);
   };
 
@@ -37,6 +37,7 @@ function AdminPeople({ trainers, setTrainers, staff, setStaff, members, sessions
     };
     setTrainers(prev => [...prev, newT]);
     toast('Trainer added — ' + newT.name);
+    addAudit?.('info', 'Trainer registered', newT.name + ' (' + id + ')');
     setAdding(false);
     setAddForm({name:'', specialty:'', certs:'', sessionPrice:'900', status:'Active'});
   };
@@ -53,6 +54,7 @@ function AdminPeople({ trainers, setTrainers, staff, setStaff, members, sessions
     const id = 'S-' + (401 + sessions.length);
     setSessions(prev => [...prev, {id, member: member.name, trainer: trainer.name, date, time, type:'Custom', status:'Pending', paid:false, amount: trainer.sessionPrice}]);
     toast('Session assigned — ' + trainer.name + ' ↔ ' + member.name);
+    addAudit?.('info', 'Session assigned', trainer.name + ' ↔ ' + member.name);
     setAssignForm({trainerId:trainers[0]?.id||'', memberId:members[0]?.id||'', dateTime:''});
   };
 
@@ -71,6 +73,7 @@ function AdminPeople({ trainers, setTrainers, staff, setStaff, members, sessions
     if (!staffEditForm) return;
     setStaff(prev => prev.map(s => s.id === staffEditForm.id ? staffEditForm : s));
     toast('Staff updated — ' + staffEditForm.name);
+    addAudit?.('info', 'Staff updated', staffEditForm.name);
     setStaffEditing(null); setStaffEditForm(null);
   };
   const submitStaffAdd = (e: React.FormEvent) => {
@@ -89,17 +92,20 @@ function AdminPeople({ trainers, setTrainers, staff, setStaff, members, sessions
     };
     setStaff(prev => [...prev, newS]);
     toast('Staff added — ' + newS.name);
+    addAudit?.('info', 'Staff registered', newS.name + ' (' + id + ')');
     setStaffAdding(false);
     setStaffAddForm({name:'', role:'Front Desk', shift:'Morning', email:'', phone:'', status:'Active'});
   };
   const removeStaff = (s: Staff) => {
     setStaff(prev => prev.filter(x => x.id !== s.id));
     toast('Staff removed — ' + s.name);
+    addAudit?.('warn', 'Staff removed', s.name + ' (' + s.id + ')');
     setPendingStaffRemove(null);
   };
   const removeTrainer = (t) => {
     setTrainers(prev => prev.map(x => x.id === t.id ? { ...x, status: 'Inactive' } : x));
     toast('Trainer deactivated — ' + t.name);
+    addAudit?.('warn', 'Trainer deactivated', t.name);
     setPendingTrainerRemove(null);
   };
 
@@ -112,7 +118,7 @@ function AdminPeople({ trainers, setTrainers, staff, setStaff, members, sessions
             <div className="card" key={t.id}>
               <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start'}}>
                 <div style={{display:'flex', gap:10}}>
-                  <span className="avatar-sm" style={{width:38,height:38,fontSize:13}}>{INITIALS(t.name)}</span>
+                  <Avatar src={t.avatarUrl} name={t.name} size={38} />
                   <div>
                     <b>{t.name}</b>
                     <div style={{fontSize:12, color:'var(--steel)'}}>{t.specialty}</div>
@@ -169,7 +175,7 @@ function AdminPeople({ trainers, setTrainers, staff, setStaff, members, sessions
               <div className="card" key={s.id}>
                 <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start'}}>
                   <div style={{display:'flex', gap:10}}>
-                    <span className="avatar-sm" style={{width:38,height:38,fontSize:13}}>{INITIALS(s.name)}</span>
+                    <Avatar src={s.avatarUrl} name={s.name} size={38} />
                     <div>
                       <b>{s.name}</b>
                       <div style={{fontSize:12, color:'var(--steel)'}}>{s.role} · {s.shift} shift</div>
