@@ -1,0 +1,38 @@
+/* ===== Sidebar (used only by Sidebar.tsx) ===== */
+
+.sidebar{background:var(--ink);color:var(--paper);padding:20px 0;position:sticky;top:0;height:100vh;overflow-y:auto;}
+.sidebar .brand{padding:0 20px 18px;color:var(--paper);border-bottom:1px solid #2C4038;margin-bottom:14px;}
+.sidebar .brand .brand-mark{background:var(--signal);color:var(--ink);}
+
+.nav-section{padding:0 14px;margin-bottom:14px;}
+.nav-section .head{font-family:var(--font-mono);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:#7E9186;padding:0 8px;margin-bottom:6px;}
+.nav-item{
+  display:flex;align-items:center;gap:10px;width:100%;text-align:left;
+  padding:9px 10px;border:none;background:transparent;color:#D6E0DA;
+  border-radius:2px;font-size:13px;margin-bottom:2px;
+}
+.nav-item .ic{width:18px;text-align:center;font-size:14px;}
+.nav-item:hover{background:#1E332B;color:#fff;}
+.nav-item.active{background:var(--signal);color:#fff;font-weight:600;}
+
+/* Bell button */
+.bell-btn{position:relative;border:2px solid var(--ink);background:var(--surface);border-radius:50%;width:38px;height:38px;display:flex;align-items:center;justify-content:center;font-size:15px;margin-right:10px;}
+.bell-btn .bell-dot{position:absolute;top:6px;right:7px;width:8px;height:8px;border-radius:50%;background:var(--signal);border:1.5px solid var(--surface);}
+
+/* Sidebar smart search + filters */
+.sidebar-search{padding:0 14px 14px;}
+.sidebar-search .ss-input-wrap{position:relative;margin-bottom:10px;}
+.sidebar-search input{
+  width:100%;padding:8px 10px 8px 28px;border-radius:3px;border:1.5px solid #2C4038;
+  background:#1E332B;color:var(--paper);font-size:12.5px;font-family:var(--font-body);
+}
+.sidebar-search input::placeholder{color:#7E9186;}
+.sidebar-search input:focus{border-color:var(--signal);outline:none;}
+.sidebar-search .ss-ic{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:#7E9186;font-size:12px;}
+.sidebar-search .ss-filters{display:flex;flex-wrap:wrap;gap:6px;}
+.sidebar-search .ss-chip{
+  font-family:var(--font-mono);font-size:10px;letter-spacing:.5px;text-transform:uppercase;
+  padding:4px 9px;border-radius:12px;border:1.5px solid #2C4038;background:transparent;color:#B9C7BF;
+}
+.sidebar-search .ss-chip.active{background:var(--signal);border-color:var(--signal);color:#fff;}
+.sidebar-search .ss-empty{color:#7E9186;font-size:11.5px;padding:6px 8px;font-family:var(--font-mono);}

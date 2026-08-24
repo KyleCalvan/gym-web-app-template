@@ -1,0 +1,36 @@
+/* ===== Login page (used only by LoginPage.tsx) ===== */
+
+.auth-wrap{max-width:1180px;margin:0 auto;padding:70px 40px 100px;display:grid;grid-template-columns:.9fr 1.1fr;gap:60px;align-items:start;}
+.auth-card{background:var(--surface);border:2px solid var(--ink);border-radius:4px;padding:34px;position:relative;box-shadow:var(--shadow-card);}
+.auth-tabs{display:flex;gap:0;margin:18px 0 22px;border:2px solid var(--ink);border-radius:3px;overflow:hidden;}
+.auth-tabs button{flex:1;padding:10px;border:none;background:var(--surface);font-family:var(--font-mono);font-size:12px;letter-spacing:1px;text-transform:uppercase;}
+.auth-tabs button.active{background:var(--ink);color:var(--signal);}
+
+.auth-page{min-height:100vh;background:var(--ink);display:flex;flex-direction:column;}
+.auth-page-nav{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:22px 40px;border-bottom:2px solid var(--ink);
+}
+.auth-page-nav .brand{color:var(--paper);}
+.auth-page-nav a{font-family:var(--font-mono);font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--paper);text-decoration:none;}
+.auth-page-nav a:hover{color:var(--signal);}
+.auth-page-body{
+  flex:1;display:grid;grid-template-columns:1fr 1fr;align-items:center;
+  max-width:1180px;margin:0 auto;padding:60px 40px;width:100%;gap:60px;
+}
+.auth-page-aside{color:var(--paper);}
+.auth-page-aside .eyebrow{color:#7E9186;}
+.auth-page-aside h2{font-size:clamp(28px,3.5vw,42px);text-transform:uppercase;margin:14px 0 16px;}
+.auth-page-aside p{color:#B9C7BF;font-size:15px;max-width:420px;line-height:1.55;margin:0 0 24px;}
+.auth-page-aside ul{list-style:none;padding:0;margin:0;color:#B9C7BF;font-size:13px;}
+.auth-page-aside ul li{padding:6px 0;border-top:1px solid #2C4038;}
+.auth-page-aside ul li:last-child{border-bottom:1px solid #2C4038;}
+
+.role-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px;}
+.role-pick{border:2px solid var(--line);background:var(--surface);padding:10px 4px;border-radius:3px;font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.5px;text-align:center;}
+.role-pick.active{border-color:var(--ink);background:var(--ink);color:var(--signal);}
+
+.side-note{color:var(--paper);}
+.side-note h2{font-size:30px;text-transform:uppercase;color:var(--paper);margin-bottom:14px;}
+.side-note p{color:#B9C7BF;font-size:14px;max-width:420px;}
+.auth-wrap-dark{background:var(--ink);}

@@ -1,0 +1,13 @@
+/* ===== Responsive media query (used across landing + app) ===== */
+
+@media (max-width:980px){
+  .app-shell{grid-template-columns:1fr;}
+  .sidebar{position:relative;height:auto;}
+  .landing-hero-inner, .auth-wrap{grid-template-columns:1fr;}
+  .auth-page-body{grid-template-columns:1fr;}
+  .promo-grid, .feature-strip, .grid-4, .trainers-grid, .contact-grid, .hero-cards-grid{grid-template-columns:repeat(2,1fr);}
+  .grid-3{grid-template-columns:repeat(2,1fr);}
+  .grid-2-1, .grid-1-2{grid-template-columns:1fr;}
+  .landing-nav{flex-wrap:wrap;gap:14px;}
+  .landing-nav-links{order:3;width:100%;justify-content:flex-start;gap:18px;}
+}

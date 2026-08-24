@@ -1,0 +1,11 @@
+/* ===== Member view extras (used by views/member.tsx) ===== */
+
+.metrics-tracker{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;}
+.metric-tile{
+  border:2px solid var(--ink);border-radius:3px;padding:10px 12px;background:var(--paper);
+}
+.metric-tile .lbl{font-family:var(--font-mono);font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--steel);}
+.metric-tile .val{font-family:var(--font-mono);font-size:20px;font-weight:600;margin-top:4px;}
+.metric-tile .sub{font-family:var(--font-mono);font-size:10px;color:var(--court);margin-top:2px;}
+.metric-tile.warn{border-left:4px solid var(--amber);}
+.metric-tile.ok{border-left:4px solid var(--court);}

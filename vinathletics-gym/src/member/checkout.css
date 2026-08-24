@@ -1,0 +1,17 @@
+/* ===== Checkout / POS / dashboard promo widget (used by views) ===== */
+
+.pay-method-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;}
+.pay-method{border:1.5px solid var(--line);border-radius:3px;padding:12px 8px;text-align:center;background:var(--surface);font-size:12px;}
+.pay-method.active{border-color:var(--ink);background:var(--paper);font-weight:700;}
+
+.checkout-summary{background:var(--paper);border:1px dashed var(--ink);border-radius:2px;padding:14px;margin-bottom:14px;font-size:12.5px;}
+.checkout-summary .row{display:flex;justify-content:space-between;padding:3px 0;}
+
+.success-check{width:56px;height:56px;border-radius:50%;background:var(--court-soft);color:var(--court);display:flex;align-items:center;justify-content:center;font-size:26px;margin:6px auto 14px;}
+
+.modal-tabs{display:flex;gap:0;border:1.5px solid var(--ink);border-radius:3px;overflow:hidden;margin-bottom:16px;}
+.modal-tabs button{flex:1;padding:8px;border:none;background:var(--surface);font-family:var(--font-mono);font-size:11px;letter-spacing:1px;text-transform:uppercase;}
+.modal-tabs button.active{background:var(--ink);color:var(--signal);}
+
+.promo-widget-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--line);font-size:12.5px;}
+.promo-widget-row:last-child{border-bottom:none;}

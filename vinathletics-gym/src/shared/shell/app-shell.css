@@ -1,0 +1,23 @@
+/* ===== App shell (used only by App.tsx) ===== */
+
+.app-shell{display:grid;grid-template-columns:238px 1fr;min-height:100vh;}
+
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px 28px;border-bottom:2px solid var(--ink);background:var(--surface);
+  position:sticky;top:0;z-index:5;
+}
+.topbar .path{font-family:var(--font-mono);font-size:11px;color:var(--steel);text-transform:uppercase;letter-spacing:1px;}
+.topbar h1{font-size:24px;text-transform:uppercase;}
+
+.role-pill{
+  display:flex;align-items:center;gap:10px;border:2px solid var(--ink);border-radius:20px;
+  padding:5px 14px 5px 5px;background:var(--surface);
+}
+.role-pill .av{width:28px;height:28px;border-radius:50%;background:var(--ink);color:var(--signal);
+  display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:12px;font-weight:700;}
+.role-pill .who{font-size:12.5px;}
+.role-pill .who b{display:block;font-size:12.5px;}
+.role-pill .who span{color:var(--steel);font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;}
+
+.content{padding:26px 28px 60px;max-width:1320px;}
