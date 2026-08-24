@@ -12,6 +12,7 @@
   padding:22px 40px;border-bottom:2px solid var(--ink);
 }
 .auth-page-nav .brand{color:var(--paper);}
+.auth-page-nav .brand .brand-mark-img{height:34px;width:auto;display:inline-block;border-radius:6px;background:var(--paper);padding:2px;vertical-align:middle;}
 .auth-page-nav a{font-family:var(--font-mono);font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--paper);text-decoration:none;}
 .auth-page-nav a:hover{color:var(--signal);}
 .auth-page-body{

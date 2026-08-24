@@ -3,6 +3,7 @@
 .sidebar{background:var(--ink);color:var(--paper);padding:20px 0;position:sticky;top:0;height:100vh;overflow-y:auto;}
 .sidebar .brand{padding:0 20px 18px;color:var(--paper);border-bottom:1px solid #2C4038;margin-bottom:14px;}
 .sidebar .brand .brand-mark{background:var(--signal);color:var(--ink);}
+.sidebar .brand .brand-mark-img{height:32px;width:auto;display:inline-block;border-radius:6px;background:var(--paper);padding:2px;vertical-align:middle;}
 
 .nav-section{padding:0 14px;margin-bottom:14px;}
 .nav-section .head{font-family:var(--font-mono);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:#7E9186;padding:0 8px;margin-bottom:6px;}

@@ -1,6 +1,6 @@
 import type {
   CurrentUser, DayDatum, LabeledDatum, Member, MonthDatum, Notification,
-  Plan, Promotion, Role, Session, Transaction, Trainer,
+  Plan, Promotion, Role, Session, Staff, Transaction, Trainer,
 } from './types.ts';
 
 /* ===== Mock data ===== */
@@ -22,6 +22,13 @@ export const TRAINERS: Trainer[] = [
   { id: 'T-02', name: 'Diane Cruz',  specialty: 'Yoga & Mobility',         certs: 'RYT-500',        rating: 4.8, sessionsWeek: 11, status: 'Active',   sessionPrice: 800,  reviews: [] },
   { id: 'T-03', name: 'Marco Villa', specialty: 'HIIT & Fat Loss',         certs: 'ACE-CPT',        rating: 4.7, sessionsWeek: 9,  status: 'Active',   sessionPrice: 850,  reviews: [] },
   { id: 'T-04', name: 'Sofia Lim',   specialty: 'Powerlifting',            certs: 'USAPL Coach',    rating: 5.0, sessionsWeek: 6,  status: 'On Leave', sessionPrice: 1100, reviews: [] },
+];
+
+export const STAFF: Staff[] = [
+  { id: 'S-01', name: 'Liza Manalo',  role: 'Front Desk', shift: 'Morning', status: 'Active',   email: 'liza.manalo@vinathletics.gym',   phone: '+63 917 555 1001', hireDate: 'Feb 12, 2025' },
+  { id: 'S-02', name: 'Andre Gomez',  role: 'Sales',      shift: 'Evening', status: 'Active',   email: 'andre.gomez@vinathletics.gym',  phone: '+63 918 555 1002', hireDate: 'May 04, 2025' },
+  { id: 'S-03', name: 'Rina Bautista',role: 'Manager',    shift: 'Morning', status: 'Active',   email: 'rina.bautista@vinathletics.gym',phone: '+63 919 555 1003', hireDate: 'Jan 20, 2024' },
+  { id: 'S-04', name: 'Josh Cruz',    role: 'Front Desk', shift: 'Night',   status: 'On Leave', email: 'josh.cruz@vinathletics.gym',    phone: '+63 920 555 1004', hireDate: 'Aug 17, 2025' },
 ];
 
 export const PLANS: Plan[] = [
@@ -80,10 +87,10 @@ export const NOTIFICATIONS: Notification[] = [
 ];
 
 export const PROMOTIONS: Promotion[] = [
-  { id: 'PROMO-01', title: 'New Member Special',    discountType: 'Percentage', discount: '20%',         validFrom: 'Jul 01, 2026', validUntil: 'Dec 31, 2026', plan: 'Any Plan',     code: 'NEWFIT20', maxRedemptions: 500, redemptions: 214, minSpend: 0,    status: 'Published' },
-  { id: 'PROMO-02', title: 'Personal Training BOGO',discountType: 'Bundle',     discount: 'Buy 10 Get 5', validFrom: 'Jun 01, 2026', validUntil: 'Nov 30, 2026', plan: 'Any Plan',     code: 'PTBOGO',   maxRedemptions: 200, redemptions: 87,  minSpend: 8000, status: 'Published' },
-  { id: 'PROMO-03', title: 'Bring a Friend',        discountType: 'Percentage', discount: '30%',         validFrom: 'Aug 01, 2026', validUntil: 'Oct 15, 2026', plan: 'Annual Plans', code: 'FRIEND30', maxRedemptions: 150, redemptions: 41,  minSpend: 0,    status: 'Published' },
-  { id: 'PROMO-04', title: 'Early Bird Membership', discountType: 'Percentage', discount: '15%',         validFrom: 'Sep 01, 2026', validUntil: 'Jan 31, 2027', plan: 'Basic, Premium', code: 'EARLY15', maxRedemptions: 300, redemptions: 0,   minSpend: 0,    status: 'Draft' },
+  { id: 'PROMO-01', title: 'New Member Special',    discountType: 'Percentage', discount: '20%',         validFrom: 'Jul 01, 2026', validUntil: 'Dec 31, 2026', plan: 'Any Plan',     code: 'NEWFIT20', maxRedemptions: 500, redemptions: 214, minSpend: 0,    status: 'Published', imageUrl: '/promo-1.jpg' },
+  { id: 'PROMO-02', title: 'Personal Training BOGO',discountType: 'Bundle',     discount: 'Buy 10 Get 5', validFrom: 'Jun 01, 2026', validUntil: 'Nov 30, 2026', plan: 'Any Plan',     code: 'PTBOGO',   maxRedemptions: 200, redemptions: 87,  minSpend: 8000, status: 'Published', imageUrl: '/promo-2.jpg' },
+  { id: 'PROMO-03', title: 'Bring a Friend',        discountType: 'Percentage', discount: '30%',         validFrom: 'Aug 01, 2026', validUntil: 'Oct 15, 2026', plan: 'Annual Plans', code: 'FRIEND30', maxRedemptions: 150, redemptions: 41,  minSpend: 0,    status: 'Published', imageUrl: '/promo-3.jpg' },
+  { id: 'PROMO-04', title: 'Early Bird Membership', discountType: 'Percentage', discount: '15%',         validFrom: 'Sep 01, 2026', validUntil: 'Jan 31, 2027', plan: 'Basic, Premium', code: 'EARLY15', maxRedemptions: 300, redemptions: 0,   minSpend: 0,    status: 'Draft',     imageUrl: '/promo-4.png' },
 ];
 
 export const CURRENT: Record<Role, CurrentUser> = {

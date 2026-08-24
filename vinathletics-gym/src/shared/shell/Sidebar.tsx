@@ -50,7 +50,7 @@ export default function Sidebar({
     <aside className="sidebar">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px 18px', borderBottom: '1px solid #2C4038', marginBottom: 14 }}>
         <div className="brand" style={{ padding: 0, border: 'none', margin: 0, color: 'var(--paper)' }}>
-          <span className="brand-mark">🏋</span> {brand}
+          <img src="/logo.jpg" alt="VinAthletics" className="brand-mark-img" /> {brand}
         </div>
         {bell && (
           <motion.button

@@ -5,7 +5,27 @@
   background:var(--surface);border:2px solid var(--ink);border-radius:4px;padding:20px;
   display:flex;flex-direction:column;gap:10px;position:relative;cursor:pointer;
   transition:transform .15s ease, box-shadow .15s ease;
+  overflow:hidden;
 }
+.resource-card .thumb{
+  height:200px;margin:-20px -20px 14px;border-radius:4px 4px 0 0;
+  background-size:cover;background-position:center;background-color:#2C4038;
+}
+@media (min-width: 768px){
+  .resource-card .thumb{ height:300px; }
+}
+
+/* Image drop zone (used in promotion create/edit modals) */
+.dropzone{
+  border:2px dashed var(--line);border-radius:4px;height:160px;
+  display:flex;align-items:center;justify-content:center;
+  background-color:var(--paper);background-size:cover;background-position:center;
+  color:var(--steel);font-size:12px;text-align:center;cursor:pointer;padding:14px;
+  transition:border-color .15s ease, background-color .15s ease;
+}
+.dropzone:hover, .dropzone.drag{border-color:var(--signal);background-color:var(--surface);}
+.dropzone-hint{font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.5px;font-size:11px;color:var(--steel);}
+.field-spacer{height:8px;}
 .resource-card:hover{transform:translate(-2px,-2px);box-shadow:4px 4px 0 var(--ink);}
 .resource-card .head{display:flex;justify-content:space-between;align-items:flex-start;}
 .resource-card .head .ttl{font-family:var(--font-display);font-size:16px;text-transform:uppercase;font-weight:600;}

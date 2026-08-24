@@ -1,9 +1,8 @@
 // @ts-nocheck
 import { motion } from 'framer-motion';
 import { dur, ease, stagger } from '../motion.tsx';
-import MembershipCard from './MembershipCard.tsx';
 
-function LandingHero({ heroRef, onHeroMove, onHeroLeave, cardX, cardY, onNavigate }) {
+function LandingHero({ onNavigate }) {
   const heroItem = (i) => ({
     initial: { opacity: 0, y: 10 },
     animate: { opacity: 1, y: 0 },
@@ -11,14 +10,10 @@ function LandingHero({ heroRef, onHeroMove, onHeroLeave, cardX, cardY, onNavigat
   });
 
   return (
-    <div
-      className="landing-hero"
-      ref={heroRef}
-      onMouseMove={onHeroMove}
-      onMouseLeave={onHeroLeave}
-    >
+    <div className="landing-hero">
       <div className="hero-blob hero-blob-1" />
       <div className="hero-blob hero-blob-2" />
+      <div className="hero-photo-bg" aria-hidden="true" />
       <div className="landing-hero-inner">
         <div>
           <motion.div className="eyebrow" style={{ marginBottom: 14 }} {...heroItem(0)}>
@@ -61,7 +56,6 @@ function LandingHero({ heroRef, onHeroMove, onHeroLeave, cardX, cardY, onNavigat
             <span className="stat"><span className="dot" /> 4.8★ Avg Rating</span>
           </motion.div>
         </div>
-        <MembershipCard cardX={cardX} cardY={cardY} />
       </div>
     </div>
   );

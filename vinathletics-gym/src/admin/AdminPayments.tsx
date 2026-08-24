@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { useState } from 'react';
-import { StatTile, Badge, Table, Modal, Field } from '../shared';
+import { StatTile, Badge, Table, Modal, Field, TabbedCard } from '../shared';
 import { peso } from '../data.ts';
 
 function AdminPayments({ transactions, setTransactions, today, toast }){

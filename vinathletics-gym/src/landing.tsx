@@ -1,7 +1,6 @@
 // @ts-nocheck
 import { useState, useRef, useEffect } from 'react';
 import type { RefObject } from 'react';
-import { useMotionValue, useTransform } from 'framer-motion';
 import './landing/landing.css';
 import type { Plan, Promotion, Trainer } from './types.ts';
 import LandingNav from './landing/LandingNav.tsx';
@@ -25,21 +24,6 @@ export interface LandingProps {
 }
 
 export default function Landing({ plans, promotions, trainers, onNavigate }: LandingProps) {
-  const heroRef = useRef<HTMLDivElement | null>(null);
-  const mx = useMotionValue(0);
-  const my = useMotionValue(0);
-  const cardX = useTransform(mx, (v) => v * 4);
-  const cardY = useTransform(my, (v) => v * 8);
-  const onHeroMove = (e: React.MouseEvent) => {
-    const r = heroRef.current?.getBoundingClientRect();
-    if (!r) return;
-    const nx = ((e.clientX - r.left) / r.width) * 2 - 1;
-    const ny = ((e.clientY - r.top) / r.height) * 2 - 1;
-    mx.set(nx);
-    my.set(ny);
-  };
-  const onHeroLeave = () => { mx.set(0); my.set(0); };
-
   // Section refs for scroll-spy
   const refs: Record<'promotions' | 'plans' | 'trainers' | 'contact', RefObject<HTMLElement>> = {
     promotions: useRef<HTMLElement>(null),
@@ -74,14 +58,7 @@ export default function Landing({ plans, promotions, trainers, onNavigate }: Lan
   return (
     <div className="landing">
       <LandingNav stuck={stuck} activeSection={activeSection} onNavigate={onNavigate} />
-      <LandingHero
-        heroRef={heroRef}
-        onHeroMove={onHeroMove}
-        onHeroLeave={onHeroLeave}
-        cardX={cardX}
-        cardY={cardY}
-        onNavigate={onNavigate}
-      />
+      <LandingHero onNavigate={onNavigate} />
       <WhyCardsRow />
       <PromoStrip promotionsRef={refs.promotions} activePromos={activePromos} />
       <PlansStrip plansRef={refs.plans} activePlans={activePlans} onNavigate={onNavigate} />

@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { useState } from 'react';
-import { StatTile, Badge, Table, Modal, Field, TextInput, Select } from '../shared';
+import { StatTile, Badge, Table, Modal, Field, TextInput, Select, TabbedCard } from '../shared';
 import { INITIALS, peso } from '../data.ts';
 
 function AdminMembers({ members, setMembers, plans, setTransactions, today, toast }){

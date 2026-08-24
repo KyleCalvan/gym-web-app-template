@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { StatTile, Badge, BarChart, Donut, Table } from '../shared';
+import { StatTile, Badge, BarChart, Donut, Table, TabbedCard } from '../shared';
 import { downloadCSV } from '../shared/utils/csv.ts';
 import { REVENUE_7D, MEMBERSHIP_DIST, peso } from '../data.ts';
 

@@ -102,7 +102,7 @@ export default function LoginPage({
   return (
     <div className="auth-page">
       <nav className="auth-page-nav">
-        <div className="brand"><span className="brand-mark">🏋</span> VinAthletics</div>
+        <div className="brand"><img src="/logo.jpg" alt="VinAthletics" className="brand-mark-img" /> VinAthletics</div>
         <a onClick={onBack} style={{ cursor: 'pointer' }}>← Back to home</a>
       </nav>
 

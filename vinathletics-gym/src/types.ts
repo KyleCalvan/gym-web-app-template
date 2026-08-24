@@ -86,6 +86,22 @@ export interface Promotion {
   redemptions: number;
   minSpend: number;
   status: PromoStatus;
+  imageUrl?: string;
+}
+
+export type StaffRole = 'Front Desk' | 'Sales' | 'Manager';
+export type StaffShift = 'Morning' | 'Evening' | 'Night';
+export type StaffStatus = 'Active' | 'On Leave' | 'Inactive';
+
+export interface Staff {
+  id: string;
+  name: string;
+  role: StaffRole;
+  shift: StaffShift;
+  status: StaffStatus;
+  email: string;
+  phone: string;
+  hireDate: string;
 }
 
 export interface Notification {
@@ -159,6 +175,8 @@ export interface ViewProps {
   setSessions: Setter<Session[]>;
   promotions: Promotion[];
   setPromotions: Setter<Promotion[]>;
+  staff: Staff[];
+  setStaff: Setter<Staff[]>;
   notifications: Notification[];
   setNotifications: Setter<Notification[]>;
   bookings: Session[];

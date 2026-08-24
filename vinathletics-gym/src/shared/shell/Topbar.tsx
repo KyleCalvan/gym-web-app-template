@@ -4,7 +4,7 @@ import './app-shell.css';
 
 const VIEW_TITLES: Record<string, string> = {
   dashboard: 'Dashboard', members: 'Member Management', plans: 'Membership Plans', payments: 'Payments / Point of Sale',
-  reports: 'Revenue & Reports', trainers: 'Trainer Management', promotions: 'Promotions', activity: 'Activity Logs',
+  reports: 'Revenue & Reports', trainers: 'Trainers & Staff', promotions: 'Promotions', activity: 'Activity Logs',
   coaching: 'Coaching Sessions', membership: 'Membership', pos: 'Point of Sale', transactions: 'My Transactions',
   schedules: 'Trainer Schedules', sessions: 'Assigned Sessions', schedule: 'My Schedule & Availability',
   profile: 'My Profile', notifications: 'Notifications',

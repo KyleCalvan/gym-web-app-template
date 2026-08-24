@@ -9,10 +9,25 @@ const formatDate = (iso) => {
   return d.toLocaleDateString('en-US', {month:'short', day:'2-digit', year:'numeric'});
 };
 
+const readFileAsDataUrl = (file) => new Promise((resolve, reject) => {
+  if (!file.type.startsWith('image/')) { reject(new Error('Please choose an image file.')); return; }
+  if (file.size > 1.5 * 1024 * 1024) { reject(new Error('Image must be under 1.5 MB.')); return; }
+  const fr = new FileReader();
+  fr.onload = () => resolve(fr.result);
+  fr.onerror = () => reject(new Error('Could not read file.'));
+  fr.readAsDataURL(file);
+});
+
+const onPickImage = async (file, setter, toast) => {
+  try { const url = await readFileAsDataUrl(file); setter(url); }
+  catch (err) { toast(err.message); }
+};
+
 function AdminPromotions({ promotions, setPromotions, plans, toast }){
   const [form, setForm] = useState({
     title:'', discountType:'Percentage', discountValue:'', validFrom:'', validUntil:'',
     applicablePlan:'Any Plan', description:'', maxRedemptions:'', minSpend:'', code:'',
+    imageUrl:'',
   });
   const [editing, setEditing] = useState(null);
   const [editForm, setEditForm] = useState(null);
@@ -42,16 +57,17 @@ function AdminPromotions({ promotions, setPromotions, plans, toast }){
       redemptions: 0,
       minSpend: Number(form.minSpend) || 0,
       status: 'Draft',
+      imageUrl: form.imageUrl.trim() || '/gym-interior.jpg',
     };
     setPromotions(prev => [...prev, newPromo]);
     toast('Promotion created — ' + newPromo.title);
-    setForm({title:'', discountType:'Percentage', discountValue:'', validFrom:'', validUntil:'', applicablePlan:'Any Plan', description:'', maxRedemptions:'', minSpend:'', code:''});
+    setForm({title:'', discountType:'Percentage', discountValue:'', validFrom:'', validUntil:'', applicablePlan:'Any Plan', description:'', maxRedemptions:'', minSpend:'', code:'', imageUrl:''});
     setShowCreate(false);
   };
 
   const startEdit = (p) => {
     setEditing(p);
-    setEditForm({title:p.title, discountType:p.discountType, discount:p.discount, code:p.code, validUntil:p.validUntil});
+    setEditForm({title:p.title, discountType:p.discountType, discount:p.discount, code:p.code, validUntil:p.validUntil, imageUrl: p.imageUrl || ''});
   };
   const submitEdit = (e) => {
     e.preventDefault();
@@ -91,6 +107,11 @@ function AdminPromotions({ promotions, setPromotions, plans, toast }){
           <div className="resource-grid">
             {promotions.map(p=>(
               <div className="resource-card" key={p.id} onClick={()=>setDetailPromo(p)}>
+                <div
+                  className="thumb"
+                  style={{ backgroundImage: 'url(' + (p.imageUrl || '/gym-interior.jpg') + ')' }}
+                  aria-hidden="true"
+                />
                 <div className="head">
                   <div>
                     <div className="ttl">{p.title}</div>
@@ -183,6 +204,40 @@ function AdminPromotions({ promotions, setPromotions, plans, toast }){
               </Field>
             </div>
             <Field label="Description"><textarea className="form-control" rows="2" placeholder="Short description shown to members…" value={form.description} onChange={e=>setForm(f=>({...f, description:e.target.value}))} /></Field>
+            <Field label="Promotion Image">
+              <div
+                className="dropzone"
+                onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('drag'); }}
+                onDragLeave={(e) => e.currentTarget.classList.remove('drag')}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  e.currentTarget.classList.remove('drag');
+                  const file = e.dataTransfer.files?.[0];
+                  if (file) onPickImage(file, url => setForm(f => ({ ...f, imageUrl: url })), toast);
+                }}
+                onClick={() => document.getElementById('promo-image-input-create')?.click()}
+                style={{ backgroundImage: form.imageUrl ? `url(${form.imageUrl})` : 'none' }}
+              >
+                {!form.imageUrl && <span className="dropzone-hint">Drop an image here, click to browse, or paste a URL below</span>}
+              </div>
+              <input
+                id="promo-image-input-create"
+                type="file" accept="image/*"
+                style={{ display: 'none' }}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) onPickImage(file, url => setForm(f => ({ ...f, imageUrl: url })), toast);
+                  e.target.value = '';
+                }}
+              />
+              <div className="field-spacer" />
+              <input
+                className="form-control"
+                placeholder="…or paste an image URL"
+                value={form.imageUrl && !form.imageUrl.startsWith('data:') ? form.imageUrl : ''}
+                onChange={e => setForm(f => ({ ...f, imageUrl: e.target.value }))}
+              />
+            </Field>
             <div className="grid grid-3">
               <Field label="Max Redemptions"><TextInput type="number" placeholder="100" value={form.maxRedemptions} onChange={v=>setForm(f=>({...f, maxRedemptions:v}))} /></Field>
               <Field label="Min. Spend"><TextInput type="number" placeholder="0" value={form.minSpend} onChange={v=>setForm(f=>({...f, minSpend:v}))} /></Field>
@@ -197,7 +252,7 @@ function AdminPromotions({ promotions, setPromotions, plans, toast }){
       )}
 
       {editing && editForm && (
-        <Modal title="Edit Promotion" onClose={()=>{setEditing(null); setEditForm(null);}}>
+        <Modal title="Edit Promotion" onClose={()=>{setEditing(null); setEditForm(null);}} wide>
           <form onSubmit={submitEdit}>
             <Field label="Title"><TextInput required value={editForm.title} onChange={v=>setEditForm(f=>({...f, title:v}))} /></Field>
             <Field label="Discount Type">
@@ -207,6 +262,40 @@ function AdminPromotions({ promotions, setPromotions, plans, toast }){
             </Field>
             <Field label="Discount"><TextInput value={editForm.discount} onChange={v=>setEditForm(f=>({...f, discount:v}))} /></Field>
             <Field label="Promo Code"><TextInput value={editForm.code} onChange={v=>setEditForm(f=>({...f, code:v}))} /></Field>
+            <Field label="Promotion Image">
+              <div
+                className="dropzone"
+                onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('drag'); }}
+                onDragLeave={(e) => e.currentTarget.classList.remove('drag')}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  e.currentTarget.classList.remove('drag');
+                  const file = e.dataTransfer.files?.[0];
+                  if (file) onPickImage(file, url => setEditForm(f => ({ ...f, imageUrl: url })), toast);
+                }}
+                onClick={() => document.getElementById('promo-image-input-edit')?.click()}
+                style={{ backgroundImage: editForm.imageUrl ? `url(${editForm.imageUrl})` : 'none' }}
+              >
+                {!editForm.imageUrl && <span className="dropzone-hint">Drop an image here, click to browse, or paste a URL below</span>}
+              </div>
+              <input
+                id="promo-image-input-edit"
+                type="file" accept="image/*"
+                style={{ display: 'none' }}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) onPickImage(file, url => setEditForm(f => ({ ...f, imageUrl: url })), toast);
+                  e.target.value = '';
+                }}
+              />
+              <div className="field-spacer" />
+              <input
+                className="form-control"
+                placeholder="…or paste an image URL"
+                value={editForm.imageUrl && !editForm.imageUrl.startsWith('data:') ? editForm.imageUrl : ''}
+                onChange={e => setEditForm(f => ({ ...f, imageUrl: e.target.value }))}
+              />
+            </Field>
             <Field label="Valid Until"><TextInput type="date" value={editForm.validUntil} onChange={v=>setEditForm(f=>({...f, validUntil:v}))} /></Field>
             <button className="btn btn-signal btn-block" type="submit">Save Changes</button>
           </form>

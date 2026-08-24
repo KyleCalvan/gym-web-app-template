@@ -15,6 +15,7 @@ import {
   TRANSACTIONS,
   SESSIONS,
   PROMOTIONS,
+  STAFF,
   NOTIFICATIONS,
 } from './data.ts';
 import { ADMIN_NAV, ADMIN_VIEWS } from './admin';
@@ -24,7 +25,7 @@ import { MEMBER_NAV, MEMBER_VIEWS, NotificationsModal } from './member';
 import { dur, ease } from './motion.tsx';
 import type {
   Member, NavSection, Notification, NotifPrefs, Plan, Promotion, Role, Session,
-  Trainer, Transaction, ViewProps, CheckIns,
+  Staff, Trainer, Transaction, ViewProps, CheckIns,
 } from './types.ts';
 
 const NAV_BY_ROLE: Record<Role, NavSection[]> = {
@@ -52,6 +53,7 @@ export default function App() {
   const [transactions, setTransactions]     = useState<Transaction[]>(() => [...TRANSACTIONS]);
   const [sessions, setSessions]             = useState<Session[]>(() => [...SESSIONS]);
   const [promotions, setPromotions]         = useState<Promotion[]>(() => [...PROMOTIONS]);
+  const [staff, setStaff]                   = useState<Staff[]>(() => [...STAFF]);
   const [notifications, setNotifications]   = useState<Notification[]>(() => NOTIFICATIONS.map((n) => ({ ...n })));
   const [bookings, setBookings]             = useState<Session[]>(() => SESSIONS.filter((s) => s.member === CURRENT.member.name && s.status !== 'Cancelled'));
   const [currentUserId, setCurrentUserId]   = useState<string | null>(null);
@@ -188,6 +190,7 @@ export default function App() {
                 transactions={transactions} setTransactions={setTransactions}
                 sessions={sessions} setSessions={setSessions}
                 promotions={promotions} setPromotions={setPromotions}
+                staff={staff} setStaff={setStaff}
                 notifications={notifications} setNotifications={setNotifications}
                 bookings={bookings} setBookings={setBookings}
                 currentUserId={currentUserId}

@@ -19,6 +19,11 @@ function PromoStrip({ promotionsRef, activePromos }) {
               transition={{ duration: dur.base, delay: i * stagger.list, ease: ease.out }}
               whileHover={{ y: -2, boxShadow: '6px 6px 0 rgba(22,36,31,0.18)' }}
             >
+              <div
+                className="thumb"
+                style={{ backgroundImage: 'url(' + (p.imageUrl || '/gym-interior.jpg') + ')' }}
+                aria-hidden="true"
+              />
               <span className="tag">
                 {p.discountType === 'Percentage' ? (p.discount + ' OFF') :
                  p.discountType === 'Bundle'     ? 'BUNDLE DEAL' :

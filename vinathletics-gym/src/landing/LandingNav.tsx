@@ -16,7 +16,7 @@ function LandingNav({ stuck, activeSection, onNavigate }) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: dur.base, ease: ease.out }}
     >
-      <div className="brand"><span className="brand-mark">🏋</span> VinAthletics</div>
+      <div className="brand"><img src="/logo.jpg" alt="VinAthletics" className="brand-mark-img" /><span>VinAthletics</span></div>
       <div className="landing-nav-links">
         {navLinks.map((l) => (
           <a

@@ -33,6 +33,12 @@
   width:34px;height:34px;background:var(--ink);color:var(--signal);
   display:flex;align-items:center;justify-content:center;font-size:18px;border-radius:3px;
 }
+.brand-mark-img{
+  height:42px;width:auto;display:block;border-radius:6px;
+  object-fit:contain;
+  background:var(--paper);
+  padding:2px;
+}
 
 /* Hero */
 .landing-hero{
@@ -48,10 +54,22 @@
 .landing-hero::after{
   content:''; position:absolute; inset:0; pointer-events:none;
   background:
-    repeating-linear-gradient(45deg, rgba(255,255,255,.025) 0 2px, transparent 2px 8px),
-    radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,.55) 100%);
+    repeating-linear-gradient(45deg, rgba(255,255,255,.018) 0 2px, transparent 2px 8px),
+    radial-gradient(ellipse at center, transparent 65%, rgba(0,0,0,.30) 100%);
+  z-index:1;
 }
-.landing-hero-inner{position:relative;z-index:1;max-width:1180px;margin:0 auto;width:100%;display:grid;grid-template-columns:1.15fr 0.85fr;gap:60px;align-items:center;}
+.hero-photo-bg{
+  position:absolute;inset:0;z-index:0;pointer-events:none;
+  background-image:url('/gym-interior.jpg');
+  background-size:cover;background-position:center;
+  opacity:.62;
+  filter:saturate(1.15) contrast(1.10);
+}
+.landing-hero::before{
+  content:'';position:absolute;inset:0;z-index:1;pointer-events:none;
+  background:linear-gradient(180deg, rgba(22,36,31,.20) 0%, rgba(22,36,31,.40) 100%);
+}
+.landing-hero-inner{position:relative;z-index:2;max-width:1080px;margin:0 auto;width:100%;display:grid;grid-template-columns:1fr;gap:40px;align-items:center;text-align:left;}
 .landing-hero h1{font-size:clamp(40px,5.5vw,68px);line-height:.98;text-transform:uppercase;color:var(--paper);}
 .landing-hero .accent-word{color:var(--signal);}
 .landing-hero p.lede{font-size:17px;color:rgba(255,255,255,.72);max-width:480px;margin:22px 0 30px;}
@@ -82,25 +100,6 @@
   width:5px;height:5px;border-radius:50%;background:var(--signal);
   display:inline-block;
 }
-
-/* Hero membership card */
-.membership-card{
-  background:var(--ink); color:var(--paper); border-radius:10px; padding:26px 26px 22px;
-  position:relative; overflow:hidden;
-  box-shadow:8px 10px 0 rgba(22,36,31,.35), 0 0 60px rgba(255,90,46,.18);
-  font-family:var(--font-mono);
-}
-.membership-card::before{
-  content:''; position:absolute; top:0; left:0; right:0; height:10px;
-  background:repeating-linear-gradient(90deg, var(--signal) 0 18px, transparent 18px 26px);
-  opacity:.9;
-}
-.membership-card .mc-top{display:flex;justify-content:space-between;align-items:flex-start;margin-top:14px;}
-.membership-card .mc-org{font-family:var(--font-display);font-size:16px;letter-spacing:1px;text-transform:uppercase;}
-.membership-card .mc-chip{width:38px;height:28px;border-radius:4px;background:linear-gradient(135deg,#c9a24b,#8a6d2c);}
-.membership-card .mc-name{font-size:22px;margin-top:36px;font-family:var(--font-display);letter-spacing:.4px;}
-.membership-card .mc-row{display:flex;justify-content:space-between;margin-top:18px;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#B9C7BF;}
-.membership-card .mc-row b{display:block;color:var(--paper);font-size:14px;text-transform:none;letter-spacing:0;margin-top:4px;font-family:var(--font-mono);}
 
 /* Why-cards row */
 .hero-cards-row{
@@ -150,7 +149,14 @@
   grid-template-columns:repeat(auto-fit, minmax(240px, 280px));
   justify-content:center;gap:18px;
 }
-.promo-card{background:var(--paper);border-radius:4px;padding:22px;position:relative;border:2px solid var(--ink);box-shadow:4px 4px 0 rgba(255,255,255,0.06);}
+.promo-card{background:var(--paper);border-radius:4px;padding:18px;position:relative;border:2px solid var(--ink);box-shadow:4px 4px 0 rgba(255,255,255,0.06);}
+.promo-card .thumb{
+  height:200px;margin:-18px -18px 14px;border-radius:4px 4px 0 0;
+  background-size:cover;background-position:center;background-color:#2C4038;
+}
+@media (min-width: 768px){
+  .promo-card .thumb{ height:300px; }
+}
 .promo-card .tag{font-family:var(--font-mono);background:var(--signal);color:#fff;font-size:11px;padding:4px 10px;border-radius:2px;letter-spacing:.5px;display:inline-block;}
 .promo-card h3{margin:14px 0 8px;font-size:18px;color:var(--ink);}
 .promo-card p{font-size:12.5px;color:var(--steel);margin:0 0 12px;line-height:1.5;}
@@ -224,3 +230,4 @@
 .cta-band .accent-word{color:var(--signal);}
 
 footer.site-footer{border-top:2px solid var(--ink);padding:24px 40px;text-align:center;font-family:var(--font-mono);font-size:11px;color:var(--steel);}
+.site-footer-brand{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:8px;font-family:var(--font-display);font-size:18px;color:var(--ink);font-weight:700;}
