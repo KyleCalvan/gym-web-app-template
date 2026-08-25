@@ -4,12 +4,13 @@ import { peso } from '../data.ts';
 
 function StaffDashboard({ checkIns, members, transactions }) {
   const todayRevenue = transactions.filter(t => t.date === new Date().toLocaleDateString('en-US', {month:'short', day:'2-digit', year:'numeric'}) && t.status==='Paid').reduce((a,t)=>a+t.amount,0);
-  const newThisMonth = members.filter(m => {
+  const liveMembers = members.filter(m => !m.deletedAt);
+  const newThisMonth = liveMembers.filter(m => {
     const d = new Date(m.joined);
     const now = new Date();
     return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
   }).length;
-  const expiring = members.filter(m => m.status === 'Expiring').length;
+  const expiring = liveMembers.filter(m => m.status === 'Expiring').length;
   return (
     <>
       <div className="grid grid-4" style={{marginBottom:18}}>

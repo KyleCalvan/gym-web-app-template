@@ -8,13 +8,18 @@ function SuperAdminDashboard({
   const recent = auditLog.slice(0, 6);
   const liveSessions = activeSessions.length;
 
+  const liveMembers  = members.filter((m) => !m.deletedAt).length;
+  const liveTrainers = trainers.filter((t) => !t.deletedAt).length;
+  const liveStaff    = staff.filter((s) => !s.deletedAt).length;
+  const liveAdmins   = admins.filter((a) => !a.deletedAt).length;
+
   return (
     <>
       <div className="grid grid-4" style={{ marginBottom: 18 }}>
-        <StatTile label="Total Members" value={members.length} tone="court" />
-        <StatTile label="Trainers" value={trainers.length} tone="steel" />
-        <StatTile label="Staff" value={staff.length} tone="amber" />
-        <StatTile label="Admin Users" value={admins.length} tone="signal" />
+        <StatTile label="Total Members" value={liveMembers} tone="court" />
+        <StatTile label="Trainers" value={liveTrainers} tone="steel" />
+        <StatTile label="Staff" value={liveStaff} tone="amber" />
+        <StatTile label="Admin Users" value={liveAdmins} tone="signal" />
       </div>
 
       <TabbedCard label="System" title="Super Admin Overview">
@@ -24,6 +29,7 @@ function SuperAdminDashboard({
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
           <button className="btn btn-signal btn-sm" onClick={() => onNav('users')}>Manage Users</button>
           <button className="btn btn-outline btn-sm" onClick={() => onNav('system_logs')}>View Audit Log</button>
+          <button className="btn btn-outline btn-sm" onClick={() => onNav('trash')}>Open Trash</button>
           <button className="btn btn-outline btn-sm" onClick={() => onNav('backups')}>Download Backup</button>
           <button className="btn btn-outline btn-sm" onClick={() => onNav('sessions')}>Active Sessions</button>
         </div>

@@ -78,21 +78,36 @@ function AdminMembers({ members, setMembers, plans, setTransactions, today, toas
     setPendingUnfreeze(null);
   };
 
-  const filtered = members.filter(m =>
-    (statusF==='All' || m.status===statusF) &&
-    (m.name.toLowerCase().includes(q.toLowerCase()) || m.id.toLowerCase().includes(q.toLowerCase()))
-  );
+  // Soft-delete (Remove) flow — admins send the member to trash; super admin handles restore/permanent delete.
+  const [pendingRemove, setPendingRemove] = useState(null);
+  const applyRemove = () => {
+    if (!pendingRemove) return;
+    const now = new Date().toISOString();
+    setMembers(prev => prev.map(m => m.id===pendingRemove.id ? {...m, deletedAt: now} : m));
+    toast('Member removed — ' + pendingRemove.name);
+    addAudit?.('warn', 'Member removed (soft)', pendingRemove.name + ' (' + pendingRemove.id + ')');
+    setPendingRemove(null);
+    setSelected(null);
+  };
 
+  const filtered = members
+    .filter(m => !m.deletedAt)
+    .filter(m =>
+      (statusF==='All' || m.status===statusF) &&
+      (m.name.toLowerCase().includes(q.toLowerCase()) || m.id.toLowerCase().includes(q.toLowerCase()))
+    );
+
+  const liveMembers = members.filter(m => !m.deletedAt);
   const counts = {
-    active: members.filter(m=>m.status==='Active').length,
-    expiring: members.filter(m=>m.status==='Expiring').length,
-    ef: members.filter(m=>m.status==='Expired' || m.status==='Frozen').length,
+    active: liveMembers.filter(m=>m.status==='Active').length,
+    expiring: liveMembers.filter(m=>m.status==='Expiring').length,
+    ef: liveMembers.filter(m=>m.status==='Expired' || m.status==='Frozen').length,
   };
 
   return (
     <>
       <div className="grid grid-4" style={{marginBottom:18}}>
-        <StatTile label="Total Members" value={members.length} tone="steel"/>
+        <StatTile label="Total Members" value={liveMembers.length} tone="steel"/>
         <StatTile label="Active" value={counts.active} tone="court"/>
         <StatTile label="Expiring Soon" value={counts.expiring} tone="amber"/>
         <StatTile label="Expired / Frozen" value={counts.ef} />
@@ -154,6 +169,7 @@ function AdminMembers({ members, setMembers, plans, setTransactions, today, toas
             ) : (
               <button className="btn btn-danger btn-sm" onClick={()=>setPendingFreeze(selected)}>Freeze Account</button>
             )}
+            <button className="btn btn-ghost btn-sm" onClick={()=>setPendingRemove(selected)}>Remove</button>
           </div>
         </Modal>
       )}
@@ -215,6 +231,19 @@ function AdminMembers({ members, setMembers, plans, setTransactions, today, toas
           <div style={{display:'flex', gap:8, justifyContent:'flex-end'}}>
             <button className="btn btn-outline" type="button" onClick={()=>setPendingUnfreeze(null)}>Cancel</button>
             <button className="btn btn-signal" type="button" onClick={applyUnfreeze}>Unfreeze</button>
+          </div>
+        </Modal>
+      )}
+
+      {pendingRemove && (
+        <Modal title="Remove Member?" onClose={()=>setPendingRemove(null)}>
+          <p style={{fontSize:13, color:'var(--steel)', marginBottom:14}}>
+            You're about to remove <b>{pendingRemove.name}</b>. They will be sent to the trash and
+            hidden from the directory. A super admin can restore or permanently delete them later.
+          </p>
+          <div style={{display:'flex', gap:8, justifyContent:'flex-end'}}>
+            <button className="btn btn-outline" type="button" onClick={()=>setPendingRemove(null)}>Cancel</button>
+            <button className="btn btn-danger" type="button" onClick={applyRemove}>Remove</button>
           </div>
         </Modal>
       )}

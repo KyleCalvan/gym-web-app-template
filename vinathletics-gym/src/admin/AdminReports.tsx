@@ -17,7 +17,7 @@ function AdminReports({ members, transactions, today, toast }){
       ['Filters', applied ? `${applied.dateRange} · ${applied.category} · ${applied.branch}` : 'None'],
       [],
       ['Members'], ['ID','Name','Plan','Status','Joined'],
-      ...members.map(m => [m.id, m.name, m.plan, m.status, m.joined]),
+      ...members.filter(m => !m.deletedAt).map(m => [m.id, m.name, m.plan, m.status, m.joined]),
       [],
       ['Transactions'], ['ID','Member','Type','Amount','Method','Date','Status'],
       ...transactions.map(t => [t.id, t.member, t.type, t.amount, t.method, t.date, t.status]),

@@ -16,6 +16,10 @@ export const MEMBERS: Member[] = [
   { id: 'M-1046', name: 'Miguel Ramos',    email: 'miguel.ramos@mail.com',   phone: '+63 919 774 5510', plan: 'Basic',   status: 'Frozen',   joined: 'Mar 30, 2025' },
   { id: 'M-1047', name: 'Bea Fernandez',   email: 'bea.fernandez@mail.com',  phone: '+63 916 331 9982', plan: 'Elite',   status: 'Active',   joined: 'Jul 15, 2025' },
   { id: 'M-1048', name: 'Paolo Villanueva',email: 'paolo.v@mail.com',        phone: '+63 921 887 4402', plan: 'Premium', status: 'Expired',  joined: 'Nov 02, 2024' },
+  // Pre-seeded soft-deleted members (in Trash on first load).
+  { id: 'M-1039', name: 'Daniel Mercado',  email: 'daniel.mercado@mail.com', phone: '+63 917 333 4422', plan: 'Basic',   status: 'Expired',  joined: 'Oct 04, 2023', deletedAt: '2026-08-12T14:21:00.000Z' },
+  { id: 'M-1040', name: 'Trisha Aquino',   email: 'trisha.aquino@mail.com',  phone: '+63 922 118 0067', plan: 'Premium', status: 'Expired',  joined: 'May 19, 2024', deletedAt: '2026-08-19T09:05:00.000Z' },
+  { id: 'M-1041', name: 'Kevin Yap',       email: 'kevin.yap@mail.com',      phone: '+63 925 770 3318', plan: 'Elite',   status: 'Active',   joined: 'Sep 27, 2024', deletedAt: '2026-08-21T16:48:00.000Z' },
 ];
 
 export const TRAINERS: Trainer[] = [
@@ -23,6 +27,8 @@ export const TRAINERS: Trainer[] = [
   { id: 'T-02', name: 'Diane Cruz',  specialty: 'Yoga & Mobility',         certs: 'RYT-500',        rating: 4.8, sessionsWeek: 11, status: 'Active',   sessionPrice: 800,  reviews: [] },
   { id: 'T-03', name: 'Marco Villa', specialty: 'HIIT & Fat Loss',         certs: 'ACE-CPT',        rating: 4.7, sessionsWeek: 9,  status: 'Active',   sessionPrice: 850,  reviews: [] },
   { id: 'T-04', name: 'Sofia Lim',   specialty: 'Powerlifting',            certs: 'USAPL Coach',    rating: 5.0, sessionsWeek: 6,  status: 'On Leave', sessionPrice: 1100, reviews: [] },
+  // Pre-seeded soft-deleted trainer.
+  { id: 'T-05', name: 'Rico Salvador', specialty: 'Boxing & Conditioning',  certs: 'ISSA-CPT',        rating: 4.5, sessionsWeek: 0,  status: 'Inactive', sessionPrice: 950,  reviews: [], deletedAt: '2026-08-10T11:32:00.000Z' },
 ];
 
 export const STAFF: Staff[] = [
@@ -30,6 +36,8 @@ export const STAFF: Staff[] = [
   { id: 'S-02', name: 'Andre Gomez',  role: 'Sales',      shift: 'Evening', status: 'Active',   email: 'andre.gomez@vinathletics.gym',  phone: '+63 918 555 1002', hireDate: 'May 04, 2025' },
   { id: 'S-03', name: 'Rina Bautista',role: 'Manager',    shift: 'Morning', status: 'Active',   email: 'rina.bautista@vinathletics.gym',phone: '+63 919 555 1003', hireDate: 'Jan 20, 2024' },
   { id: 'S-04', name: 'Josh Cruz',    role: 'Front Desk', shift: 'Night',   status: 'On Leave', email: 'josh.cruz@vinathletics.gym',    phone: '+63 920 555 1004', hireDate: 'Aug 17, 2025' },
+  // Pre-seeded soft-deleted staff.
+  { id: 'S-05', name: 'Nadine Flores',role: 'Front Desk', shift: 'Evening', status: 'Active',   email: 'nadine.flores@vinathletics.gym',phone: '+63 921 555 1005', hireDate: 'Mar 11, 2024', deletedAt: '2026-08-08T08:15:00.000Z' },
 ];
 
 export const PLANS: Plan[] = [
@@ -98,6 +106,8 @@ export const ADMINS: Admin[] = [
   { id: 'SA-01', name: 'Andrea Cruz',     email: 'andrea.cruz@vinathletics.gym',    status: 'Active',   createdAt: 'Jan 15, 2024' },
   { id: 'SA-02', name: 'Roberto Garcia',  email: 'roberto.garcia@vinathletics.gym', status: 'Active',   createdAt: 'Mar 02, 2025' },
   { id: 'SA-03', name: 'Patricia Lim',    email: 'patricia.lim@vinathletics.gym',   status: 'Inactive', createdAt: 'Sep 08, 2022' },
+  // Pre-seeded soft-deleted admin (in Trash on first load).
+  { id: 'SA-04', name: 'Mark Villanueva', email: 'mark.villanueva@vinathletics.gym', status: 'Inactive', createdAt: 'Jul 22, 2023', deletedAt: '2026-08-05T13:40:00.000Z' },
 ];
 
 export const CURRENT: Record<Role, CurrentUser> = {

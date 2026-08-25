@@ -20,6 +20,7 @@ export interface Member {
   status: MemberStatus;
   joined: string;
   avatarUrl?: string;
+  deletedAt?: string | null;
 }
 
 export type AdminStatus = 'Active' | 'Inactive';
@@ -31,6 +32,7 @@ export interface Admin {
   status: AdminStatus;
   createdAt: string;
   avatarUrl?: string;
+  deletedAt?: string | null;
 }
 
 export interface TrainerReview {
@@ -49,6 +51,7 @@ export interface Trainer {
   sessionPrice: number;
   reviews: TrainerReview[];
   avatarUrl?: string;
+  deletedAt?: string | null;
 }
 
 export interface Plan {
@@ -116,6 +119,7 @@ export interface Staff {
   phone: string;
   hireDate: string;
   avatarUrl?: string;
+  deletedAt?: string | null;
 }
 
 export interface Notification {

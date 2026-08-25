@@ -5,11 +5,13 @@ import { REVENUE_7D, MEMBERSHIP_DIST, peso } from '../data.ts';
 
 function AdminDashboard({ onNav, members, trainers, transactions, sessions, promotions, today, toast }){
   const published = promotions.filter(p=>p.status==='Published');
-  const totalMembers = members.length;
-  const activeCount = members.filter(m=>m.status==='Active').length;
+  const liveMembers = members.filter(m => !m.deletedAt);
+  const liveTrainers = trainers.filter(t => !t.deletedAt);
+  const totalMembers = liveMembers.length;
+  const activeCount = liveMembers.filter(m=>m.status==='Active').length;
   const paid = transactions.filter(t=>t.status==='Paid');
   const revenueMtd = paid.reduce((a,t)=>a+t.amount,0);
-  const activeTrainers = trainers.filter(t=>t.status==='Active').length;
+  const activeTrainers = liveTrainers.filter(t=>t.status==='Active').length;
   const today2 = new Date().toLocaleDateString('en-US', {month:'short', day:'2-digit', year:'numeric'});
   const sessionsToday = sessions.filter(s=>s.date===today2).length;
 
@@ -17,7 +19,7 @@ function AdminDashboard({ onNav, members, trainers, transactions, sessions, prom
     const rows = [
       ['Members'],
       ['ID','Name','Email','Phone','Plan','Status','Joined'],
-      ...members.map(m => [m.id, m.name, m.email, m.phone, m.plan, m.status, m.joined]),
+      ...liveMembers.map(m => [m.id, m.name, m.email, m.phone, m.plan, m.status, m.joined]),
       [],
       ['Transactions'],
       ['ID','Member','Type','Amount','Method','Date','Status'],
@@ -36,7 +38,7 @@ function AdminDashboard({ onNav, members, trainers, transactions, sessions, prom
       <div className="grid grid-4" style={{marginBottom:18}}>
         <StatTile label="Total Members" value={totalMembers} delta={`${activeCount} active`} />
         <StatTile label="Revenue (MTD)" value={peso(revenueMtd)} delta={`${paid.length} paid txns`} tone="court" />
-        <StatTile label="Active Trainers" value={activeTrainers} delta={`${trainers.length-activeTrainers} on leave/inactive`} tone="amber" />
+        <StatTile label="Active Trainers" value={activeTrainers} delta={`${liveTrainers.length-activeTrainers} on leave/inactive`} tone="amber" />
         <StatTile label="Sessions Today" value={sessionsToday} delta={`${sessions.filter(s=>s.status==='Pending').length} pending`} tone="steel" />
       </div>
 

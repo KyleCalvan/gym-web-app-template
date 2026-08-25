@@ -26,10 +26,12 @@ function StaffMembers({ members, setMembers, plans, setCheckIns, today, toast, a
     addAudit?.('info', 'Member checked in', m.name + ' (' + m.id + ')');
   };
 
-  const filtered = members.filter(m =>
-    (statusF==='All' || m.status===statusF) &&
-    (m.name.toLowerCase().includes(q.toLowerCase()) || m.id.toLowerCase().includes(q.toLowerCase()))
-  );
+  const filtered = members
+    .filter(m => !m.deletedAt)
+    .filter(m =>
+      (statusF==='All' || m.status===statusF) &&
+      (m.name.toLowerCase().includes(q.toLowerCase()) || m.id.toLowerCase().includes(q.toLowerCase()))
+    );
 
   return (
     <>

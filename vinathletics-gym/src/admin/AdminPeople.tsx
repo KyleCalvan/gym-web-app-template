@@ -97,15 +97,17 @@ function AdminPeople({ trainers, setTrainers, staff, setStaff, members, sessions
     setStaffAddForm({name:'', role:'Front Desk', shift:'Morning', email:'', phone:'', status:'Active'});
   };
   const removeStaff = (s: Staff) => {
-    setStaff(prev => prev.filter(x => x.id !== s.id));
+    const now = new Date().toISOString();
+    setStaff(prev => prev.map(x => x.id === s.id ? { ...x, deletedAt: now } : x));
     toast('Staff removed — ' + s.name);
-    addAudit?.('warn', 'Staff removed', s.name + ' (' + s.id + ')');
+    addAudit?.('warn', 'Staff removed (soft)', s.name + ' (' + s.id + ')');
     setPendingStaffRemove(null);
   };
   const removeTrainer = (t) => {
-    setTrainers(prev => prev.map(x => x.id === t.id ? { ...x, status: 'Inactive' } : x));
-    toast('Trainer deactivated — ' + t.name);
-    addAudit?.('warn', 'Trainer deactivated', t.name);
+    const now = new Date().toISOString();
+    setTrainers(prev => prev.map(x => x.id === t.id ? { ...x, deletedAt: now } : x));
+    toast('Trainer removed — ' + t.name);
+    addAudit?.('warn', 'Trainer removed (soft)', t.name + ' (' + t.id + ')');
     setPendingTrainerRemove(null);
   };
 
@@ -114,7 +116,7 @@ function AdminPeople({ trainers, setTrainers, staff, setStaff, members, sessions
       {/* ===== Trainer Roster ===== */}
       <TabbedCard label="Ops" title="Trainer Roster" right={<button className="btn btn-signal btn-sm" onClick={()=>setAdding(true)}>+ Add Trainer</button>}>
         <div className="grid grid-2">
-          {trainers.filter(t => t.status !== 'Inactive').map(t=>(
+          {trainers.filter(t => !t.deletedAt).map(t=>(
             <div className="card" key={t.id}>
               <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start'}}>
                 <div style={{display:'flex', gap:10}}>
@@ -165,13 +167,13 @@ function AdminPeople({ trainers, setTrainers, staff, setStaff, members, sessions
 
       {/* ===== Staff Roster ===== */}
       <TabbedCard label="Ops" title="Staff Roster" right={<button className="btn btn-signal btn-sm" onClick={()=>setStaffAdding(true)}>+ Add Staff</button>}>
-        {staff.length === 0 ? (
+        {staff.filter(s => !s.deletedAt).length === 0 ? (
           <div style={{fontSize:13, color:'var(--steel)', padding:'10px 0'}}>
             No staff yet. Click <b>+ Add Staff</b> to add the first one.
           </div>
         ) : (
           <div className="grid grid-2">
-            {staff.map(s=>(
+            {staff.filter(s => !s.deletedAt).map(s=>(
               <div className="card" key={s.id}>
                 <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start'}}>
                   <div style={{display:'flex', gap:10}}>
@@ -312,7 +314,8 @@ function AdminPeople({ trainers, setTrainers, staff, setStaff, members, sessions
       {pendingTrainerRemove && (
         <Modal title="Remove Trainer?" onClose={()=>setPendingTrainerRemove(null)}>
           <p style={{fontSize:13, color:'var(--steel)', marginBottom:14}}>
-            You're about to remove <b>{pendingTrainerRemove.name}</b>. They will no longer appear in the trainer roster.
+            You're about to remove <b>{pendingTrainerRemove.name}</b>. They will be sent to the trash
+            and hidden from the trainer roster. A super admin can restore or permanently delete them later.
           </p>
           <div style={{display:'flex', gap:8, justifyContent:'flex-end'}}>
             <button className="btn btn-outline" type="button" onClick={()=>setPendingTrainerRemove(null)}>Cancel</button>
@@ -324,7 +327,8 @@ function AdminPeople({ trainers, setTrainers, staff, setStaff, members, sessions
       {pendingStaffRemove && (
         <Modal title="Remove Staff?" onClose={()=>setPendingStaffRemove(null)}>
           <p style={{fontSize:13, color:'var(--steel)', marginBottom:14}}>
-            You're about to remove <b>{pendingStaffRemove.name}</b>. This will permanently remove them from the staff roster.
+            You're about to remove <b>{pendingStaffRemove.name}</b>. They will be sent to the trash
+            and hidden from the staff roster. A super admin can restore or permanently delete them later.
           </p>
           <div style={{display:'flex', gap:8, justifyContent:'flex-end'}}>
             <button className="btn btn-outline" type="button" onClick={()=>setPendingStaffRemove(null)}>Cancel</button>

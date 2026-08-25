@@ -6,10 +6,10 @@ import { INITIALS } from '../data.ts';
 // Normalized user shape used in the unified table.
 function buildUsers({ admins, members, trainers, staff }) {
   const out = [];
-  for (const a of admins)    out.push({ kind: 'admin',   id: a.id, name: a.name,   email: a.email,                              status: a.status,   label: a.status === 'Active' ? 'Admin' : 'Inactive Admin' });
-  for (const m of members)   out.push({ kind: 'member',  id: m.id, name: m.name,   email: m.email, phone: m.phone, plan: m.plan, status: m.status, label: m.plan });
-  for (const t of trainers)  out.push({ kind: 'trainer', id: t.id, name: t.name,   email: '—',          status: t.status, label: t.specialty });
-  for (const s of staff)     out.push({ kind: 'staff',   id: s.id, name: s.name,   email: s.email, phone: s.phone, status: s.status, label: s.role });
+  for (const a of admins)    if (!a.deletedAt) out.push({ kind: 'admin',   id: a.id, name: a.name,   email: a.email,                              status: a.status,   label: a.status === 'Active' ? 'Admin' : 'Inactive Admin' });
+  for (const m of members)   if (!m.deletedAt) out.push({ kind: 'member',  id: m.id, name: m.name,   email: m.email, phone: m.phone, plan: m.plan, status: m.status, label: m.plan });
+  for (const t of trainers)  if (!t.deletedAt) out.push({ kind: 'trainer', id: t.id, name: t.name,   email: '—',          status: t.status, label: t.specialty });
+  for (const s of staff)     if (!s.deletedAt) out.push({ kind: 'staff',   id: s.id, name: s.name,   email: s.email, phone: s.phone, status: s.status, label: s.role });
   return out;
 }
 
@@ -46,10 +46,10 @@ function SuperAdminUsers({
   );
 
   const counts = {
-    admin:   admins.length,
-    member:  members.length,
-    trainer: trainers.filter((t) => t.status !== 'Inactive').length,
-    staff:   staff.length,
+    admin:   admins.filter((a) => !a.deletedAt).length,
+    member:  members.filter((m) => !m.deletedAt).length,
+    trainer: trainers.filter((t) => !t.deletedAt && t.status !== 'Inactive').length,
+    staff:   staff.filter((s) => !s.deletedAt).length,
   };
 
   const startEdit = (u) => {
@@ -112,25 +112,26 @@ function SuperAdminUsers({
     setAddForm({ name: '', email: '', phone: '', plan: 'Premium', specialty: 'General', certs: '', sessionPrice: '900', role: 'Front Desk', shift: 'Morning', status: 'Active' });
   };
 
-  // Removal: admins soft-delete (Inactive), others hard-delete (filter).
+  // Removal: soft-delete everyone via deletedAt; super admin can restore or permanently delete from Trash.
   const applyRemove = () => {
     if (!pendingRemove) return;
     const u = pendingRemove;
+    const now = new Date().toISOString();
     if (u.kind === 'admin') {
-      setAdmins((prev) => prev.map((a) => a.id === u.id ? { ...a, status: 'Inactive' } : a));
-      addAudit?.('warn', 'Admin deactivated', `${u.name} (${u.id})`);
-      toast('Admin deactivated — ' + u.name);
+      setAdmins((prev) => prev.map((a) => a.id === u.id ? { ...a, deletedAt: now } : a));
+      addAudit?.('warn', 'Admin removed (soft)', `${u.name} (${u.id})`);
+      toast('Admin removed — ' + u.name);
     } else if (u.kind === 'member') {
-      setMembers((prev) => prev.filter((m) => m.id !== u.id));
-      addAudit?.('warn', 'Member removed', `${u.name} (${u.id})`);
+      setMembers((prev) => prev.map((m) => m.id === u.id ? { ...m, deletedAt: now } : m));
+      addAudit?.('warn', 'Member removed (soft)', `${u.name} (${u.id})`);
       toast('Member removed — ' + u.name);
     } else if (u.kind === 'trainer') {
-      setTrainers((prev) => prev.map((t) => t.id === u.id ? { ...t, status: 'Inactive' } : t));
-      addAudit?.('warn', 'Trainer deactivated', `${u.name} (${u.id})`);
-      toast('Trainer deactivated — ' + u.name);
+      setTrainers((prev) => prev.map((t) => t.id === u.id ? { ...t, deletedAt: now } : t));
+      addAudit?.('warn', 'Trainer removed (soft)', `${u.name} (${u.id})`);
+      toast('Trainer removed — ' + u.name);
     } else if (u.kind === 'staff') {
-      setStaff((prev) => prev.filter((s) => s.id !== u.id));
-      addAudit?.('warn', 'Staff removed', `${u.name} (${u.id})`);
+      setStaff((prev) => prev.map((s) => s.id === u.id ? { ...s, deletedAt: now } : s));
+      addAudit?.('warn', 'Staff removed (soft)', `${u.name} (${u.id})`);
       toast('Staff removed — ' + u.name);
     }
     setPendingRemove(null);
@@ -192,7 +193,7 @@ function SuperAdminUsers({
                 <div style={{ display: 'flex', gap: 6 }}>
                   <button className="btn btn-outline btn-sm" onClick={() => startEdit(u)}>Edit</button>
                   <button className="btn btn-ghost btn-sm" onClick={() => setPendingRemove(u)}>
-                    {u.kind === 'admin' || u.kind === 'trainer' ? 'Deactivate' : 'Remove'}
+                    Remove
                   </button>
                 </div>
               </td>
@@ -332,21 +333,20 @@ function SuperAdminUsers({
         </Modal>
       )}
 
-      {/* ===== Remove/deactivate confirmation ===== */}
+      {/* ===== Remove (soft-delete) confirmation ===== */}
       {pendingRemove && (
         <Modal
-          title={pendingRemove.kind === 'admin' || pendingRemove.kind === 'trainer' ? 'Deactivate User?' : 'Remove User?'}
+          title="Remove User?"
           onClose={() => setPendingRemove(null)}
         >
           <p style={{ fontSize: 13, color: 'var(--steel)', marginBottom: 14 }}>
-            {pendingRemove.kind === 'admin' || pendingRemove.kind === 'trainer'
-              ? `You're about to deactivate ${pendingRemove.name}. Their account will be marked Inactive but their history will be preserved.`
-              : `You're about to remove ${pendingRemove.name}. This will permanently delete their record.`}
+            You're about to remove <b>{pendingRemove.name}</b>. They will be sent to the trash and
+            hidden from this list. You can restore or permanently delete them from the Trash view.
           </p>
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
             <button className="btn btn-outline" type="button" onClick={() => setPendingRemove(null)}>Cancel</button>
             <button className="btn btn-danger" type="button" onClick={applyRemove}>
-              {pendingRemove.kind === 'admin' || pendingRemove.kind === 'trainer' ? 'Deactivate' : 'Remove'}
+              Remove
             </button>
           </div>
         </Modal>
