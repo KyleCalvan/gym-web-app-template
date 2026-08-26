@@ -112,7 +112,7 @@ function SuperAdminUsers({
     setAddForm({ name: '', email: '', phone: '', plan: 'Premium', specialty: 'General', certs: '', sessionPrice: '900', role: 'Front Desk', shift: 'Morning', status: 'Active' });
   };
 
-  // Removal: soft-delete everyone via deletedAt; super admin can restore or permanently delete from Trash.
+  // Removal: soft-delete everyone via deletedAt; super admin can restore or permanently delete from Archive.
   const applyRemove = () => {
     if (!pendingRemove) return;
     const u = pendingRemove;
@@ -153,6 +153,8 @@ function SuperAdminUsers({
           <div style={{ display: 'flex', gap: 6 }}>
             <button className="btn btn-outline btn-sm" onClick={() => { setAddKind('admin'); setAdding(true); }}>+ Add Admin</button>
             <button className="btn btn-signal btn-sm" onClick={() => { setAddKind('member'); setAdding(true); }}>+ Register Member</button>
+            <button className="btn btn-outline btn-sm" onClick={() => { setAddKind('trainer'); setAdding(true); }}>+ Add Trainer</button>
+            <button className="btn btn-outline btn-sm" onClick={() => { setAddKind('staff'); setAdding(true); }}>+ Add Staff</button>
           </div>
         }
       >
@@ -264,7 +266,7 @@ function SuperAdminUsers({
                 </Field>
               </>
             )}
-            <button className="btn btn-signal btn-block" type="submit">Add {addKind === 'member' ? 'Member' : addKind}</button>
+            <button className="btn btn-signal btn-block" type="submit">Add {addKind === 'admin' ? 'Admin' : addKind === 'member' ? 'Member' : addKind === 'trainer' ? 'Trainer' : 'Staff'}</button>
           </form>
         </Modal>
       )}
@@ -340,8 +342,8 @@ function SuperAdminUsers({
           onClose={() => setPendingRemove(null)}
         >
           <p style={{ fontSize: 13, color: 'var(--steel)', marginBottom: 14 }}>
-            You're about to remove <b>{pendingRemove.name}</b>. They will be sent to the trash and
-            hidden from this list. You can restore or permanently delete them from the Trash view.
+            You're about to remove <b>{pendingRemove.name}</b>. They will be archived and
+            hidden from this list. You can restore or permanently delete them from the Archive view.
           </p>
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
             <button className="btn btn-outline" type="button" onClick={() => setPendingRemove(null)}>Cancel</button>

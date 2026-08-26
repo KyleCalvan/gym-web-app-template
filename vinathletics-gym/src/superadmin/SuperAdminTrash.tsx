@@ -77,7 +77,7 @@ function SuperAdminTrash({
     else if (u.kind === 'member')  setMembers(clear);
     else if (u.kind === 'trainer') setTrainers(clear);
     else if (u.kind === 'staff')   setStaff(clear);
-    addAudit?.('info', 'Restored from trash', `${u.name} (${u.id})`);
+    addAudit?.('info', 'Restored from archive', `${u.name} (${u.id})`);
     toast(`Restored — ${u.name}`);
     setPendingRestore(null);
   };
@@ -98,13 +98,13 @@ function SuperAdminTrash({
   return (
     <>
       <div className="grid grid-4" style={{ marginBottom: 18 }}>
-        <div className="stat-tile"><div className="eyebrow">Admins in Trash</div><div className="num">{counts.admin}</div></div>
-        <div className="stat-tile"><div className="eyebrow">Members in Trash</div><div className="num">{counts.member}</div></div>
-        <div className="stat-tile"><div className="eyebrow">Trainers in Trash</div><div className="num">{counts.trainer}</div></div>
-        <div className="stat-tile"><div className="eyebrow">Staff in Trash</div><div className="num">{counts.staff}</div></div>
+        <div className="stat-tile"><div className="eyebrow">Archived Admins</div><div className="num">{counts.admin}</div></div>
+        <div className="stat-tile"><div className="eyebrow">Archived Members</div><div className="num">{counts.member}</div></div>
+        <div className="stat-tile"><div className="eyebrow">Archived Trainers</div><div className="num">{counts.trainer}</div></div>
+        <div className="stat-tile"><div className="eyebrow">Archived Staff</div><div className="num">{counts.staff}</div></div>
       </div>
 
-      <TabbedCard label="Maintenance" title="Trash">
+      <TabbedCard label="Maintenance" title="Archive">
         <div className="search-row">
           <TextInput placeholder="Search by name or email…" value={q} onChange={setQ} />
           <Select value={kindF} onChange={setKindF} style={{ maxWidth: 160 }}>
@@ -118,7 +118,7 @@ function SuperAdminTrash({
 
         {filtered.length === 0 ? (
           <div style={{ fontSize: 13, color: 'var(--steel)', padding: '14px 0' }}>
-            Nothing in the trash. Removed users will appear here so you can restore or permanently delete them.
+            Nothing in the archive. Removed users will appear here so you can restore or permanently delete them.
           </div>
         ) : (
           <Table

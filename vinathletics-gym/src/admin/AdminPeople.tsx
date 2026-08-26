@@ -314,7 +314,7 @@ function AdminPeople({ trainers, setTrainers, staff, setStaff, members, sessions
       {pendingTrainerRemove && (
         <Modal title="Remove Trainer?" onClose={()=>setPendingTrainerRemove(null)}>
           <p style={{fontSize:13, color:'var(--steel)', marginBottom:14}}>
-            You're about to remove <b>{pendingTrainerRemove.name}</b>. They will be sent to the trash
+            You're about to remove <b>{pendingTrainerRemove.name}</b>. They will be archived
             and hidden from the trainer roster. A super admin can restore or permanently delete them later.
           </p>
           <div style={{display:'flex', gap:8, justifyContent:'flex-end'}}>
@@ -327,7 +327,7 @@ function AdminPeople({ trainers, setTrainers, staff, setStaff, members, sessions
       {pendingStaffRemove && (
         <Modal title="Remove Staff?" onClose={()=>setPendingStaffRemove(null)}>
           <p style={{fontSize:13, color:'var(--steel)', marginBottom:14}}>
-            You're about to remove <b>{pendingStaffRemove.name}</b>. They will be sent to the trash
+            You're about to remove <b>{pendingStaffRemove.name}</b>. They will be archived
             and hidden from the staff roster. A super admin can restore or permanently delete them later.
           </p>
           <div style={{display:'flex', gap:8, justifyContent:'flex-end'}}>

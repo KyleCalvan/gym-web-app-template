@@ -29,7 +29,7 @@ function SuperAdminDashboard({
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
           <button className="btn btn-signal btn-sm" onClick={() => onNav('users')}>Manage Users</button>
           <button className="btn btn-outline btn-sm" onClick={() => onNav('system_logs')}>View Audit Log</button>
-          <button className="btn btn-outline btn-sm" onClick={() => onNav('trash')}>Open Trash</button>
+          <button className="btn btn-outline btn-sm" onClick={() => onNav('trash')}>Open Archive</button>
           <button className="btn btn-outline btn-sm" onClick={() => onNav('backups')}>Download Backup</button>
           <button className="btn btn-outline btn-sm" onClick={() => onNav('sessions')}>Active Sessions</button>
         </div>

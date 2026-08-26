@@ -16,7 +16,7 @@ export const MEMBERS: Member[] = [
   { id: 'M-1046', name: 'Miguel Ramos',    email: 'miguel.ramos@mail.com',   phone: '+63 919 774 5510', plan: 'Basic',   status: 'Frozen',   joined: 'Mar 30, 2025' },
   { id: 'M-1047', name: 'Bea Fernandez',   email: 'bea.fernandez@mail.com',  phone: '+63 916 331 9982', plan: 'Elite',   status: 'Active',   joined: 'Jul 15, 2025' },
   { id: 'M-1048', name: 'Paolo Villanueva',email: 'paolo.v@mail.com',        phone: '+63 921 887 4402', plan: 'Premium', status: 'Expired',  joined: 'Nov 02, 2024' },
-  // Pre-seeded soft-deleted members (in Trash on first load).
+  // Pre-seeded soft-deleted members (in Archive on first load).
   { id: 'M-1039', name: 'Daniel Mercado',  email: 'daniel.mercado@mail.com', phone: '+63 917 333 4422', plan: 'Basic',   status: 'Expired',  joined: 'Oct 04, 2023', deletedAt: '2026-08-12T14:21:00.000Z' },
   { id: 'M-1040', name: 'Trisha Aquino',   email: 'trisha.aquino@mail.com',  phone: '+63 922 118 0067', plan: 'Premium', status: 'Expired',  joined: 'May 19, 2024', deletedAt: '2026-08-19T09:05:00.000Z' },
   { id: 'M-1041', name: 'Kevin Yap',       email: 'kevin.yap@mail.com',      phone: '+63 925 770 3318', plan: 'Elite',   status: 'Active',   joined: 'Sep 27, 2024', deletedAt: '2026-08-21T16:48:00.000Z' },
@@ -106,7 +106,7 @@ export const ADMINS: Admin[] = [
   { id: 'SA-01', name: 'Andrea Cruz',     email: 'andrea.cruz@vinathletics.gym',    status: 'Active',   createdAt: 'Jan 15, 2024' },
   { id: 'SA-02', name: 'Roberto Garcia',  email: 'roberto.garcia@vinathletics.gym', status: 'Active',   createdAt: 'Mar 02, 2025' },
   { id: 'SA-03', name: 'Patricia Lim',    email: 'patricia.lim@vinathletics.gym',   status: 'Inactive', createdAt: 'Sep 08, 2022' },
-  // Pre-seeded soft-deleted admin (in Trash on first load).
+  // Pre-seeded soft-deleted admin (in Archive on first load).
   { id: 'SA-04', name: 'Mark Villanueva', email: 'mark.villanueva@vinathletics.gym', status: 'Inactive', createdAt: 'Jul 22, 2023', deletedAt: '2026-08-05T13:40:00.000Z' },
 ];
 

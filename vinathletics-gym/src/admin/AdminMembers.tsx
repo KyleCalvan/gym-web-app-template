@@ -78,7 +78,7 @@ function AdminMembers({ members, setMembers, plans, setTransactions, today, toas
     setPendingUnfreeze(null);
   };
 
-  // Soft-delete (Remove) flow — admins send the member to trash; super admin handles restore/permanent delete.
+  // Soft-delete (Remove) flow — admins send the member to archive; super admin handles restore/permanent delete.
   const [pendingRemove, setPendingRemove] = useState(null);
   const applyRemove = () => {
     if (!pendingRemove) return;
@@ -238,7 +238,7 @@ function AdminMembers({ members, setMembers, plans, setTransactions, today, toas
       {pendingRemove && (
         <Modal title="Remove Member?" onClose={()=>setPendingRemove(null)}>
           <p style={{fontSize:13, color:'var(--steel)', marginBottom:14}}>
-            You're about to remove <b>{pendingRemove.name}</b>. They will be sent to the trash and
+            You're about to remove <b>{pendingRemove.name}</b>. They will be archived and
             hidden from the directory. A super admin can restore or permanently delete them later.
           </p>
           <div style={{display:'flex', gap:8, justifyContent:'flex-end'}}>
