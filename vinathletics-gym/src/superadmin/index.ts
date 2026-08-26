@@ -15,7 +15,7 @@ export const SUPERADMIN_NAV: NavSection[] = [
     { id: 'system_logs', label: 'System Logs', ic: '≡' },
   ] },
   { section: 'Maintenance', items: [
-    { id: 'trash', label: 'Trash', ic: '⌫' },
+    { id: 'trash', label: 'Archive', ic: '⌫' },
     { id: 'backups', label: 'Database Backups', ic: '◇' },
     { id: 'sessions', label: 'Active Sessions', ic: '●' },
   ] },
