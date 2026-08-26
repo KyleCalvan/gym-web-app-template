@@ -17,7 +17,7 @@ function MemberCoaching({ bookings, setBookings, sessions, setSessions, setTrans
   const openBookingFor = (trainerName) => { setBookingTrainer(trainerName); setShowBooking(true); };
 
   const handlePersistBooking = ({ id, trainer, date, time, amount, method }) => {
-    const memberName = me?.name || 'Juan Dela Cruz';
+    const memberName = me?.name || '';
     setBookings(prev => [...prev, {id, member: memberName, trainer, date, time, type:'Coaching', status:'Pending', paid:true, amount}]);
     setSessions(prev => [...prev, {id, member: memberName, trainer, date, time, type:'Coaching', status:'Pending', paid:true, amount}]);
     setTransactions(prev => [{
@@ -108,6 +108,7 @@ function MemberCoaching({ bookings, setBookings, sessions, setSessions, setTrans
       {showBooking && (
         <BookingCheckoutModal
           initialTrainer={bookingTrainer}
+          trainers={trainers}
           onClose={()=>setShowBooking(false)}
           onComplete={()=>setShowBooking(false)}
           onPersistBooking={handlePersistBooking}

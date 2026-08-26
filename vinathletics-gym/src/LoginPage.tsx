@@ -21,11 +21,11 @@ interface RoleCred {
 }
 
 const ROLE_CREDS: Record<Role, RoleCred> = {
-  member:     { email: 'member@vinathletics.gym',     password: 'member123',  label: 'Member',      hint: 'Demo: member@vinathletics.gym / member123' },
-  staff:      { email: 'staff@vinathletics.gym',      password: 'staff123',   label: 'Staff',       hint: 'Demo: staff@vinathletics.gym / staff123' },
-  trainer:    { email: 'trainer@vinathletics.gym',    password: 'trainer123', label: 'Trainer',     hint: 'Demo: trainer@vinathletics.gym / trainer123' },
-  admin:      { email: 'admin@vinathletics.gym',      password: 'admin123',   label: 'Admin',       hint: 'Demo: admin@vinathletics.gym / admin123' },
-  superadmin: { email: 'superadmin@vinathletics.gym', password: 'super123',   label: 'Super Admin', hint: 'Demo: superadmin@vinathletics.gym / super123' },
+  member:     { email: '', password: '', label: 'Member', hint: '' },
+  staff:      { email: '', password: '', label: 'Staff', hint: '' },
+  trainer:    { email: '', password: '', label: 'Trainer', hint: '' },
+  admin:      { email: '', password: '', label: 'Admin', hint: '' },
+  superadmin: { email: '', password: '', label: 'Super Admin', hint: '' },
 };
 
 export interface LoginPageProps {
@@ -112,7 +112,7 @@ export default function LoginPage({
         <motion.div className="auth-page-aside" {...item(0)}>
           <div className="eyebrow">Sign in</div>
           <h2>Welcome back to the floor.</h2>
-          <p>Pick your role and sign in. Each role has its own dashboard, demo credentials prefilled.</p>
+          <p>Pick your role and sign in to access its dashboard.</p>
           <ul>
             <li><b>Member</b> — track progress, sessions, payments.</li>
             <li><b>Staff</b> — front desk, point of sale, day-to-day ops.</li>
@@ -159,7 +159,7 @@ export default function LoginPage({
           {role === 'member' && memberTab === 'register' ? (
             <form onSubmit={handleMemberRegister}>
               <Field label="Full Name">
-                <input className="form-control" required placeholder="Juan Dela Cruz"
+                <input className="form-control" required placeholder="Your full name"
                   value={regName} onChange={(e) => setRegName(e.target.value)} />
               </Field>
               <Field label="Email">
@@ -195,9 +195,7 @@ export default function LoginPage({
               <button type="submit" className="btn btn-signal btn-block">
                 Sign In to {creds.label} Dashboard
               </button>
-              <p style={{ fontSize: 11.5, color: 'var(--steel)', marginTop: 12, textAlign: 'center' }}>
-                {creds.hint}
-              </p>
+              {creds.hint && <p style={{ fontSize: 11.5, color: 'var(--steel)', marginTop: 12, textAlign: 'center' }}>{creds.hint}</p>}
             </form>
           )}
         </motion.div>

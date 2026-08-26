@@ -60,28 +60,6 @@ const toISODate = (d: Date): string => {
   return `${y}-${m}-${day}`;
 };
 
-// Deterministic seed: produces 8-12 check-ins in the last 28 days for a given memberId.
-const seedCheckIns = (memberId: string): CheckInRecord[] => {
-  const seed = memberId.length + (memberId.charCodeAt(0) || 0);
-  const count = 8 + (seed % 5);
-  const out: CheckInRecord[] = [];
-  const now = new Date();
-  // Use a stable pattern so dates don't shift every render.
-  const offsets = [0, 2, 4, 5, 7, 9, 11, 13, 14, 16, 18, 20, 22, 24, 26];
-  const times = ['06:42', '07:15', '08:00', '17:30', '18:10', '19:00', '20:05'];
-  for (let i = 0; i < count && i < offsets.length; i++) {
-    const d = new Date(now);
-    d.setDate(d.getDate() - offsets[i] - ((seed + i) % 3));
-    out.push({
-      id: `CKI-${memberId}-${i}`,
-      memberId,
-      date: toISODate(d),
-      time: times[(seed + i) % times.length],
-    });
-  }
-  return out;
-};
-
 export default function App() {
   const [members, setMembers]               = useState<Member[]>(() => [...MEMBERS]);
   const [trainers, setTrainers]             = useState<Trainer[]>(() => [...TRAINERS]);
@@ -96,8 +74,8 @@ export default function App() {
   const [notifications, setNotifications]   = useState<Notification[]>(() => NOTIFICATIONS.map((n) => ({ ...n })));
   const [bookings, setBookings]             = useState<Session[]>(() => SESSIONS.filter((s) => s.member === CURRENT.member.name && s.status !== 'Cancelled'));
   const [currentUserId, setCurrentUserId]   = useState<string | null>(null);
-  const [checkIns, setCheckIns]             = useState<CheckIns>({ count: 86, today: today() });
-  const [checkInHistory, setCheckInHistory] = useState<CheckInRecord[]>(() => seedCheckIns('M-1042'));
+  const [checkIns, setCheckIns]             = useState<CheckIns>({ count: 0, today: today() });
+  const [checkInHistory, setCheckInHistory] = useState<CheckInRecord[]>([]);
   const [notifPrefs, setNotifPrefs]         = useState<NotifPrefs>({ email: true, sms: false, reminders: true, promos: false });
 
   // Current superadmin session id (used by Sessions view to exclude self).
@@ -153,8 +131,8 @@ export default function App() {
     setView('dashboard');
     setLoggedIn(true);
     setRoute('app');
-    if (r === 'member') setCurrentUserId(userId || 'M-1042');
-    else if (r === 'trainer') setCurrentUserId(userId || 'T-01');
+    if (r === 'member') setCurrentUserId(userId || null);
+    else if (r === 'trainer') setCurrentUserId(userId || null);
     else setCurrentUserId(null);
     setBookings(SESSIONS.filter((s) => s.member === CURRENT[r].name && s.status !== 'Cancelled'));
     setNotifications(NOTIFICATIONS.map((n) => ({ ...n })));
@@ -187,8 +165,8 @@ export default function App() {
     addAudit('warn', 'Role switched', `${fromName} → ${toName}`);
     setRole(r);
     setView('dashboard');
-    if (r === 'member') setCurrentUserId('M-1042');
-    else if (r === 'trainer') setCurrentUserId('T-01');
+    if (r === 'member') setCurrentUserId(null);
+    else if (r === 'trainer') setCurrentUserId(null);
     else setCurrentUserId(null);
   };
 

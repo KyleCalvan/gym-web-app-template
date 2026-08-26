@@ -5,7 +5,7 @@ import BookingCheckoutModal from './BookingCheckoutModal.tsx';
 
 function MemberDashboard({ members, sessions, bookings, currentUserId, plans, onNav, toast, checkInHistory }){
   const me = members.find(m => m.id === currentUserId) || members[0];
-  const upcoming = bookings.length > 0 ? bookings : sessions.filter(s => s.member === (me?.name || 'Juan Dela Cruz')).slice(0, 3);
+  const upcoming = bookings.length > 0 ? bookings : sessions.filter(s => s.member === me?.name).slice(0, 3);
   const [showBook, setShowBook] = useState(false);
 
   // ---- Metrics tracker (weight / height / BMI) ----
@@ -35,7 +35,7 @@ function MemberDashboard({ members, sessions, bookings, currentUserId, plans, on
   };
 
   // Real data: this month's check-ins + session count.
-  const myId = me?.id || 'M-1042';
+  const myId = me?.id || '';
   const monthCheckIns = (checkInHistory || []).filter(r => {
     if (r.memberId !== myId) return false;
     const now = new Date();
@@ -43,7 +43,7 @@ function MemberDashboard({ members, sessions, bookings, currentUserId, plans, on
     return r.date.startsWith(ym);
   }).length;
   const monthCheckPct = Math.min(100, Math.round((monthCheckIns / 20) * 100));
-  const mySessionsCount = sessions.filter(s => s.member === (me?.name || 'Juan Dela Cruz')).length;
+  const mySessionsCount = sessions.filter(s => s.member === me?.name).length;
   const sessionGoal = 10;
   const sessionPct = Math.min(100, Math.round((mySessionsCount / sessionGoal) * 100));
 
@@ -70,7 +70,7 @@ function MemberDashboard({ members, sessions, bookings, currentUserId, plans, on
   return (
     <>
       <TabbedCard label="Welcome" title="">
-        <h2 style={{fontSize:22, marginBottom:6}}>Welcome back, {(me?.name || 'Juan Dela Cruz').split(' ')[0]} 💪</h2>
+        <h2 style={{fontSize:22, marginBottom:6}}>Welcome back{me?.name ? `, ${me.name.split(' ')[0]}` : ''} 💪</h2>
         <p style={{color:'var(--steel)', margin:0}}>You're on the <b>{me?.plan || 'Premium'}</b> plan, renewing Sep 12, 2026.</p>
       </TabbedCard>
       <div style={{height:18}}></div>

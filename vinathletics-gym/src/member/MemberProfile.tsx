@@ -60,9 +60,9 @@ function MemberProfile({ members, setMembers, currentUserId, toast, addAudit }){
           </div>
         )}
         <div style={{fontSize:12.5}}>
-          <div className="eyebrow">Member ID</div><p className="mono">{me?.id || 'M-1042'}</p>
-          <div className="eyebrow">Plan</div><p>{me?.plan || 'Premium'}</p>
-          <div className="eyebrow">Member Since</div><p className="mono">{me?.joined || 'Feb 12, 2025'}</p>
+          <div className="eyebrow">Member ID</div><p className="mono">{me?.id || '—'}</p>
+          <div className="eyebrow">Plan</div><p>{me?.plan || '—'}</p>
+          <div className="eyebrow">Member Since</div><p className="mono">{me?.joined || '—'}</p>
         </div>
       </TabbedCard>
       <TabbedCard label="Info" title="Account Information">

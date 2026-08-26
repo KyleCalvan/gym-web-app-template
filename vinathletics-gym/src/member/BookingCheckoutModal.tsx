@@ -5,9 +5,9 @@ import { Modal, AnimatedStepTrack, Field, TextInput, Select } from '../shared';
 import { peso } from '../data.ts';
 import { dur, ease, spring } from '../motion.tsx';
 
-function BookingCheckoutModal({ initialTrainer, onClose, onComplete, onPersistBooking }){
+function BookingCheckoutModal({ initialTrainer, trainers = [], onClose, onComplete, onPersistBooking }){
   const [step, setStep] = useState(0);
-  const [trainerName, setTrainerName] = useState(initialTrainer || 'James Reyes');
+  const [trainerName, setTrainerName] = useState(initialTrainer || trainers[0]?.name || '');
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
   const [method, setMethod] = useState('GCash');
@@ -46,7 +46,7 @@ function BookingCheckoutModal({ initialTrainer, onClose, onComplete, onPersistBo
             <div className="grid grid-2">
               <Field label="Trainer">
                 <Select value={trainerName} onChange={setTrainerName}>
-                  {['James Reyes','Marco Cruz','Andrea Lim','Chris Santos'].map(t=><option key={t}>{t}</option>)}
+                  {trainers.filter(t => !t.deletedAt && t.status !== 'Inactive').map(t=><option key={t.id}>{t.name}</option>)}
                 </Select>
               </Field>
               <Field label="Session Rate">

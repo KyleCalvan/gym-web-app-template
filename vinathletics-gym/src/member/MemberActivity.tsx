@@ -23,7 +23,7 @@ function MemberActivity({
   checkInHistory, setCheckInHistory, setCheckIns, toast,
 }) {
   const me = members.find(m => m.id === currentUserId) || members[0];
-  const myId = me?.id || 'M-1042';
+  const myId = me?.id || '';
 
   const checkedToday = useMemo(
     () => checkInHistory.some(r => r.memberId === myId && r.date === todayISO()),
