@@ -26,6 +26,8 @@ function SuperAdminTrash({
 
   const [pendingRestore, setPendingRestore] = useState(null);
   const [pendingPurge, setPendingPurge] = useState(null);
+  const [confirmRestoreAll, setConfirmRestoreAll] = useState(false);
+  const [confirmPurgeAll, setConfirmPurgeAll] = useState(false);
 
   const trashed = useMemo(() => {
     const out = [];
@@ -82,6 +84,16 @@ function SuperAdminTrash({
     setPendingRestore(null);
   };
 
+  const restoreAll = () => {
+    setAdmins(prev => prev.map(a => a.deletedAt ? { ...a, deletedAt: null } : a));
+    setMembers(prev => prev.map(m => m.deletedAt ? { ...m, deletedAt: null } : m));
+    setTrainers(prev => prev.map(t => t.deletedAt ? { ...t, deletedAt: null } : t));
+    setStaff(prev => prev.map(s => s.deletedAt ? { ...s, deletedAt: null } : s));
+    addAudit?.('info', 'Bulk restored archive', 'All archived users restored');
+    toast('All users restored from archive');
+    setConfirmRestoreAll(false);
+  };
+
   const applyPurge = () => {
     if (!pendingPurge) return;
     const u = pendingPurge;
@@ -95,6 +107,16 @@ function SuperAdminTrash({
     setPendingPurge(null);
   };
 
+  const purgeAll = () => {
+    setAdmins(prev => prev.filter(a => !a.deletedAt));
+    setMembers(prev => prev.filter(m => !m.deletedAt));
+    setTrainers(prev => prev.filter(t => !t.deletedAt));
+    setStaff(prev => prev.filter(s => !s.deletedAt));
+    addAudit?.('error', 'Bulk purged archive', 'All archived users permanently deleted');
+    toast('Archive permanently cleared');
+    setConfirmPurgeAll(false);
+  };
+
   return (
     <>
       <div className="grid grid-4" style={{ marginBottom: 18 }}>
@@ -104,7 +126,16 @@ function SuperAdminTrash({
         <div className="stat-tile"><div className="eyebrow">Archived Staff</div><div className="num">{counts.staff}</div></div>
       </div>
 
-      <TabbedCard label="Maintenance" title="Archive">
+      <TabbedCard
+        label="Maintenance"
+        title="Archive"
+        right={
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="btn btn-outline btn-sm" onClick={() => setConfirmRestoreAll(true)}>BULK RESTORE</button>
+            <button className="btn btn-danger btn-sm" onClick={() => setConfirmPurgeAll(true)}>BULK REMOVE</button>
+          </div>
+        }
+      >
         <div className="search-row">
           <TextInput placeholder="Search by name or email…" value={q} onChange={setQ} />
           <Select value={kindF} onChange={setKindF} style={{ maxWidth: 160 }}>
@@ -139,7 +170,7 @@ function SuperAdminTrash({
                 <td className="mono" style={{ fontSize: 12 }}>{fmt(u.deletedAt)}</td>
                 <td>
                   <div style={{ display: 'flex', gap: 6 }}>
-                    <button className="btn btn-outline btn-sm" onClick={() => setPendingRestore(u)}>
+                    <button className="btn btn-signal btn-sm" style={{ background: 'var(--court)', borderColor: 'var(--court)' }} onClick={() => setPendingRestore(u)}>
                       Restore
                     </button>
                     <button className="btn btn-danger btn-sm" onClick={() => setPendingPurge(u)}>
@@ -163,7 +194,12 @@ function SuperAdminTrash({
             <button className="btn btn-outline" type="button" onClick={() => setPendingRestore(null)}>
               Cancel
             </button>
-            <button className="btn btn-signal" type="button" onClick={applyRestore}>
+            <button
+              className="btn btn-signal"
+              type="button"
+              onClick={applyRestore}
+              style={{ background: 'var(--court)', borderColor: 'var(--court)' }}
+            >
               Restore
             </button>
           </div>
@@ -181,6 +217,43 @@ function SuperAdminTrash({
               Cancel
             </button>
             <button className="btn btn-danger" type="button" onClick={applyPurge}>
+              Delete Permanently
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {confirmRestoreAll && (
+        <Modal title="Restore All Users?" onClose={() => setConfirmRestoreAll(false)}>
+          <p style={{ fontSize: 13, color: 'var(--steel)', marginBottom: 14 }}>
+            Are you sure you want to restore all archived users? They will be moved back to their respective active lists.
+          </p>
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+            <button className="btn btn-outline" type="button" onClick={() => setConfirmRestoreAll(false)}>
+              Cancel
+            </button>
+            <button
+              className="btn btn-signal"
+              type="button"
+              onClick={restoreAll}
+              style={{ background: 'var(--court)', borderColor: 'var(--court)' }}
+            >
+              Restore All
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {confirmPurgeAll && (
+        <Modal title="Purge All Users?" onClose={() => setConfirmPurgeAll(false)}>
+          <p style={{ fontSize: 13, color: 'var(--steel)', marginBottom: 14 }}>
+            Are you sure you want to permanently delete all archived users? This action cannot be undone.
+          </p>
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+            <button className="btn btn-outline" type="button" onClick={() => setConfirmPurgeAll(false)}>
+              Cancel
+            </button>
+            <button className="btn btn-danger" type="button" onClick={purgeAll}>
               Delete Permanently
             </button>
           </div>

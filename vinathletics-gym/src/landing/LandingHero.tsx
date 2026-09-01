@@ -1,6 +1,8 @@
 // @ts-nocheck
 import { motion } from 'framer-motion';
 import { dur, ease, stagger } from '../motion.tsx';
+import HeroImage from './HeroImage.tsx';
+import { LANDING_STATS } from './landing-mock.ts';
 
 function LandingHero({ onNavigate }) {
   const heroItem = (i) => ({
@@ -10,16 +12,16 @@ function LandingHero({ onNavigate }) {
   });
 
   return (
-    <div className="landing-hero">
+    <section className="landing-hero" aria-labelledby="hero-heading">
       <div className="hero-blob hero-blob-1" />
       <div className="hero-blob hero-blob-2" />
-      <div className="hero-photo-bg" aria-hidden="true" />
+      <HeroImage className="hero-photo-bg" />
       <div className="landing-hero-inner">
         <div>
           <motion.div className="eyebrow" style={{ marginBottom: 14 }} {...heroItem(0)}>
             Gym Management, Squared Away
           </motion.div>
-          <motion.h1 {...heroItem(1)}>
+          <motion.h1 id="hero-heading" {...heroItem(1)}>
             Run your gym like a{' '}
             <span className="accent-word">
               champion&nbsp;runs
@@ -36,7 +38,7 @@ function LandingHero({ onNavigate }) {
           <motion.p className="lede" {...heroItem(2)}>
             Memberships, coaching schedules, point-of-sale and reporting — one ledger for admins, staff, trainers and members alike.
           </motion.p>
-          <motion.div className="btn-group" style={{ display: 'flex', gap: 12 }} {...heroItem(3)}>
+          <motion.div className="btn-group" style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }} {...heroItem(3)}>
             <button
               className="btn btn-signal"
               onClick={() => onNavigate && onNavigate('/login')}
@@ -51,13 +53,15 @@ function LandingHero({ onNavigate }) {
             >View Promotions</a>
           </motion.div>
           <motion.div className="hero-stats" {...heroItem(4)}>
-            <span className="stat"><span className="dot" /> 1,200+ Active Members</span>
-            <span className="stat"><span className="dot" /> 50+ Classes Weekly</span>
-            <span className="stat"><span className="dot" /> 4.8★ Avg Rating</span>
+            {LANDING_STATS.map((s) => (
+              <span key={s.label} className="stat">
+                <span className="dot" aria-hidden="true" /> {s.value} {s.label}
+              </span>
+            ))}
           </motion.div>
         </div>
       </div>
-    </div>
+    </section>
   );
 }
 

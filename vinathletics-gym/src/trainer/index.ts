@@ -7,9 +7,21 @@ import TrainerSchedule from './TrainerSchedule.tsx';
 import TrainerProfile from './TrainerProfile.tsx';
 
 export const TRAINER_NAV: NavSection[] = [
-  {section:'Overview', items:[{id:'dashboard', label:'Dashboard', ic:'▤'}]},
-  {section:'Coaching', items:[{id:'sessions', label:'Sessions', ic:'✦'}, {id:'schedule', label:'Schedule', ic:'◷'}]},
-  {section:'Account', items:[{id:'profile', label:'Profile', ic:'◉'}]},
+  {
+    section: 'Main',
+    items: [
+      { id: 'dashboard', label: 'Dashboard', ic: '▤' },
+      { id: 'sessions',  label: 'Assigned Sessions', ic: '◉' },
+      { id: 'schedule',  label: 'Schedule & Availability', ic: '◷' },
+      { id: 'profile',   label: 'My Profile', ic: '◆' },
+    ],
+  },
+  {
+    section: 'Session',
+    items: [
+      // Log Out lives in the shell sidebar itself; kept here for reference.
+    ],
+  },
 ];
 
 export const TRAINER_VIEWS: Record<string, ComponentType<ViewProps>> = {

@@ -16,7 +16,7 @@ export const MEMBER_NAV: NavSection[] = [
   {section:'Membership', items:[{id:'membership', label:'My Membership', ic:'▥'}]},
   {section:'Training', items:[{id:'coaching', label:'Coaching Sessions', ic:'●'}, {id:'activity', label:'Activity', ic:'≡'}]},
   {section:'Finance', items:[{id:'payments', label:'My Payments', ic:'₱'}]},
-  {section:'Other', items:[{id:'notifications', label:'Notifications', ic:'◆'}, {id:'profile', label:'Profile', ic:'◉'}]},
+  {section:'Other', items:[{id:'profile', label:'Profile', ic:'◉'}]},
 ];
 
 export const MEMBER_VIEWS: Record<string, ComponentType<ViewProps>> = {

@@ -27,6 +27,13 @@
 .auth-page-aside ul li{padding:6px 0;border-top:1px solid #2C4038;}
 .auth-page-aside ul li:last-child{border-bottom:1px solid #2C4038;}
 
+.modal-dark{background:var(--ink);border-color:var(--ink-soft);color:var(--paper);}
+.modal-dark .modal-head h2{color:var(--paper);}
+.modal-dark .modal-close{color:var(--steel);}
+.modal-dark p, .modal-dark .eyebrow{color:#B9C7BF;}
+.modal-dark .form-control{background:var(--ink-soft);border-color:var(--line-strong);color:var(--paper);}
+.modal-dark .form-control::placeholder{color:var(--steel);}
+
 .role-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px;}
 .role-pick{border:2px solid var(--line);background:var(--surface);padding:10px 4px;border-radius:3px;font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.5px;text-align:center;}
 .role-pick.active{border-color:var(--ink);background:var(--ink);color:var(--signal);}

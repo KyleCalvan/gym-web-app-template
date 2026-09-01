@@ -8,9 +8,10 @@ export interface ModalProps {
   onClose: () => void;
   children?: ReactNode;
   wide?: boolean;
+  className?: string;
 }
 
-export function Modal({ title, onClose, children, wide }: ModalProps) {
+export function Modal({ title, onClose, children, wide, className }: ModalProps) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', onKey);
@@ -26,7 +27,7 @@ export function Modal({ title, onClose, children, wide }: ModalProps) {
       transition={{ duration: 0.18, ease: ease.out }}
     >
       <motion.div
-        className="modal"
+        className={"modal " + (className || '')}
         style={wide ? { maxWidth: 640 } : undefined}
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}

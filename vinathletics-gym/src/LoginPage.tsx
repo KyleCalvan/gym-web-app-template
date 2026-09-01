@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import './LoginPage.css';
-import { Field, TextInput } from './shared';
+import { Field, TextInput, Modal } from './shared';
 import { dur, ease } from './motion.tsx';
 import type { Member, Plan, Role, Setter } from './types.ts';
 
@@ -58,6 +58,27 @@ export default function LoginPage({
   const showToast = (msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(null), 2600);
+  };
+
+  // Reset Password Flow
+  const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
+  const [resetSuccessOpen, setResetSuccessOpen] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+
+  const handleResetPassword = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!/^\S+@\S+\.\S+$/.test(resetEmail)) {
+      showToast('Please enter a valid email');
+      return;
+    }
+    setForgotPasswordOpen(false);
+    setResetSuccessOpen(true);
+  };
+
+  const closeResetFlow = () => {
+    setForgotPasswordOpen(false);
+    setResetSuccessOpen(false);
+    setResetEmail('');
   };
 
   const pickRole = (r: Role) => {
@@ -192,6 +213,16 @@ export default function LoginPage({
                   value={password} onChange={(e) => setPassword(e.target.value)}
                 />
               </Field>
+              <div style={{ textAlign: 'right', marginBottom: 12 }}>
+                <button
+                  type="button"
+                  className="btn-link-sm"
+                  style={{ fontSize: 11, fontWeight: 'bold', color: 'var(--signal)', textTransform: 'uppercase', cursor: 'pointer', border: 'none', background: 'none', padding: 0 }}
+                  onClick={() => setForgotPasswordOpen(true)}
+                >
+                  Forgot Password
+                </button>
+              </div>
               <button type="submit" className="btn btn-signal btn-block">
                 Sign In to {creds.label} Dashboard
               </button>
@@ -210,6 +241,56 @@ export default function LoginPage({
         >
           <span className="dot"></span>{toast}
         </motion.div>
+      )}
+
+      {forgotPasswordOpen && (
+        <Modal title="Reset your password" className="modal-dark" onClose={closeResetFlow}>
+          <form onSubmit={handleResetPassword} style={{ padding: '0 24px 24px' }}>
+            <p style={{ margin: '0 0 18px', color: 'var(--steel)', fontSize: 13, lineHeight: 1.6 }}>
+              Enter your email address below and we'll send you a password reset link so you can get back to your account.
+            </p>
+            <Field label="EMAIL">
+              <TextInput
+                value={resetEmail}
+                onChange={(v) => setResetEmail(v)}
+                placeholder="you@example.com"
+              />
+            </Field>
+            <button type="submit" className="btn btn-signal btn-block" style={{ marginTop: 12 }}>
+              RESET PASSWORD
+            </button>
+            <div style={{ textAlign: 'center', marginTop: 20, fontSize: 13, color: 'var(--steel)' }}>
+              Remember password?{' '}
+              <span
+                style={{ color: 'var(--signal)', cursor: 'pointer', fontWeight: 'bold' }}
+                onClick={closeResetFlow}
+              >
+                Log In
+              </span>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {resetSuccessOpen && (
+        <Modal title="Check your email" className="modal-dark" onClose={closeResetFlow}>
+          <div style={{ padding: '0 24px 24px', textAlign: 'center' }}>
+            <p style={{ margin: '0 0 12px', fontSize: 15, lineHeight: 1.6 }}>
+              We've sent a password reset link to <br />
+              <strong style={{ color: 'var(--signal)' }}>{resetEmail}</strong>
+            </p>
+            <p style={{ margin: '0 0 24px', color: 'var(--steel)', fontSize: 13, lineHeight: 1.6 }}>
+              Please check your inbox and follow the instructions to reset your password
+            </p>
+            <button
+              className="btn btn-outline btn-block"
+              onClick={closeResetFlow}
+              style={{ borderColor: 'var(--signal)', color: 'var(--signal)' }}
+            >
+              BACK TO LOG IN
+            </button>
+          </div>
+        </Modal>
       )}
     </div>
   );
