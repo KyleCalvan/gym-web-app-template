@@ -417,20 +417,22 @@ a.contact-card .value:hover{ color:var(--signal); }
     flex-direction:column; align-items:stretch; gap:0;
     background:var(--paper);
     border-bottom:2px solid var(--ink);
-    padding:8px 0;
+    padding:0;
     box-shadow: 0 8px 16px -8px rgba(22,36,31,.18);
     display:none;
+    z-index: 40;
   }
   .landing-nav.mobile-open .landing-nav-links,
   .landing-nav.mobile-open .landing-nav-actions{
     display:flex;
   }
-  .landing-nav-links{ padding:8px 20px 0; }
+  .landing-nav-links{ padding:16px 20px 0; }
   .landing-nav-links a{
-    padding:12px 0; border-bottom:1px solid var(--line);
+    padding:14px 0; border-bottom:1px solid var(--line);
+    font-size: 14px;
   }
   .landing-nav-actions{
-    padding:12px 20px 18px; gap:10px;
+    padding:16px 20px 24px; gap:12px;
     border-bottom:none;
   }
   .landing-nav-actions .btn{ width:100%; justify-content:center; }

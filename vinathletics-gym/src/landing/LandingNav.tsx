@@ -46,8 +46,36 @@ function LandingNav({ stuck, activeSection, onNavigate }) {
             initial={{ opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0, transition: { duration: dur.fast, ease: ease.out } }}
             exit={{ opacity: 0, y: -6, transition: { duration: dur.fast, ease: ease.out } }}
-            style={{ position: 'absolute', left: 0, right: 0, top: '100%' }}
-          />
+            className="mobile-menu-overlay"
+          >
+            <div className="mobile-menu-content">
+              <div className="landing-nav-links">
+                {navLinks.map((l) => {
+                  const id = l.href.slice(1);
+                  const isActive = activeSection === id;
+                  return (
+                    <a
+                      key={l.href}
+                      href={l.href}
+                      className={"nav-link" + (isActive ? " active" : "")}
+                      aria-current={isActive ? 'location' : undefined}
+                      onClick={(e) => handleLink(e, l.href)}
+                    >{l.label}</a>
+                  );
+                })}
+              </div>
+              <div className="landing-nav-actions">
+                <button
+                  className="btn btn-outline btn-sm"
+                  onClick={() => { setOpen(false); onNavigate && onNavigate('/login?flow=register'); }}
+                >Join Now</button>
+                <button
+                  className="btn btn-signal btn-sm"
+                  onClick={() => { setOpen(false); onNavigate && onNavigate('/login'); }}
+                >Member Login</button>
+              </div>
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
 

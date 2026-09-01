@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { CURRENT } from '../../data.ts';
-import { Avatar } from '../primitives/Avatar.tsx';
+import { Menu } from 'lucide-react';
 import type { Role } from '../../types.ts';
 import './app-shell.css';
 
@@ -20,7 +20,7 @@ const HAS_PROFILE_NAV: Record<Role, boolean> = {
   member: true,
 };
 
-export function Topbar({ role, view, onNav }: { role: Role; view: string; onNav?: (id: string) => void }) {
+export function Topbar({ role, view, onNav, toggleSidebar }: { role: Role; view: string; onNav?: (id: string) => void; toggleSidebar?: () => void }) {
   const user = CURRENT[role];
   const hasProfile = HAS_PROFILE_NAV[role];
 
@@ -30,9 +30,29 @@ export function Topbar({ role, view, onNav }: { role: Role; view: string; onNav?
 
   return (
     <div className="topbar">
-      <div>
-        <div className="path">{role.toUpperCase()} / {(VIEW_TITLES[view] || view).toUpperCase()}</div>
-        <h1>{VIEW_TITLES[view] || view}</h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <button
+          className="nav-toggle-btn"
+          onClick={toggleSidebar}
+          style={{
+            display: window.innerWidth <= 980 ? 'flex' : 'none',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '40px',
+            height: '40px',
+            background: 'transparent',
+            border: 'none',
+            color: 'var(--ink)',
+            cursor: 'pointer',
+            borderRadius: '4px'
+          }}
+        >
+          <Menu size={24} />
+        </button>
+        <div>
+          <div className="path">{role.toUpperCase()} / {(VIEW_TITLES[view] || view).toUpperCase()}</div>
+          <h1 style={{ margin: 0 }}>{VIEW_TITLES[view] || view}</h1>
+        </div>
       </div>
       <div
         className={'role-pill' + (hasProfile ? ' clickable' : '')}

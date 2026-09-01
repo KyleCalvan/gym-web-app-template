@@ -2,6 +2,12 @@
 
 .app-shell{display:grid;grid-template-columns:238px 1fr;min-height:100vh;}
 
+@media (max-width: 980px) {
+  .app-shell {
+    grid-template-columns: 1fr !important;
+  }
+}
+
 .topbar{
   display:flex;align-items:center;justify-content:space-between;
   padding:16px 28px;border-bottom:2px solid var(--ink);background:var(--surface);

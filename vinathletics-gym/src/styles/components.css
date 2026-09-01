@@ -78,7 +78,7 @@ table.tbl tbody tr:hover{background:var(--paper);}
 .badge.mute{background:var(--steel-soft);color:var(--steel);}
 
 /* ---------- search / filters / pills ---------- */
-.search-row{display:flex;gap:10px;margin-bottom:14px;}
+.search-row{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
 .search-row .form-control{flex:1;}
 .pill-tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;}
 .pill-tabs button{

@@ -11,3 +11,33 @@
   .landing-nav{flex-wrap:wrap;gap:14px;}
   .landing-nav-links{order:3;width:100%;justify-content:flex-start;gap:18px;}
 }
+
+@media (max-width:600px){
+  /* Collapse all grids to 1 column */
+  .grid-2, .grid-3, .grid-4, .grid-2-1, .grid-1-2,
+  .promo-grid, .feature-strip, .trainers-grid, .contact-grid, .hero-cards-grid{
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Reduce padding for App Shell and Content */
+  .topbar{
+    padding: 12px 16px !important;
+  }
+  .content{
+    padding: 16px 16px 40px !important;
+  }
+
+  /* Sidebar mobile adjustments */
+  .sidebar{
+    padding: 10px 0;
+  }
+  .sidebar .brand{
+    padding: 0 16px 14px !important;
+  }
+
+  /* Modal adjustments */
+  .modal{
+    padding: 16px !important;
+    max-width: 95% !important;
+  }
+}

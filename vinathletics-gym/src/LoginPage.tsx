@@ -164,7 +164,7 @@ export default function LoginPage({
           <h2 style={{ fontSize: 20, textTransform: 'uppercase', marginBottom: 4 }}>
             {role === 'member' && memberTab === 'register' ? 'Create Account' : `${creds.label} Sign In`}
           </h2>
-          <p style={{ color: 'var(--steel)', fontSize: 13, margin: '4px 0 14px' }}>
+          <p style={{ fontSize: 13, margin: '4px 0 14px' }}>
             {role === 'member'
               ? (memberTab === 'login' ? 'Access your member dashboard' : 'Join VinAthletics Gym today')
               : `Sign in to the ${creds.label} dashboard.`}

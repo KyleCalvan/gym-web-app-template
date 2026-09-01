@@ -80,6 +80,7 @@ export default function App() {
 
   // Current superadmin session id (used by Sessions view to exclude self).
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
 
   const [route, setRoute]                   = useState<'landing' | '/login' | 'app'>('landing');
   const [loginFlow, setLoginFlow]           = useState<{ role: Role; tab: 'login' | 'register' }>({ role: 'member', tab: 'login' });
@@ -220,14 +221,16 @@ export default function App() {
         brand="VinAthletics"
         nav={NAV_BY_ROLE[role]}
         active={view}
-        onNav={handleNav}
+        onNav={(id) => { handleNav(id); setIsSidebarOpen(false); }}
         onLogout={handleLogout}
         onSwitchRole={handleSwitchRole}
         searchable={SEARCHABLE_ROLES.includes(role)}
         bell={role === 'member' ? { count: unread, onClick: () => setShowNotifModal(true) } : null}
+        isOpen={isSidebarOpen}
+        setIsOpen={setIsSidebarOpen}
       />
-      <div>
-        <Topbar role={role} view={view} onNav={handleNav} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <Topbar role={role} view={view} onNav={handleNav} toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
         <div className="content">
           <AnimatePresence mode="wait">
             <motion.div

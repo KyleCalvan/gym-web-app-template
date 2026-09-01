@@ -19,8 +19,8 @@ export interface SidebarProps {
 }
 
 export default function Sidebar({
-  role, brand, nav, active, onNav, onLogout, searchable, bell,
-}: SidebarProps) {
+  role, brand, nav, active, onNav, onLogout, searchable, bell, isOpen, setIsOpen,
+}: SidebarProps & { isOpen: boolean; setIsOpen: (open: boolean) => void }) {
   const [query, setQuery] = useState<string>('');
   const [filters, setFilters] = useState<string[]>([]);
   const [confirmLogout, setConfirmLogout] = useState<boolean>(false);
@@ -47,10 +47,13 @@ export default function Sidebar({
   };
 
   return (
-    <aside className="sidebar">
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px 18px', borderBottom: '1px solid #2C4038', marginBottom: 14 }}>
-        <div className="brand" style={{ padding: 0, border: 'none', margin: 0, color: 'var(--paper)' }}>
-          <img src="/logo.jpg" alt="VinAthletics" className="brand-mark-img" /> {brand}
+    <>
+      <div className={`sidebar ${isOpen ? 'open' : ''}`}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px 18px', borderBottom: '1px solid #2C4038', marginBottom: 14 }}>
+          <div className="brand" style={{ padding: 0, border: 'none', margin: 0, color: 'var(--paper)' }}>
+            <img src="/logo.jpg" alt="VinAthletics" className="brand-mark-img" /> {brand}
+          </div>
+          <button className="nav-close-btn" onClick={() => setIsOpen(false)} style={{ display: 'none' }}>✕</button>
         </div>
         {bell && (
           <motion.button
@@ -72,7 +75,6 @@ export default function Sidebar({
           </motion.button>
         )}
       </div>
-
       {searchable && (
         <SidebarSearch
           sections={sectionNames}
@@ -108,7 +110,9 @@ export default function Sidebar({
         <div className="head">Session</div>
         <button className="nav-item" onClick={() => setConfirmLogout(true)}><span className="ic">←</span>Log Out</button>
       </div>
-
+      {isOpen && (
+        <div className="sidebar-backdrop" onClick={() => setIsOpen(false)} />
+      )}
       {confirmLogout && (
         <Modal title="Confirm Log Out" showCloseButton={false} onClose={() => setConfirmLogout(false)}>
           <div style={{ padding: '0 24px 24px' }}>
@@ -122,6 +126,6 @@ export default function Sidebar({
           </div>
         </Modal>
       )}
-    </aside>
+    </>
   );
 }
