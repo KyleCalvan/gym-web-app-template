@@ -50,7 +50,7 @@ function AdminPayments({ transactions, setTransactions, today, toast, addAudit }
       </TabbedCard>
 
       {showRefund && (
-        <Modal title="Refund / Void Transaction" onClose={()=>setShowRefund(null)}>
+        <Modal title="Refund / Void Transaction" showCloseButton={false} onClose={()=>setShowRefund(null)}>
           <p style={{fontSize:13, color:'var(--steel)', marginBottom:14}}>You are about to refund <b className="mono">{showRefund.id}</b> — {peso(showRefund.amount)} paid by {showRefund.member}.</p>
           <Field label="Reason"><textarea className="form-control" rows="3" placeholder="Reason for refund…" value={reason} onChange={e=>setReason(e.target.value)} /></Field>
           <div style={{display:'flex', gap:8}}>

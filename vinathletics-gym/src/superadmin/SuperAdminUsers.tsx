@@ -310,7 +310,7 @@ function SuperAdminUsers({
       )}
 
       {confirmAdd && (
-        <Modal title="" onClose={() => { setConfirmAdd(false); setPendingAddForm(null); }}>
+        <Modal title="" showCloseButton={false} onClose={() => { setConfirmAdd(false); setPendingAddForm(null); }}>
           <div style={{ padding: '0 24px 24px', textAlign: 'center' }}>
             <p style={{ fontSize: 15, margin: '0 0 24px', lineHeight: 1.6 }}>
               Are you sure you want to add this user as an {addKind === 'admin' ? 'admin' : addKind === 'member' ? 'member' : addKind === 'trainer' ? 'trainer' : 'staff'}?
@@ -449,6 +449,7 @@ function SuperAdminUsers({
       {pendingRemove && (
         <Modal
           title="Remove User?"
+          showCloseButton={false}
           onClose={() => setPendingRemove(null)}
         >
           <p style={{ fontSize: 13, color: 'var(--steel)', marginBottom: 14 }}>

@@ -185,7 +185,7 @@ function SuperAdminTrash({
       </TabbedCard>
 
       {pendingRestore && (
-        <Modal title="Restore User?" onClose={() => setPendingRestore(null)}>
+        <Modal title="Restore User?" showCloseButton={false} onClose={() => setPendingRestore(null)}>
           <p style={{ fontSize: 13, color: 'var(--steel)', marginBottom: 14 }}>
             You're about to restore <b>{pendingRestore.name}</b>. They'll reappear in the active list
             for their role and can be edited or removed again normally.
@@ -207,7 +207,7 @@ function SuperAdminTrash({
       )}
 
       {pendingPurge && (
-        <Modal title="Delete Permanently?" onClose={() => setPendingPurge(null)}>
+        <Modal title="Delete Permanently?" showCloseButton={false} onClose={() => setPendingPurge(null)}>
           <p style={{ fontSize: 13, color: 'var(--steel)', marginBottom: 14 }}>
             You're about to permanently delete <b>{pendingPurge.name}</b>. This action cannot be
             undone — their record and references will be removed from the system.
@@ -224,7 +224,7 @@ function SuperAdminTrash({
       )}
 
       {confirmRestoreAll && (
-        <Modal title="Restore All Users?" onClose={() => setConfirmRestoreAll(false)}>
+        <Modal title="Restore All Users?" showCloseButton={false} onClose={() => setConfirmRestoreAll(false)}>
           <p style={{ fontSize: 13, color: 'var(--steel)', marginBottom: 14 }}>
             Are you sure you want to restore all archived users? They will be moved back to their respective active lists.
           </p>
@@ -245,7 +245,7 @@ function SuperAdminTrash({
       )}
 
       {confirmPurgeAll && (
-        <Modal title="Purge All Users?" onClose={() => setConfirmPurgeAll(false)}>
+        <Modal title="Purge All Users?" showCloseButton={false} onClose={() => setConfirmPurgeAll(false)}>
           <p style={{ fontSize: 13, color: 'var(--steel)', marginBottom: 14 }}>
             Are you sure you want to permanently delete all archived users? This action cannot be undone.
           </p>

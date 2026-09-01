@@ -172,7 +172,7 @@ function AdminPromotions({ promotions, setPromotions, plans, toast, addAudit }){
       )}
 
       {showCreate && (
-        <Modal title="New Promotion" onClose={()=>setShowCreate(false)} wide>
+        <Modal title="New Promotion" showCloseButton={false} onClose={()=>setShowCreate(false)} wide>
           <form onSubmit={submitNew}>
             <div className="grid grid-3">
               <Field label="Promotion Title *"><TextInput required placeholder="e.g. Summer Body Special" value={form.title} onChange={v=>setForm(f=>({...f, title:v}))} /></Field>

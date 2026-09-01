@@ -88,7 +88,7 @@ function AdminPlans({ plans, setPlans, toast }){
       </TabbedCard>
 
       {editingPlan && (
-        <Modal title={editingPlan.mode === 'edit' ? `Edit Plan — ${editingPlan.plan.name}` : 'Create Plan'} onClose={closeModal} wide>
+        <Modal title={editingPlan.mode === 'edit' ? `Edit Plan — ${editingPlan.plan.name}` : 'Create Plan'} showCloseButton={false} onClose={closeModal} wide>
           <form onSubmit={submitPlan}>
             <div className="grid grid-3">
               <Field label="Plan Name"><TextInput required placeholder="e.g. Student" value={form.name} onChange={v=>setForm(f=>({...f, name:v}))} /></Field>

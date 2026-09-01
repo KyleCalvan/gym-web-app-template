@@ -212,7 +212,7 @@ function AdminMembers({ members, setMembers, plans, setTransactions, today, toas
       )}
 
       {pendingFreeze && (
-        <Modal title="Freeze Account?" onClose={()=>setPendingFreeze(null)}>
+        <Modal title="Freeze Account?" showCloseButton={false} onClose={()=>setPendingFreeze(null)}>
           <p style={{fontSize:13, color:'var(--steel)', marginBottom:14}}>
             You're about to freeze <b>{pendingFreeze.name}</b>. They won't be able to check in or renew until unfrozen.
           </p>
@@ -224,7 +224,7 @@ function AdminMembers({ members, setMembers, plans, setTransactions, today, toas
       )}
 
       {pendingUnfreeze && (
-        <Modal title="Unfreeze Account?" onClose={()=>setPendingUnfreeze(null)}>
+        <Modal title="Unfreeze Account?" showCloseButton={false} onClose={()=>setPendingUnfreeze(null)}>
           <p style={{fontSize:13, color:'var(--steel)', marginBottom:14}}>
             You're about to unfreeze <b>{pendingUnfreeze.name}</b>. Their access will be restored.
           </p>
@@ -236,7 +236,7 @@ function AdminMembers({ members, setMembers, plans, setTransactions, today, toas
       )}
 
       {pendingRemove && (
-        <Modal title="Remove Member?" onClose={()=>setPendingRemove(null)}>
+        <Modal title="Remove Member?" showCloseButton={false} onClose={()=>setPendingRemove(null)}>
           <p style={{fontSize:13, color:'var(--steel)', marginBottom:14}}>
             You're about to remove <b>{pendingRemove.name}</b>. They will be archived and
             hidden from the directory. A super admin can restore or permanently delete them later.

@@ -93,7 +93,7 @@ function SuperAdminBackups({
       </TabbedCard>
 
       {confirmDownload && (
-        <Modal title="Download Backup?" onClose={() => setConfirmDownload(false)}>
+        <Modal title="Download Backup?" showCloseButton={false} onClose={() => setConfirmDownload(false)}>
           <p style={{ fontSize: 13, color: 'var(--steel)', marginBottom: 14 }}>
             A <b>vinathletics-backup-{'{timestamp}'}.json</b> file will be generated and downloaded. The file reflects the current app state, including any unsaved changes in this session.
           </p>

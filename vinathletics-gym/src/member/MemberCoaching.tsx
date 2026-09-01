@@ -124,7 +124,7 @@ function MemberCoaching({ bookings, setBookings, sessions, setSessions, setTrans
       )}
 
       {rateTarget && (
-        <Modal title={`Rate Session — ${rateTarget.trainer}`} onClose={()=>setRateTarget(null)}>
+        <Modal title={`Rate Session — ${rateTarget.trainer}`} showCloseButton={false} onClose={()=>setRateTarget(null)}>
           <div style={{padding:'0 24px 24px'}}>
             <div style={{display:'flex', gap:6, justifyContent:'center', marginBottom:16}}>
               {[1,2,3,4,5].map(n => (

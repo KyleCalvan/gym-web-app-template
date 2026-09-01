@@ -110,7 +110,7 @@ export default function Sidebar({
       </div>
 
       {confirmLogout && (
-        <Modal title="Confirm Log Out" onClose={() => setConfirmLogout(false)}>
+        <Modal title="Confirm Log Out" showCloseButton={false} onClose={() => setConfirmLogout(false)}>
           <div style={{ padding: '0 24px 24px' }}>
             <p style={{ margin: '0 0 18px', color: 'var(--steel)', fontSize: 14, lineHeight: 1.5 }}>
               Are you sure you want to log out? You'll need to sign in again to access your account.

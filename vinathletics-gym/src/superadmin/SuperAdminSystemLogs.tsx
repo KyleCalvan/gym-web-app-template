@@ -114,7 +114,7 @@ function SuperAdminSystemLogs({ auditLog, setAuditLog, addAudit, toast }) {
       </TabbedCard>
 
       {confirmClear && (
-        <Modal title="Clear All Logs?" onClose={() => setConfirmClear(false)}>
+        <Modal title="Clear All Logs?" showCloseButton={false} onClose={() => setConfirmClear(false)}>
           <p style={{ fontSize: 13, color: 'var(--steel)', marginBottom: 14 }}>
             You're about to clear all <b>{auditLog.length}</b> log entries. This cannot be undone.
           </p>

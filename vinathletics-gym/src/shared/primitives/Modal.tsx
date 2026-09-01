@@ -9,9 +9,10 @@ export interface ModalProps {
   children?: ReactNode;
   wide?: boolean;
   className?: string;
+  showCloseButton?: boolean;
 }
 
-export function Modal({ title, onClose, children, wide, className }: ModalProps) {
+export function Modal({ title, onClose, children, wide, className, showCloseButton = true }: ModalProps) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', onKey);
@@ -36,7 +37,7 @@ export function Modal({ title, onClose, children, wide, className }: ModalProps)
       >
         <div className="modal-head">
           <h2 style={{ fontSize: 18, textTransform: 'uppercase' }}>{title}</h2>
-          <button className="modal-close" onClick={onClose}>✕</button>
+          {showCloseButton && <button className="modal-close" onClick={onClose}>✕</button>}
         </div>
         {children}
       </motion.div>
