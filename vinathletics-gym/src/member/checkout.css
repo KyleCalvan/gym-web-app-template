@@ -1,4 +1,4 @@
-/* ===== Checkout / POS / dashboard promo widget (used by views) ===== */
+/* d===== Checkout / POS / dashboard promo widget (used by views) ===== */
 
 .pay-method-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;}
 .pay-method{border:1.5px solid var(--line);border-radius:3px;padding:12px 8px;text-align:center;background:var(--surface);font-size:12px;}
