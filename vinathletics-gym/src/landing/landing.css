@@ -511,7 +511,7 @@ a.contact-card .value:hover{ color:var(--signal); }
 
 /* ----- ≤ 768px (small tablet / large phone) ----- */
 @media (max-width: 768px){
-  .landing-hero{ padding:64px 24px 56px; }
+  .landing-hero{ min-height:auto; padding:64px 24px 56px; }
   .landing-hero h1{ font-size:clamp(36px, 9vw, 52px); }
   .landing-hero p.lede{ font-size:16px; }
   .hero-stats{ gap:12px; font-size:11px; }
@@ -528,6 +528,23 @@ a.contact-card .value:hover{ color:var(--signal); }
 
 /* ----- ≤ 480px (small phone) ----- */
 @media (max-width: 480px){
+  .landing{
+    width:100vw;
+    max-width:100vw;
+    overflow-x:hidden;
+  }
+  .landing-nav,
+  .landing-hero,
+  .hero-cards-row,
+  .promo-strip,
+  .trainers-strip,
+  .plans-strip,
+  .contact-strip,
+  .cta-band,
+  .site-footer{
+    width:100%;
+  }
+  .landing-hero{min-height:auto;}
   .hero-cards-grid{ grid-template-columns:1fr; }
   .plans-strip .grid-3{ grid-template-columns:1fr; }
   .contact-grid{ grid-template-columns:1fr; }
