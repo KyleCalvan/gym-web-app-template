@@ -40,3 +40,12 @@
 .resource-detail-row:last-child{border-bottom:none;}
 .resource-detail-row .lbl{font-family:var(--font-mono);font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--steel);}
 .resource-detail-row .val{font-weight:600;}
+
+@media (max-width:600px){
+  .resource-card .head,
+  .resource-card .foot,
+  .resource-detail-row{align-items:flex-start;flex-wrap:wrap;gap:8px;}
+  .resource-card .head .ttl,
+  .resource-detail-row .val{min-width:0;overflow-wrap:anywhere;}
+  .resource-card .foot .open{margin-left:auto;}
+}

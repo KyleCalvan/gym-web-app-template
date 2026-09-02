@@ -30,8 +30,9 @@ textarea.form-control{resize:vertical;font-family:var(--font-body);}
   background:var(--surface);border:1.5px solid var(--line);border-radius:var(--radius);
   padding:18px;position:relative;
 }
+.card,.card > *{min-width:0;}
 .card.tabbed{border:1.5px solid var(--ink);margin-top:12px;padding-top:22px;}
-.card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.card-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;}
 .card-head h2{font-size:17px;text-transform:uppercase;}
 
 /* ---------- grid utilities ---------- */
@@ -79,7 +80,7 @@ table.tbl tbody tr:hover{background:var(--paper);}
 
 /* ---------- search / filters / pills ---------- */
 .search-row{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
-.search-row .form-control{flex:1;}
+.search-row .form-control{flex:1;min-width:0;}
 .pill-tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;}
 .pill-tabs button{
   padding:7px 14px;border:1.5px solid var(--ink);background:var(--surface);border-radius:20px;
@@ -116,7 +117,8 @@ table.tbl tbody tr:hover{background:var(--paper);}
 /* ---------- modal ---------- */
 .modal-overlay{position:fixed;inset:0;background:rgba(22,36,31,0.5);display:flex;align-items:center;justify-content:center;z-index:120;padding:20px;}
 .modal{background:var(--surface);border:2px solid var(--ink);border-radius:4px;padding:24px;max-width:520px;width:100%;max-height:88vh;overflow-y:auto;box-shadow:8px 8px 0 rgba(22,36,31,0.15);position:relative;z-index:121;}
-.modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;}
+.modal-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:16px;}
+.modal-head h2{min-width:0;overflow-wrap:anywhere;}
 .modal-close{background:none;border:none;font-size:20px;line-height:1;color:var(--steel);}
 
 /* ---------- toast ---------- */
@@ -135,7 +137,8 @@ table.tbl tbody tr:hover{background:var(--paper);}
 /* ---------- receipt ---------- */
 .receipt{border:1.5px dashed var(--ink);border-radius:2px;padding:20px;font-family:var(--font-mono);font-size:12.5px;background:var(--paper);}
 .receipt hr{border:none;border-top:1px dashed var(--line-strong);margin:10px 0;}
-.receipt .row{display:flex;justify-content:space-between;padding:2px 0;}
+.receipt .row{display:flex;justify-content:space-between;gap:12px;padding:2px 0;}
+.receipt .row > *{min-width:0;overflow-wrap:anywhere;}
 
 /* ---------- switch ---------- */
 .checkbox-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line);}
@@ -163,4 +166,20 @@ table.tbl tbody tr:hover{background:var(--paper);}
   animation:vm-spin .8s linear infinite;
   display:inline-block;
   vertical-align:middle;
+}
+
+@media (max-width:600px){
+  .card-head{align-items:flex-start;flex-wrap:wrap;}
+  .card-head h2{flex:1 1 180px;overflow-wrap:anywhere;}
+  .card-head > :last-child{max-width:100%;}
+  .modal-overlay{padding:16px;}
+  .modal{max-width:100%;max-height:calc(100dvh - 32px);padding:18px;}
+  .modal-head{margin-bottom:12px;}
+  .modal-head h2{font-size:19px;line-height:1.15;}
+  .search-row{align-items:stretch;}
+  .search-row > *{min-width:0;}
+  .receipt .row{align-items:flex-start;flex-wrap:wrap;}
+  .modal form > div[style*="grid-template-columns"]{
+    grid-template-columns:1fr !important;
+  }
 }

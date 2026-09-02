@@ -44,3 +44,10 @@
   letter-spacing:.5px;text-transform:uppercase;
 }
 .cal-legend .cal-legend-dot{width:8px;height:8px;border-radius:50%;background:var(--court);display:inline-block;}
+
+@media (max-width:600px){
+  .metrics-tracker{grid-template-columns:1fr;}
+  .cal-toolbar{align-items:flex-start;flex-wrap:wrap;}
+  .cal-legend{align-items:flex-start;flex-wrap:wrap;line-height:1.4;}
+  .cal-legend > span:last-child{margin-left:0 !important;}
+}

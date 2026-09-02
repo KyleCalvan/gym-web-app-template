@@ -13,6 +13,7 @@
   padding:16px 28px;border-bottom:2px solid var(--ink);background:var(--surface);
   position:sticky;top:0;z-index:5;
 }
+.topbar > div:first-child{min-width:0;}
 .nav-toggle-btn {
   display:none;
   align-items:center;
@@ -50,3 +51,12 @@
 .role-pill .who span{color:var(--steel);font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;}
 
 .content{padding:26px 28px 60px;max-width:1320px;background:var(--paper);min-height:100vh;}
+
+@media (max-width:600px){
+  .topbar{gap:12px;padding:12px 16px;}
+  .topbar h1{font-size:20px;line-height:1.1;overflow-wrap:anywhere;}
+  .topbar .path{font-size:10px;overflow-wrap:anywhere;}
+  .role-pill{flex-shrink:1;min-width:0;padding-right:8px;gap:6px;}
+  .role-pill .who{min-width:0;}
+  .role-pill .who b,.role-pill .who span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+}

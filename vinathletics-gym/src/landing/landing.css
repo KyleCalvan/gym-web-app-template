@@ -511,17 +511,17 @@ a.contact-card .value:hover{ color:var(--signal); }
 
 /* ----- ≤ 768px (small tablet / large phone) ----- */
 @media (max-width: 768px){
-  .landing-hero{ min-height:auto; padding:64px 24px 56px; }
+  .landing-hero{ min-height:auto; padding:52px 20px 48px; }
   .landing-hero h1{ font-size:clamp(36px, 9vw, 52px); }
   .landing-hero p.lede{ font-size:16px; }
   .hero-stats{ gap:12px; font-size:11px; }
-  .hero-cards-row{ padding:64px 24px; }
-  .promo-strip{ padding:64px 24px; }
-  .trainers-strip{ padding:64px 24px; }
-  .plans-strip{ padding:64px 24px; }
-  .contact-strip{ padding:64px 24px; }
-  .cta-band{ padding:64px 24px; }
-  .site-footer{ padding:40px 24px 24px; }
+  .hero-cards-row{ padding:48px 20px; }
+  .promo-strip{ padding:48px 20px; }
+  .trainers-strip{ padding:48px 20px; }
+  .plans-strip{ padding:48px 20px; }
+  .contact-strip{ padding:48px 20px; }
+  .cta-band{ padding:48px 20px; }
+  .site-footer{ padding:36px 20px 24px; }
 
   .promo-card .thumb{ height:200px; }
 }
@@ -544,7 +544,13 @@ a.contact-card .value:hover{ color:var(--signal); }
   .site-footer{
     width:100%;
   }
-  .landing-hero{min-height:auto;}
+  .landing-hero{min-height:auto;padding-left:16px;padding-right:16px;}
+  .hero-cards-row,
+  .promo-strip,
+  .trainers-strip,
+  .plans-strip,
+  .contact-strip,
+  .cta-band{padding-left:16px;padding-right:16px;}
   .hero-cards-grid{ grid-template-columns:1fr; }
   .plans-strip .grid-3{ grid-template-columns:1fr; }
   .contact-grid{ grid-template-columns:1fr; }
@@ -553,4 +559,17 @@ a.contact-card .value:hover{ color:var(--signal); }
   .landing-hero .btn-group .btn{ width:100%; justify-content:center; }
   .site-footer-inner{ grid-template-columns:1fr; }
   .site-footer .legal{ flex-direction:column; align-items:flex-start; }
+  .site-footer .legal > span{ overflow-wrap:anywhere; }
+  .contact-card .value{ overflow-wrap:anywhere; }
+
+  .why-bottom-section{ margin-top:40px !important; padding-top:40px !important; }
+  .why-bottom-inner{ flex-direction:column; gap:32px !important; margin-bottom:40px !important; }
+  .why-right-grid{ grid-template-columns:1fr !important; gap:20px !important; }
+  .why-trust-row{ flex-direction:column; align-items:center; gap:12px !important; text-align:center; }
+}
+
+@media (min-width: 481px) and (max-width: 600px){
+  .hero-cards-grid,
+  .plans-strip .grid-3,
+  .contact-grid{ grid-template-columns:1fr; }
 }
