@@ -1,14 +1,10 @@
 /* ===== Login page (used only by LoginPage.tsx) ===== */
 
 .auth-wrap{max-width:1180px;margin:0 auto;padding:70px 40px 100px;display:grid;grid-template-columns:.9fr 1.1fr;gap:60px;align-items:start;}
-.auth-card{background:var(--ink-soft);border:2px solid var(--line);border-radius:4px;padding:34px;position:relative;box-shadow:var(--shadow-card);color:var(--paper);}
-.auth-card h2{color:var(--paper);}
-.auth-card p{color:#B9C7BF;}
-.auth-card .form-control{background:var(--ink);border-color:var(--line);color:var(--paper);}
-.auth-card .form-control::placeholder{color:var(--steel);}
-.auth-tabs{display:flex;gap:0;margin:18px 0 22px;border:2px solid var(--line);border-radius:3px;overflow:hidden;}
-.auth-tabs button{flex:1;padding:10px;border:none;background:var(--ink);color:var(--steel);font-family:var(--font-mono);font-size:12px;letter-spacing:1px;text-transform:uppercase;}
-.auth-tabs button.active{background:var(--signal);color:#fff;}
+.auth-card{background:var(--surface);border:2px solid var(--ink);border-radius:4px;padding:34px;position:relative;box-shadow:var(--shadow-card);}
+.auth-tabs{display:flex;gap:0;margin:18px 0 22px;border:2px solid var(--ink);border-radius:3px;overflow:hidden;}
+.auth-tabs button{flex:1;padding:10px;border:none;background:var(--surface);font-family:var(--font-mono);font-size:12px;letter-spacing:1px;text-transform:uppercase;}
+.auth-tabs button.active{background:var(--ink);color:var(--signal);}
 
 .auth-page{min-height:100vh;background:var(--ink);display:flex;flex-direction:column;}
 .auth-page-nav{
@@ -39,8 +35,8 @@
 .modal-dark .form-control::placeholder{color:var(--steel);}
 
 .role-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px;}
-.role-pick{border:2px solid var(--line);background:var(--ink);color:var(--paper);padding:10px 4px;border-radius:3px;font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.5px;text-align:center;}
-.role-pick.active{border-color:var(--signal);background:var(--signal);color:#fff;}
+.role-pick{border:2px solid var(--line);background:var(--surface);padding:10px 4px;border-radius:3px;font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.5px;text-align:center;}
+.role-pick.active{border-color:var(--ink);background:var(--ink);color:var(--signal);}
 
 .side-note{color:var(--paper);}
 .side-note h2{font-size:30px;text-transform:uppercase;color:var(--paper);margin-bottom:14px;}

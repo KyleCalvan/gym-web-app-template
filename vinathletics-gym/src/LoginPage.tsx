@@ -21,11 +21,11 @@ interface RoleCred {
 }
 
 const ROLE_CREDS: Record<Role, RoleCred> = {
-  member:     { email: '', password: '', label: 'Member', hint: '' },
-  staff:      { email: '', password: '', label: 'Staff', hint: '' },
-  trainer:    { email: '', password: '', label: 'Trainer', hint: '' },
-  admin:      { email: '', password: '', label: 'Admin', hint: '' },
-  superadmin: { email: '', password: '', label: 'Super Admin', hint: '' },
+  member:     { email: 'member@vinathletics.gym', password: 'member123', label: 'Member', hint: 'Demo: member@vinathletics.gym / member123' },
+  staff:      { email: 'staff@vinathletics.gym', password: 'staff123', label: 'Staff', hint: 'Demo: staff@vinathletics.gym / staff123' },
+  trainer:    { email: 'trainer@vinathletics.gym', password: 'trainer123', label: 'Trainer', hint: 'Demo: trainer@vinathletics.gym / trainer123' },
+  admin:      { email: 'admin@vinathletics.gym', password: 'admin123', label: 'Admin', hint: 'Demo: admin@vinathletics.gym / admin123' },
+  superadmin: { email: 'superadmin@vinathletics.gym', password: 'superadmin123', label: 'Super Admin', hint: 'Demo: superadmin@vinathletics.gym / superadmin123' },
 };
 
 export interface LoginPageProps {
@@ -164,7 +164,7 @@ export default function LoginPage({
           <h2 style={{ fontSize: 20, textTransform: 'uppercase', marginBottom: 4 }}>
             {role === 'member' && memberTab === 'register' ? 'Create Account' : `${creds.label} Sign In`}
           </h2>
-          <p style={{ fontSize: 13, margin: '4px 0 14px' }}>
+          <p style={{ color: 'var(--steel)', fontSize: 13, margin: '4px 0 14px' }}>
             {role === 'member'
               ? (memberTab === 'login' ? 'Access your member dashboard' : 'Join VinAthletics Gym today')
               : `Sign in to the ${creds.label} dashboard.`}

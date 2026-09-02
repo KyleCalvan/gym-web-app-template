@@ -74,41 +74,42 @@ export default function Sidebar({
             )}
           </motion.button>
         )}
-      </div>
-      {searchable && (
-        <SidebarSearch
-          sections={sectionNames}
-          onQueryChange={setQuery}
-          onFiltersChange={setFilters}
-        />
-      )}
 
-      {visibleNav.length === 0 && searchable && (
-        <div className="ss-empty" style={{ padding: '0 20px' }}>No matching pages.</div>
-      )}
+        {searchable && (
+          <SidebarSearch
+            sections={sectionNames}
+            onQueryChange={setQuery}
+            onFiltersChange={setFilters}
+          />
+        )}
 
-      {visibleNav.map((sec) => (
-        <div className="nav-section" key={sec.section}>
-          <div className="head">{sec.section}</div>
-          {sec.items.map((it, i) => (
-            <motion.button
-              key={it.id}
-              className={"nav-item" + (active === it.id ? " active" : "")}
-              onClick={() => onNav(it.id)}
-              initial={{ opacity: 0, x: -6 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: dur.base, delay: i * stagger.list, ease: ease.out }}
-              whileHover={{ x: 2 }}
-            >
-              <span className="ic">{it.ic}</span>{it.label}
-            </motion.button>
-          ))}
+        {visibleNav.length === 0 && searchable && (
+          <div className="ss-empty" style={{ padding: '0 20px' }}>No matching pages.</div>
+        )}
+
+        {visibleNav.map((sec) => (
+          <div className="nav-section" key={sec.section}>
+            <div className="head">{sec.section}</div>
+            {sec.items.map((it, i) => (
+              <motion.button
+                key={it.id}
+                className={"nav-item" + (active === it.id ? " active" : "")}
+                onClick={() => onNav(it.id)}
+                initial={{ opacity: 0, x: -6 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: dur.base, delay: i * stagger.list, ease: ease.out }}
+                whileHover={{ x: 2 }}
+              >
+                <span className="ic">{it.ic}</span>{it.label}
+              </motion.button>
+            ))}
+          </div>
+        ))}
+
+        <div className="nav-section">
+          <div className="head">Session</div>
+          <button className="nav-item" onClick={() => setConfirmLogout(true)}><span className="ic">←</span>Log Out</button>
         </div>
-      ))}
-
-      <div className="nav-section">
-        <div className="head">Session</div>
-        <button className="nav-item" onClick={() => setConfirmLogout(true)}><span className="ic">←</span>Log Out</button>
       </div>
       {isOpen && (
         <div className="sidebar-backdrop" onClick={() => setIsOpen(false)} />

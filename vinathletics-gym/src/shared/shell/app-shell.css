@@ -1,6 +1,6 @@
 /* ===== App shell (used only by App.tsx) ===== */
 
-.app-shell{display:grid;grid-template-columns:238px 1fr;min-height:100vh;}
+.app-shell{display:grid;grid-template-columns:238px 1fr;min-height:100vh;background:var(--paper);}
 
 @media (max-width: 980px) {
   .app-shell {
@@ -13,8 +13,28 @@
   padding:16px 28px;border-bottom:2px solid var(--ink);background:var(--surface);
   position:sticky;top:0;z-index:5;
 }
+.nav-toggle-btn {
+  display:none;
+  align-items:center;
+  justify-content:center;
+  width:40px;
+  height:40px;
+  background:transparent;
+  border:none;
+  color:var(--ink);
+  cursor:pointer;
+  border-radius:4px;
+  padding:0;
+}
+.nav-toggle-btn:hover { background: rgba(51, 83, 70, 0.08); }
 .topbar .path{font-family:var(--font-mono);font-size:11px;color:var(--steel);text-transform:uppercase;letter-spacing:1px;}
 .topbar h1{font-size:24px;text-transform:uppercase;}
+
+@media (max-width: 980px) {
+  .nav-toggle-btn {
+    display:flex !important;
+  }
+}
 
 .role-pill{
   display:flex;align-items:center;gap:10px;border:2px solid var(--ink);border-radius:20px;
@@ -29,4 +49,4 @@
 .role-pill .who b{display:block;font-size:12.5px;}
 .role-pill .who span{color:var(--steel);font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;}
 
-.content{padding:26px 28px 60px;max-width:1320px;}
+.content{padding:26px 28px 60px;max-width:1320px;background:var(--paper);min-height:100vh;}

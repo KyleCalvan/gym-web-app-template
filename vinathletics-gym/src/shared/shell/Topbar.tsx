@@ -2,6 +2,7 @@
 import { CURRENT } from '../../data.ts';
 import { Menu } from 'lucide-react';
 import type { Role } from '../../types.ts';
+import { Avatar } from '../primitives/Avatar.tsx';
 import './app-shell.css';
 
 const VIEW_TITLES: Record<string, string> = {
@@ -34,18 +35,7 @@ export function Topbar({ role, view, onNav, toggleSidebar }: { role: Role; view:
         <button
           className="nav-toggle-btn"
           onClick={toggleSidebar}
-          style={{
-            display: window.innerWidth <= 980 ? 'flex' : 'none',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: '40px',
-            height: '40px',
-            background: 'transparent',
-            border: 'none',
-            color: 'var(--ink)',
-            cursor: 'pointer',
-            borderRadius: '4px'
-          }}
+          aria-label="Open navigation"
         >
           <Menu size={24} />
         </button>
