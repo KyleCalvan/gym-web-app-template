@@ -42,3 +42,24 @@
 .side-note h2{font-size:30px;text-transform:uppercase;color:var(--paper);margin-bottom:14px;}
 .side-note p{color:#B9C7BF;font-size:14px;max-width:420px;}
 .auth-wrap-dark{background:var(--ink);}
+
+@media (max-width:980px){
+  .auth-page-body{
+    grid-template-columns:minmax(0,1fr);
+    gap:36px;
+    padding:48px 24px 64px;
+  }
+  .auth-page-aside,
+  .auth-card{min-width:0;width:100%;}
+}
+
+@media (max-width:600px){
+  .auth-page-nav{padding:18px 16px;}
+  .auth-page-nav .brand{font-size:20px;}
+  .auth-page-nav .brand .brand-mark-img{height:30px;}
+  .auth-page-nav a{font-size:10px;letter-spacing:1px;}
+  .auth-page-body{gap:28px;padding:36px 16px 48px;}
+  .auth-page-aside h2{font-size:clamp(30px,10vw,38px);}
+  .auth-card{padding:24px 20px;}
+  .role-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+}
