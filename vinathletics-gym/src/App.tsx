@@ -17,6 +17,7 @@ import {
   PROMOTIONS,
   STAFF,
   ADMINS,
+  SUPERADMINS,
   NOTIFICATIONS,
   SEED_AUDIT_LOG,
   SEED_SESSIONS,
@@ -69,6 +70,7 @@ export default function App() {
   const [promotions, setPromotions]         = useState<Promotion[]>(() => [...PROMOTIONS]);
   const [staff, setStaff]                   = useState<Staff[]>(() => [...STAFF]);
   const [admins, setAdmins]                 = useState<Admin[]>(() => [...ADMINS]);
+  const [superadmins, setSuperadmins]       = useState<Admin[]>(() => [...SUPERADMINS]);
   const [auditLog, setAuditLog]             = useState<AuditLogEntry[]>(() => [...SEED_AUDIT_LOG]);
   const [activeSessions, setActiveSessions] = useState<ActiveSession[]>(() => [...SEED_SESSIONS]);
   const [notifications, setNotifications]   = useState<Notification[]>(() => NOTIFICATIONS.map((n) => ({ ...n })));
@@ -250,6 +252,7 @@ export default function App() {
                 promotions={promotions} setPromotions={setPromotions}
                 staff={staff} setStaff={setStaff}
                 admins={admins} setAdmins={setAdmins}
+                superadmins={superadmins} setSuperadmins={setSuperadmins}
                 notifications={notifications} setNotifications={setNotifications}
                 bookings={bookings} setBookings={setBookings}
                 currentUserId={currentUserId}

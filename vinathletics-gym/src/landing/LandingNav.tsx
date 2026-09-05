@@ -7,6 +7,7 @@ import { dur, ease } from '../motion.tsx';
 function LandingNav({ stuck, activeSection, onNavigate }) {
   const [open, setOpen] = useState<boolean>(false);
   const navLinks = [
+    { label: 'About Us',         href: '#about' },
     { label: 'Promotions',       href: '#promotions' },
     { label: 'Membership Plans', href: '#plans' },
     { label: 'Trainers',         href: '#trainers' },

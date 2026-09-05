@@ -15,10 +15,11 @@ const VIEW_TITLES: Record<string, string> = {
 
 // Roles that have a Profile nav item — clicking the top-right pill routes there.
 const HAS_PROFILE_NAV: Record<Role, boolean> = {
-  admin: false,   // TODO: add admin profile
-  staff: false,   // TODO: add staff profile
+  admin: true,
+  staff: true,
   trainer: true,
   member: true,
+  superadmin: true,
 };
 
 export function Topbar({ role, view, onNav, toggleSidebar }: { role: Role; view: string; onNav?: (id: string) => void; toggleSidebar?: () => void }) {

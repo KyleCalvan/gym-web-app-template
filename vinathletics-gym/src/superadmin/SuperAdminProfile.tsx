@@ -1,15 +1,13 @@
-// @ts-nocheck
 import { useState } from 'react';
 import { Avatar, Badge, TabbedCard, Field, TextInput } from '../shared';
 import { onPickImage } from '../shared/imageUpload.ts';
 
-function MemberProfile({ members, setMembers, currentUserId, toast, addAudit }){
-  const me = members.find(m => m.id === currentUserId) || members[0];
+function SuperAdminProfile({ superadmins, setSuperadmins, currentUserId, toast, addAudit }) {
+  const me = superadmins.find(s => s.id === currentUserId) || superadmins[0];
   const [info, setInfo] = useState({
     name: me?.name || '',
     email: me?.email || '',
     phone: me?.phone || '',
-    emergency: '',
   });
 
   const [password, setPassword] = useState({
@@ -18,11 +16,11 @@ function MemberProfile({ members, setMembers, currentUserId, toast, addAudit }){
     confirm: '',
   });
 
-  const submit = (e) => {
+  const submitInfo = (e) => {
     e.preventDefault();
-    setMembers(prev => prev.map(m => m.id === me.id ? {...m, ...info} : m));
+    setSuperadmins(prev => prev.map(s => s.id === me.id ? {...s, ...info} : s));
     toast('Profile updated');
-    addAudit?.('info', 'Profile updated', me?.id || 'member');
+    addAudit?.('info', 'Profile updated', me?.id || 'superadmin');
   };
 
   const submitPassword = (e) => {
@@ -31,39 +29,38 @@ function MemberProfile({ members, setMembers, currentUserId, toast, addAudit }){
       toast('Passwords do not match');
       return;
     }
+    // Password change logic would go here
     toast('Password changed successfully');
     setPassword({ current: '', new: '', confirm: '' });
-    addAudit?.('info', 'Password changed', me?.id || 'member');
+    addAudit?.('info', 'Password changed', me?.id || 'superadmin');
   };
 
   const handleAvatarFile = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     onPickImage(file, url => {
-      setMembers(prev => prev.map(m => m.id === me.id ? {...m, avatarUrl: url} : m));
+      setSuperadmins(prev => prev.map(s => s.id === me.id ? {...s, avatarUrl: url} : s));
       toast('Photo updated');
-      addAudit?.('info', 'Profile photo updated', me?.id || 'member');
+      addAudit?.('info', 'Profile photo updated', me?.id || 'superadmin');
     }, msg => toast(msg));
     e.target.value = '';
   };
 
-  const isFrozen = me?.status === 'Frozen';
-
   return (
     <div className="grid grid-1-2">
-      <TabbedCard label="Profile" title={me?.name || 'Member'}>
+      <TabbedCard label="Profile" title={me?.name || 'Super Admin'}>
         <div style={{textAlign:'center', marginBottom:14}}>
-          <Avatar src={me?.avatarUrl} name={me?.name || 'Member'} size={64} />
+          <Avatar src={me?.avatarUrl} name={me?.name || 'Super Admin'} size={64} />
           <div style={{marginTop:10}}>
             <button
               type="button"
               className="btn btn-outline btn-sm"
-              onClick={() => document.getElementById('member-avatar-input')?.click()}
+              onClick={() => document.getElementById('superadmin-avatar-input')?.click()}
             >
               Change Photo
             </button>
             <input
-              id="member-avatar-input"
+              id="superadmin-avatar-input"
               type="file"
               accept="image/*"
               style={{display:'none'}}
@@ -71,25 +68,19 @@ function MemberProfile({ members, setMembers, currentUserId, toast, addAudit }){
             />
           </div>
         </div>
-        {isFrozen && (
-          <div style={{padding:'8px 10px', background:'var(--paper)', border:'1.5px solid var(--amber)', borderRadius:3, fontSize:12, color:'var(--steel)', marginBottom:10}}>
-            <Badge status="Frozen" /> &nbsp;Account frozen — admin must unfreeze to resume activity.
-          </div>
-        )}
         <div style={{fontSize:12.5}}>
-          <div className="eyebrow">Member ID</div><p className="mono">{me?.id || '—'}</p>
-          <div className="eyebrow">Plan</div><p>{me?.plan || '—'}</p>
-          <div className="eyebrow">Member Since</div><p className="mono">{me?.joined || '—'}</p>
+          <div className="eyebrow">Super Admin ID</div><p className="mono">{me?.id || '—'}</p>
+          <div className="eyebrow">Super Admin Since</div><p className="mono">{me?.joined || '—'}</p>
         </div>
       </TabbedCard>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
         <TabbedCard label="Info" title="Account Information">
-          <form onSubmit={submit}>
+          <form onSubmit={submitInfo}>
             <div className="grid grid-2">
               <Field label="Full Name"><TextInput required value={info.name} onChange={v=>setInfo(i=>({...i, name:v}))} /></Field>
               <Field label="Email"><TextInput type="email" required value={info.email} onChange={v=>setInfo(i=>({...i, email:v}))} /></Field>
               <Field label="Phone"><TextInput value={info.phone} onChange={v=>setInfo(i=>({...i, phone:v}))} /></Field>
-              <Field label="Emergency Contact"><TextInput placeholder="+63 9XX XXX XXXX" value={info.emergency} onChange={v=>setInfo(i=>({...i, emergency:v}))} /></Field>
+              <Field label="Phone (Secondary)"><TextInput value={info.phoneSecondary || ''} onChange={v=>setInfo(i=>({...i, phoneSecondary:v}))} /></Field>
             </div>
             <button className="btn btn-signal btn-sm" type="submit">Save Changes</button>
           </form>
@@ -109,4 +100,4 @@ function MemberProfile({ members, setMembers, currentUserId, toast, addAudit }){
   );
 }
 
-export default MemberProfile;
+export default SuperAdminProfile;

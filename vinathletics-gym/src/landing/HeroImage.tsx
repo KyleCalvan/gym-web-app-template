@@ -89,7 +89,7 @@ export default function HeroImage({
         width={1600}
         height={900}
         loading="eager"
-        fetchPriority="high"
+        fetchpriority="high"
         decoding="async"
       />
     </picture>

@@ -7,6 +7,7 @@ import SuperAdminSystemLogs from './SuperAdminSystemLogs.tsx';
 import SuperAdminBackups from './SuperAdminBackups.tsx';
 import SuperAdminSessions from './SuperAdminSessions.tsx';
 import SuperAdminTrash from './SuperAdminTrash.tsx';
+import SuperAdminProfile from './SuperAdminProfile.tsx';
 
 export const SUPERADMIN_NAV: NavSection[] = [
   { section: 'Main', items: [{ id: 'dashboard', label: 'Dashboard', ic: '▤' }] },
@@ -28,4 +29,5 @@ export const SUPERADMIN_VIEWS: Record<string, ComponentType<ViewProps>> = {
   backups:      SuperAdminBackups       as unknown as ComponentType<ViewProps>,
   sessions:     SuperAdminSessions      as unknown as ComponentType<ViewProps>,
   trash:        SuperAdminTrash         as unknown as ComponentType<ViewProps>,
+  profile:      SuperAdminProfile       as unknown as ComponentType<ViewProps>,
 };

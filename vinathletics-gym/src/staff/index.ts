@@ -6,6 +6,7 @@ import StaffMembers from './StaffMembers.tsx';
 import StaffPOS from './StaffPOS.tsx';
 import StaffTransactions from './StaffTransactions.tsx';
 import StaffSchedules from './StaffSchedules.tsx';
+import StaffProfile from './StaffProfile.tsx';
 
 export const STAFF_NAV: NavSection[] = [
   {section:'Main', items:[{id:'dashboard', label:'Dashboard', ic:'▤'}]},
@@ -20,4 +21,5 @@ export const STAFF_VIEWS: Record<string, ComponentType<ViewProps>> = {
   pos: StaffPOS as unknown as ComponentType<ViewProps>,
   transactions: StaffTransactions as unknown as ComponentType<ViewProps>,
   schedules: StaffSchedules as unknown as ComponentType<ViewProps>,
+  profile: StaffProfile as unknown as ComponentType<ViewProps>,
 };

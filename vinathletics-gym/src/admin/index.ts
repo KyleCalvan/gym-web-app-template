@@ -10,6 +10,7 @@ import AdminPeople from './AdminPeople.tsx';
 import AdminPromotions from './AdminPromotions.tsx';
 import AdminActivity from './AdminActivity.tsx';
 import AdminCoaching from './AdminCoaching.tsx';
+import AdminProfile from './AdminProfile.tsx';
 
 export const ADMIN_NAV: NavSection[] = [
   {section:'Main', items:[{id:'dashboard', label:'Dashboard', ic:'▤'}]},
@@ -29,4 +30,5 @@ export const ADMIN_VIEWS: Record<string, ComponentType<ViewProps>> = {
   promotions: AdminPromotions as unknown as ComponentType<ViewProps>,
   activity: AdminActivity as unknown as ComponentType<ViewProps>,
   coaching: AdminCoaching as unknown as ComponentType<ViewProps>,
+  profile: AdminProfile as unknown as ComponentType<ViewProps>,
 };

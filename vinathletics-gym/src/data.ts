@@ -146,6 +146,10 @@ export const PROMOTIONS: Promotion[] = [
 
 export const ADMINS: Admin[] = [];
 
+export const SUPERADMINS: Admin[] = [
+  { id: 'SD-1042', name: 'Juan Dela Cruz', email: 'juan.delacruz@mail.com', status: 'Active', createdAt: '2025-02-12', avatarUrl: '/avatar-sd.jpg' },
+];
+
 export const CURRENT: Record<Role, CurrentUser> = {
   admin:      { name: 'Admin',       role: 'Administrator',       initials: 'AD' },
   staff:      { name: 'Staff',       role: 'Front Desk Staff',    initials: 'ST' },

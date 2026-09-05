@@ -226,6 +226,8 @@ export interface ViewProps {
   setStaff: Setter<Staff[]>;
   admins: Admin[];
   setAdmins: Setter<Admin[]>;
+  superadmins: Admin[];
+  setSuperadmins: Setter<Admin[]>;
   notifications: Notification[];
   setNotifications: Setter<Notification[]>;
   bookings: Session[];

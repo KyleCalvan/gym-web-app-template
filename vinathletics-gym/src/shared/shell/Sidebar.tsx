@@ -38,6 +38,10 @@ export default function Sidebar({
       .filter((sec) => sec.items.length > 0);
   }, [nav, query, filters]);
 
+  const hasProfileInNav = useMemo(() => {
+    return nav.some(sec => sec.items.some(item => item.id === 'profile'));
+  }, [nav]);
+
   const wiggle = () => {
     bellControls.start({
       rotate: [0, -14, 14, -10, 10, -6, 6, 0],
@@ -53,27 +57,27 @@ export default function Sidebar({
           <div className="brand" style={{ padding: 0, border: 'none', margin: 0, color: 'var(--paper)' }}>
             <img src="/logo.jpg" alt="VinAthletics" className="brand-mark-img" /> {brand}
           </div>
+          {bell && (
+            <motion.button
+              className="bell-btn"
+              aria-label="Notifications"
+              onClick={wiggle}
+              animate={bellControls}
+              whileTap={{ scale: 0.92 }}
+              style={{ marginRight: 0 }}
+            >
+              🔔
+              {bell.count > 0 && (
+                <motion.span
+                  className="bell-dot"
+                  animate={{ scale: [1, 1.25, 1] }}
+                  transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+                />
+              )}
+            </motion.button>
+          )}
           <button className="nav-close-btn" onClick={() => setIsOpen(false)} style={{ display: 'none' }}>✕</button>
         </div>
-        {bell && (
-          <motion.button
-            className="bell-btn"
-            aria-label="Notifications"
-            onClick={wiggle}
-            animate={bellControls}
-            whileTap={{ scale: 0.92 }}
-            style={{ marginRight: 0 }}
-          >
-            🔔
-            {bell.count > 0 && (
-              <motion.span
-                className="bell-dot"
-                animate={{ scale: [1, 1.25, 1] }}
-                transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
-              />
-            )}
-          </motion.button>
-        )}
 
         {searchable && (
           <SidebarSearch
@@ -105,6 +109,13 @@ export default function Sidebar({
             ))}
           </div>
         ))}
+
+        {!hasProfileInNav && (
+          <div className="nav-section">
+            <div className="head">Other</div>
+            <button className="nav-item" onClick={() => onNav('profile')}><span className="ic">👤</span>Profile</button>
+          </div>
+        )}
 
         <div className="nav-section">
           <div className="head">Session</div>
