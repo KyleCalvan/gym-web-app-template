@@ -119,8 +119,8 @@ export default function LoginPage({
     if (!regName.trim()) { showToast('Name is required'); return; }
     if (!/^\S+@\S+\.\S+$/.test(regEmail)) { showToast('Please enter a valid email'); return; }
     if (regPassword.length < 8) { showToast('Password must be at least 8 characters'); return; }
-    if (!termsRead) { showToast('Please read the Terms and Agreements first'); return; }
-    if (!agreedToTerms) { showToast('You must agree to the Terms and Agreements'); return; }
+    if (!termsRead) { showToast('Please read the Terms of Use first'); return; }
+    if (!agreedToTerms) { showToast('You must agree to the Terms of Use'); return; }
     const id = 'M-' + (1042 + members.length);
     setMembers((prev) => [...prev, {
       id,
@@ -231,7 +231,7 @@ export default function LoginPage({
                   className="terms-link"
                   onClick={() => setTermsOpen(true)}
                 >
-                  Terms and Agreements
+                  Terms of Use
                 </button>
               </div>
 
@@ -244,7 +244,7 @@ export default function LoginPage({
               </button>
               {!termsRead ? (
                 <p className="terms-hint">
-                  Open and scroll through the Terms and Agreements to unlock the button.
+                  Open and scroll through the Terms of Use to unlock the button.
                 </p>
               ) : !agreedToTerms ? (
                 <p className="terms-hint">Tick the agreement box above to continue.</p>
@@ -270,7 +270,7 @@ export default function LoginPage({
                 <button
                   type="button"
                   className="btn-link-sm"
-                  style={{ fontSize: 11, fontWeight: 'bold', color: 'var(--signal)', textTransform: 'uppercase', cursor: 'pointer', border: 'none', background: 'none', padding: 0 }}
+                  style={{ fontSize: 11, fontWeight: 'bold', color:'var(--signal-ink)', textTransform: 'uppercase', cursor: 'pointer', border: 'none', background: 'none', padding: 0 }}
                   onClick={() => setForgotPasswordOpen(true)}
                 >
                   Forgot Password
@@ -315,7 +315,7 @@ export default function LoginPage({
             <div style={{ textAlign: 'center', marginTop: 20, fontSize: 13, color: 'var(--steel)' }}>
               Remember password?{' '}
               <span
-                style={{ color: 'var(--signal)', cursor: 'pointer', fontWeight: 'bold' }}
+                style={{ color:'var(--signal-ink)', cursor: 'pointer', fontWeight: 'bold' }}
                 onClick={closeResetFlow}
               >
                 Log In
@@ -330,7 +330,7 @@ export default function LoginPage({
           <div style={{ padding: '0 24px 24px', textAlign: 'center' }}>
             <p style={{ margin: '0 0 12px', fontSize: 15, lineHeight: 1.6 }}>
               We've sent a password reset link to <br />
-              <strong style={{ color: 'var(--signal)' }}>{resetEmail}</strong>
+              <strong style={{ color:'var(--signal-ink)' }}>{resetEmail}</strong>
             </p>
             <p style={{ margin: '0 0 24px', color: 'var(--steel)', fontSize: 13, lineHeight: 1.6 }}>
               Please check your inbox and follow the instructions to reset your password
@@ -338,7 +338,7 @@ export default function LoginPage({
             <button
               className="btn btn-outline btn-block"
               onClick={closeResetFlow}
-              style={{ borderColor: 'var(--signal)', color: 'var(--signal)' }}
+              style={{ borderColor: 'var(--signal)', color:'var(--signal-ink)' }}
             >
               BACK TO LOG IN
             </button>
@@ -348,7 +348,7 @@ export default function LoginPage({
 
       {termsOpen && (
         <Modal
-          title="Terms and Agreements"
+          title="Terms of Use"
           className="modal-dark"
           wide
           onClose={() => setTermsOpen(false)}
@@ -362,70 +362,57 @@ export default function LoginPage({
               aria-label="Membership agreement"
               tabIndex={0}
             >
-              <p><strong>1. Acceptance of Terms</strong></p>
+              <p className="terms-updated">Last updated: 26 August 2026</p>
+
+              <p><strong>Who can use NorthGems</strong></p>
               <p>
-                By registering a VinAthletics account you accept this agreement in full. If you do
-                not accept any part of it, do not create an account. Membership is offered by
-                VinAthletics Gym, Makati, Philippines ("the Gym", "we").
+                Vend Finder and GrowScan are for members of the NorthGems Discord server. You sign
+                in with Discord, and we check that you are in our server. We re-check every few
+                seconds, so if you leave the server you lose access straight away — you do not have
+                to sign out first. Online Count is open to everyone.
               </p>
 
-              <p><strong>2. Membership &amp; Billing</strong></p>
+              <p><strong>What the data is — and what it is not</strong></p>
               <p>
-                Your chosen membership plan begins on the date of activation and renews
-                automatically at the stated rate until cancelled by either party. Dues are billed in
-                advance and are non-transferable. A returned payment or declined card places the
-                account on hold until settled; access to the floor is suspended while a balance is
-                outstanding.
+                Our bots visit Growtopia worlds and record what vending machines are offering. Every
+                price you see is a snapshot from the moment a bot was there, not a live feed. A
+                world may have been re-priced, emptied, or locked since then. Always check in-game
+                before you trade.
+              </p>
+              <p>
+                We do not guarantee that the data is complete or correct, and we are not responsible
+                for trades you make based on it.
               </p>
 
-              <p><strong>3. Health &amp; Assumption of Risk</strong></p>
+              <p><strong>Fair use</strong></p>
               <p>
-                Exercise carries inherent risk. You confirm that you are in suitable physical
-                condition to train and that you have consulted a physician where any doubt exists.
-                You assume all risk of injury, illness or loss arising from your use of the
-                equipment, classes and facilities, and you release the Gym, its owners, trainers and
-                staff from any claim arising from such use except where caused by our gross
-                negligence.
+                Each account has a daily search quota. Please do not script the site, scrape it,
+                share your account, or try to work around the quota. Accounts that do can be
+                suspended without warning.
               </p>
 
-              <p><strong>4. Code of Conduct</strong></p>
+              <p><strong>Fixed prices &amp; haggling</strong></p>
               <p>
-                Members train in a shared space. Harassment, intimidation, misuse of equipment,
-                training under the influence, or disregard for staff instruction will result in
-                immediate removal and, at our discretion, termination of membership without refund.
+                Prices of listed packages are fixed and shown before you order. Asking staff for a
+                lower price on a listed package (custom orders excepted) is not allowed. Each case
+                gets a warning: the first 3 are warnings only; from the 4th, every warning adds +1%
+                to your future orders. Repeated cases can lead to a ban from ordering.
               </p>
 
-              <p><strong>5. Cancellation, Freeze &amp; Refunds</strong></p>
+              <p><strong>Availability</strong></p>
               <p>
-                You may cancel a membership at any time from your profile; cancellation takes effect
-                at the end of the current billing period and stops the next renewal. Prepaid months
-                are not refunded for partial use. Accounts may be frozen for medical or travel
-                reasons for a maximum of three months per membership year.
+                NorthGems is a free tool run by a small team. There is no uptime guarantee —
+                features can break, go down for maintenance, or change.
               </p>
 
-              <p><strong>6. Personal Belongings &amp; Liability</strong></p>
+              <p><strong>Changes</strong></p>
               <p>
-                Lockers are provided for the session only. The Gym is not liable for lost, stolen or
-                damaged property on the premises, including items left overnight.
-              </p>
-
-              <p><strong>7. Privacy &amp; Personal Data</strong></p>
-              <p>
-                We collect your name, contact details, health disclosures and payment information
-                solely to operate your membership — check-ins, coaching bookings, billing and
-                emergency contact. We do not sell your data. Deleting your account removes your
-                record from the active ledger.
-              </p>
-
-              <p><strong>8. Changes to These Terms</strong></p>
-              <p>
-                We may revise this agreement as our services or the law changes; material changes
-                are notified to the email on file, and continued use after notice is acceptance.
+                These terms can change. The date at the top tells you when they last did. Continuing
+                to use the site means you accept the current version.
               </p>
 
               <p style={{ marginBottom: 0 }}>
-                Questions about this agreement may be raised with front desk staff or written to
-                management at any time.
+                Questions go to discord.gg/northgems.
               </p>
             </div>
 

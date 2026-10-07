@@ -136,7 +136,7 @@ function AdminPeople({ trainers, setTrainers, staff, setStaff, members, sessions
               <div style={{display:'flex', gap:8, marginTop:14}}>
                 <button className="btn btn-outline btn-sm" onClick={()=>startEdit(t)}>Edit</button>
                 <button className="btn btn-ghost btn-sm" onClick={()=>setViewing(t)}>View Schedule</button>
-                <button className="btn btn-ghost btn-sm" onClick={()=>setPendingTrainerRemove(t)}>Remove</button>
+                <button className="btn btn-danger-ghost btn-sm" onClick={()=>setPendingTrainerRemove(t)}>Remove</button>
               </div>
             </div>
           ))}
@@ -191,7 +191,7 @@ function AdminPeople({ trainers, setTrainers, staff, setStaff, members, sessions
                 </div>
                 <div style={{display:'flex', gap:8, marginTop:14}}>
                   <button className="btn btn-outline btn-sm" onClick={()=>startStaffEdit(s)}>Edit</button>
-                  <button className="btn btn-ghost btn-sm" onClick={()=>setPendingStaffRemove(s)}>Remove</button>
+                  <button className="btn btn-danger-ghost btn-sm" onClick={()=>setPendingStaffRemove(s)}>Remove</button>
                 </div>
               </div>
             ))}

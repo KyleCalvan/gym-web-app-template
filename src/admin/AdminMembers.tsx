@@ -169,7 +169,7 @@ function AdminMembers({ members, setMembers, plans, setTransactions, today, toas
             ) : (
               <button className="btn btn-danger btn-sm" onClick={()=>setPendingFreeze(selected)}>Freeze Account</button>
             )}
-            <button className="btn btn-ghost btn-sm" onClick={()=>setPendingRemove(selected)}>Remove</button>
+            <button className="btn btn-danger-ghost btn-sm" onClick={()=>setPendingRemove(selected)}>Remove</button>
           </div>
         </Modal>
       )}

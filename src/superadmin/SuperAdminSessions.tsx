@@ -63,7 +63,7 @@ function SuperAdminSessions({ activeSessions, setActiveSessions, currentSessionI
                 <tr key={s.id}>
                   <td>
                     <b>{s.userName}</b>
-                    {isMe && <span className="mono" style={{ fontSize: 10.5, color: 'var(--signal)', marginLeft: 6 }}>(you)</span>}
+                    {isMe && <span className="mono" style={{ fontSize: 10.5, color:'var(--signal-ink)', marginLeft: 6 }}>(you)</span>}
                     <div className="mono" style={{ fontSize: 10.5, color: 'var(--steel)' }}>{s.userId}</div>
                   </td>
                   <td><Badge status={roleTone(s.role)} /> <span style={{ marginLeft: 6, textTransform: 'capitalize', fontSize: 12 }}>{s.role}</span></td>

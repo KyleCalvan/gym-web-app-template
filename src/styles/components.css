@@ -8,7 +8,7 @@
   transition:transform .12s ease, box-shadow .12s ease, background .12s ease;
 }
 .btn:hover{transform:translate(-1px,-1px);box-shadow:3px 3px 0 var(--line-strong);background:var(--surface-2);}
-.btn-signal{background:var(--signal);border-color:var(--signal);color:var(--paper);}
+.btn-signal{background:var(--signal);border-color:var(--signal);color:var(--on-signal);}
 .btn-signal:hover{background:var(--signal-dark);box-shadow:3px 3px 0 var(--signal-dark);}
 .btn-outline{background:transparent;color:var(--ink);border-color:var(--line-strong);}
 .btn-outline:hover{background:var(--surface-2);}
@@ -17,7 +17,12 @@
 .btn-sm{padding:7px 12px;font-size:12px;}
 .btn-block{width:100%;}
 .btn-danger{background:var(--danger);border-color:var(--danger);color:#fff;}
-.btn-danger:hover{background:#8E2C22;border-color:#8E2C22;box-shadow:3px 3px 0 #6E2119;}
+.btn-danger:hover{background:#B91C1C;border-color:#B91C1C;box-shadow:3px 3px 0 #8F1410;}
+/* Inline destructive rows (a table cell's "Remove") get the same red as a
+   bordered outline button so the row stays legible — the solid fill is saved
+   for the confirm step that actually does the damage. */
+.btn-danger-ghost{background:transparent;color:var(--danger);border-color:var(--danger);}
+.btn-danger-ghost:hover{background:var(--danger);color:#fff;box-shadow:none;}
 /* Locked buttons look locked: no lift, no shadow, no pointer. */
 .btn:disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:none;}
 .btn:disabled:hover{transform:none;box-shadow:none;}
@@ -92,7 +97,7 @@ table.tbl tbody tr:hover{background:var(--surface-2);}
   padding:7px 14px;border:1.5px solid var(--ink);background:var(--surface);border-radius:var(--radius);
   font-family:var(--font-mono);font-size:11.5px;text-transform:uppercase;letter-spacing:.5px;
 }
-.pill-tabs button.active{background:var(--signal);color:var(--paper);border-color:var(--signal);}
+.pill-tabs button.active{background:var(--signal);color:var(--on-signal);border-color:var(--signal);}
 
 /* ---------- plan card (used by Landing + views) ---------- */
 .plan-card{border:2px solid var(--ink);border-radius:var(--radius);padding:20px;position:relative;background:var(--surface);}
@@ -101,12 +106,12 @@ table.tbl tbody tr:hover{background:var(--surface-2);}
 .plan-card .price span{font-size:13px;font-weight:400;}
 .plan-card ul{list-style:none;padding:0;margin:14px 0;font-size:12.5px;}
 .plan-card ul li{padding:5px 0;border-top:1px solid var(--line);}
-.plan-card.featured ul li{border-top:1px solid #262626;}
-.plan-card .ribbon{position:absolute;top:-11px;left:16px;background:var(--signal);color:var(--ink);font-family:var(--font-mono);
+.plan-card.featured ul li{border-top:1px solid var(--line);}
+.plan-card .ribbon{position:absolute;top:-11px;left:16px;background:var(--signal);color:var(--on-signal);font-family:var(--font-mono);
   font-size:10px;padding:3px 10px;border-radius:var(--radius);text-transform:uppercase;letter-spacing:1px;}
 .plan-card .btn{margin-top:auto;}
 .plan-card:not(.featured) .btn.btn-outline{color:var(--ink);border-color:var(--ink);background:transparent;}
-.plan-card.featured .btn.btn-signal{background:var(--signal);border-color:var(--signal);color:var(--ink);}
+.plan-card.featured .btn.btn-signal{background:var(--signal);border-color:var(--signal);color:var(--on-signal);}
 
 /* ---------- bar chart ---------- */
 .bar-chart{display:flex;align-items:flex-end;gap:10px;height:150px;padding-top:10px;}
@@ -121,8 +126,12 @@ table.tbl tbody tr:hover{background:var(--surface-2);}
 .legend-dot{width:10px;height:10px;border-radius:0;}
 
 /* ---------- modal ---------- */
-.modal-overlay{position:fixed;inset:0;background:rgba(8,8,8,0.5);display:flex;align-items:center;justify-content:center;z-index:120;padding:20px;}
-.modal{background:var(--surface);border:2px solid var(--ink);border-radius:var(--radius);padding:24px;max-width:520px;width:100%;max-height:88vh;overflow-y:auto;box-shadow:8px 8px 0 rgba(8,8,8,0.15);position:relative;z-index:121;}
+.modal-overlay{position:fixed;inset:0;background:var(--scrim);display:flex;align-items:center;justify-content:center;z-index:120;padding:20px;}
+/* color:var(--ink) is set explicitly (rather than inherited from body) so
+   anything dropped inside a modal renders in the theme's text color — a
+   component defaulting to its own dark-on-dark would otherwise read as
+   invisible text against the dark surface. */
+.modal{background:var(--surface);color:var(--ink);border:2px solid var(--ink);border-radius:var(--radius);padding:24px;max-width:520px;width:100%;max-height:88vh;overflow-y:auto;box-shadow:8px 8px 0 rgba(8,8,8,0.15);position:relative;z-index:121;}
 .modal-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:16px;}
 .modal-head h2{min-width:0;overflow-wrap:anywhere;}
 .modal-close{background:none;border:none;font-size:20px;line-height:1;color:var(--steel);}
@@ -157,7 +166,7 @@ table.tbl tbody tr:hover{background:var(--surface-2);}
 .step-track{display:flex;align-items:center;gap:8px;margin-bottom:18px;}
 .step-track .step{display:flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--steel);}
 .step-track .step .dot{width:20px;height:20px;border-radius:50%;border:1.5px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:10px;}
-.step-track .step.done .dot{background:var(--court);border-color:var(--court);color:var(--ink);}
+.step-track .step.done .dot{background:var(--court);border-color:var(--court);color:var(--on-signal);}
 .step-track .step.current{color:var(--ink);}
 .step-track .step.current .dot{border-color:var(--ink);color:var(--ink);font-weight:700;}
 .step-track .sep{flex:1;height:1.5px;background:var(--line);}

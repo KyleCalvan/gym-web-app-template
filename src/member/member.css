@@ -33,7 +33,7 @@
   width:6px;height:6px;border-radius:50%;background:var(--court);margin-top:4px;display:block;
 }
 .check-calendar .cal-cell.checked{
-  background:var(--court);color:var(--ink);border-color:var(--ink);
+  background:var(--court);color:var(--on-signal);border-color:var(--ink);
 }
 .check-calendar .cal-cell.checked .cal-dot{background:var(--ink);}
 .check-calendar .cal-cell.today{outline:2px solid var(--ink);outline-offset:-2px;}

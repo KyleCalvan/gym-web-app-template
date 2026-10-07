@@ -48,7 +48,7 @@ function WhyCardsRow() {
           <div className="why-bottom-inner">
             <div className="why-left">
               <h3 style={{ fontSize: 24, margin: '0 0 8px' }}>MORE THAN A WORKOUT.</h3>
-              <h3 style={{ fontSize: 24, margin: '0 0 16px', color: 'var(--signal)' }}>A BETTER YOU.</h3>
+              <h3 style={{ fontSize: 24, margin: '0 0 16px', color:'var(--signal-ink)' }}>A BETTER YOU.</h3>
               <p style={{ color: 'var(--steel)', fontSize: 15, lineHeight: 1.6 }}>
                 We're here to support every part of your fitness journey, inside and outside the gym.
               </p>

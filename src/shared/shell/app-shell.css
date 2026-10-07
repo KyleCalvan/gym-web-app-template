@@ -62,7 +62,7 @@
 .role-pill.clickable{cursor:pointer;}
 .role-pill.clickable:hover{transform:translate(-1px,-1px);box-shadow:2px 2px 0 var(--line);}
 .role-pill.clickable:focus-visible{outline:2px solid var(--ink);outline-offset:2px;}
-.role-pill .av{width:28px;height:28px;border-radius:50%;background:var(--surface);color:var(--signal);
+.role-pill .av{width:28px;height:28px;border-radius:50%;background:var(--surface);color:var(--signal-ink);
   display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:12px;font-weight:700;}
 .role-pill .who{font-size:12.5px;}
 .role-pill .who b{display:block;font-size:12.5px;}

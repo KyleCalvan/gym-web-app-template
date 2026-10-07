@@ -56,7 +56,7 @@ function MemberMembership({ members, setMembers, plans, setTransactions, current
         <div style={{fontSize:13, color:'var(--steel)'}}>Renews Sep 12, 2026 · {peso((plans.find(p=>p.name===me?.plan)||{}).price || 2499)}/mo</div>
         <Badge status={me?.status || 'Active'} />
         {isFrozen && (
-          <div style={{marginTop:12, padding:'10px 12px', background:'rgba(255,255,255,.05)', borderRadius:'var(--radius)', fontSize:12.5, color:'#fff'}}>
+          <div style={{marginTop:12, padding:'10px 12px', background:'var(--surface-2)', borderRadius:'var(--radius)', fontSize:12.5, color:'var(--ink)'}}>
             Your membership is currently <b>frozen</b>. Renewal and plan switching are paused until an admin unfreezes your account.
           </div>
         )}

@@ -71,7 +71,7 @@
   white-space:nowrap;
 }
 .global-search .gs-item.hl{ background:var(--surface-2); color:var(--ink); }
-.global-search .gs-item.current .gs-label{ color:var(--signal); font-weight:600; }
+.global-search .gs-item.current .gs-label{ color:var(--signal-ink); font-weight:600; }
 .global-search .gs-item:focus-visible{ outline:2px solid var(--signal); outline-offset:1px; }
 
 @media (max-width: 980px) {

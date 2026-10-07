@@ -53,7 +53,7 @@ function SuperAdminSystemLogs({ auditLog, setAuditLog, addAudit, toast }) {
       <TabbedCard
         label="System"
         title="System Logs"
-        right={<button className="btn btn-outline btn-sm" onClick={() => setConfirmClear(true)}>Clear Logs</button>}
+        right={<button className="btn btn-danger-ghost btn-sm" onClick={() => setConfirmClear(true)}>Clear Logs</button>}
       >
         <div className="search-row">
           <TextInput placeholder="Search by actor, action, or details…" value={q} onChange={setQ} />

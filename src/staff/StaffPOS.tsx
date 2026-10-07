@@ -33,7 +33,7 @@ function StaffPOS({ transactions, setTransactions, members, plans, toast }) {
           {items.map((it,i)=>(
             <button key={i} className="card" style={{textAlign:'left', border:'1.5px solid var(--line)'}} onClick={()=>setCart([...cart, it])}>
               <div style={{fontSize:13, fontWeight:600}}>{it.name}</div>
-              <div className="mono" style={{color:'var(--signal)', marginTop:6}}>{peso(it.price)}</div>
+              <div className="mono" style={{color:'var(--signal-ink)', marginTop:6}}>{peso(it.price)}</div>
             </button>
           ))}
         </div>
@@ -63,7 +63,7 @@ function StaffPOS({ transactions, setTransactions, members, plans, toast }) {
         <div style={{display:'flex', gap:8, marginTop:14}}>
           <button className="btn btn-signal btn-block" onClick={charge}>Charge {peso(total)}</button>
         </div>
-        {cart.length > 0 && <button className="btn btn-ghost btn-sm" style={{marginTop:8}} onClick={()=>setCart([])}>Clear Cart</button>}
+        {cart.length > 0 && <button className="btn btn-danger-ghost btn-sm" style={{marginTop:8}} onClick={()=>setCart([])}>Clear Cart</button>}
       </TabbedCard>
     </div>
   );

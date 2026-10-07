@@ -134,7 +134,7 @@ export function SecurityFlow({ isOpen, onClose, toast }: SecurityFlowProps) {
           <button className="btn btn-signal btn-block" style={{ marginTop: 12 }} onClick={handleReset}>Reset Password</button>
           <button
             className="btn btn-ghost btn-block"
-            style={{ fontSize: 12, color: 'var(--signal)', textDecoration: 'underline' }}
+            style={{ fontSize: 12, color:'var(--signal-ink)', textDecoration: 'underline' }}
             onClick={() => setStep(2)}
           >
             Forgot Current Password?
@@ -162,7 +162,7 @@ export function SecurityFlow({ isOpen, onClose, toast }: SecurityFlowProps) {
           <button className="btn btn-signal btn-block" onClick={handleForgot}>RESET PASSWORD</button>
           <div style={{ marginTop: 12, fontSize: 13, color: 'var(--steel)' }}>
             or <br />
-            Remember password? <span style={{ color: 'var(--signal)', cursor: 'pointer', fontWeight: 600 }} onClick={() => setStep(0)}>Log in</span>
+            Remember password? <span style={{ color:'var(--signal-ink)', cursor: 'pointer', fontWeight: 600 }} onClick={() => setStep(0)}>Log in</span>
           </div>
         </div>
       )}
@@ -177,7 +177,7 @@ export function SecurityFlow({ isOpen, onClose, toast }: SecurityFlowProps) {
               <b style={{ color: 'var(--ink)' }}>{email}</b>
             </p>
           </div>
-          <button className="btn btn-outline btn-block" style={{ color: 'var(--signal)', borderColor: 'var(--signal)' }} onClick={onClose}>
+          <button className="btn btn-outline btn-block" style={{ color:'var(--signal-ink)', borderColor: 'var(--signal)' }} onClick={onClose}>
             BACK TO LOG IN
           </button>
         </div>

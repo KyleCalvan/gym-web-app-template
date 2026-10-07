@@ -11,6 +11,12 @@
   --surface-2:#242424;
   --signal:#9BE92A;
   --signal-dark:#8BCC25;
+  /* --signal-ink is the accent *as text*: the same lime reads as a background
+     fine, but as text on a light surface it needs a deeper green. --on-signal
+     is text on a lime fill and stays pure black in both themes — anything
+     lighter on #9BE92A loses the sharp contrast the accent needs. */
+  --signal-ink:#9BE92A;
+  --on-signal:#000000;
   --court:#9BE92A;
   --court-soft:#262626;
   --steel:#A0A0A0;
@@ -18,15 +24,48 @@
   --steel-light:#3A3A3A;
   --amber:#A0A0A0;
   --amber-soft:#1A1A1A;
-  --danger:#B23A2E;
+  --danger:#DC2626;
   --danger-soft:#1A1A1A;
   --line:#2A2A2A;
   --line-strong:#A0A0A0;
   --radius:6px;
   --shadow-card: 4px 4px 0 rgba(0,0,0,0.5);
+  --scrim:rgba(8,8,8,0.5);
+  /* Font stacks are theme-independent, so they live in :root only and the
+     light theme inherits them. */
   --font-display:var(--font-oxford), 'Oswald', 'Arial Narrow', sans-serif;
   --font-body:var(--font-plex-sans), 'IBM Plex Sans', -apple-system, sans-serif;
   --font-mono:var(--font-plex-mono), 'IBM Plex Mono', 'SFMono-Regular', monospace;
+}
+
+/* Light theme — opted into from the notifications menu's Settings tab. Only
+   the tokens flip; every component reads them, so the whole app restyles from
+   this one block. The two anchors invert (paper becomes the soft field,
+   surface the white raised one) and the lime accent stays bright, with
+   --signal-ink / --on-signal carrying the contrast it loses on white. */
+:root[data-theme="light"]{
+  --ink:#14140F;
+  --ink-soft:#3A3A34;
+  --paper:#EFEFE8;
+  --surface:#FFFFFF;
+  --surface-2:#E4E4DC;
+  --signal:#9BE92A;
+  --signal-dark:#7FB81E;
+  --signal-ink:#487A10;
+  --on-signal:#000000;
+  --court:#3F7A12;
+  --court-soft:#E9F2D8;
+  --steel:#5F5F58;
+  --steel-soft:#E2E2DA;
+  --steel-light:#B6B6AE;
+  --amber:#8A6300;
+  --amber-soft:#F6EAC8;
+  --danger:#B91C1C;
+  --danger-soft:#F8E5E1;
+  --line:#D6D6CE;
+  --line-strong:#5F5F58;
+  --shadow-card: 4px 4px 0 rgba(20,20,15,0.16);
+  --scrim:rgba(30,30,25,0.42);
 }
 
 *{box-sizing:border-box;}
@@ -45,7 +84,7 @@ h1,h2,h3,h4{font-family:var(--font-display);font-weight:600;margin:0;letter-spac
 .mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums;}
 a{color:inherit;}
 button{font-family:var(--font-body);cursor:pointer;}
-::selection{background:var(--signal);color:var(--ink);}
+::selection{background:var(--signal);color:var(--on-signal);}
 :focus-visible{outline:2px solid var(--ink);outline-offset:2px;}
 @media (prefers-reduced-motion: reduce){*{animation:none !important;transition:none !important;}}
 
@@ -59,7 +98,7 @@ button{font-family:var(--font-body);cursor:pointer;}
 }
 .tab-label{
   position:absolute; top:-1px; left:16px;
-  background:var(--signal); color:var(--paper);
+  background:var(--signal); color:var(--on-signal);
   font-family:var(--font-mono); font-size:10px; letter-spacing:1.5px;
   text-transform:uppercase; padding:3px 10px 4px;
   border-radius:0 var(--radius) var(--radius) 0;

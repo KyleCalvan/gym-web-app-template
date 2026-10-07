@@ -58,7 +58,7 @@
 
 .brand{display:flex; align-items:center; gap:10px; font-family:var(--font-display); font-size:22px; font-weight:700; letter-spacing:.3px; flex-shrink:0;}
 .brand-mark{
-  width:34px;height:34px;background:var(--surface-2);color:var(--signal);
+  width:34px;height:34px;background:var(--surface-2);color:var(--signal-ink);
   border:1.5px solid var(--line-strong);
   display:flex;align-items:center;justify-content:center;font-size:18px;border-radius:0;
 }
@@ -110,7 +110,7 @@
   line-height:.98; letter-spacing:-.5px;
   text-transform:uppercase;color:var(--ink); margin:0;
 }
-.landing-hero .accent-word{color:var(--signal); font-weight:700;}
+.landing-hero .accent-word{color:var(--signal-ink); font-weight:700;}
 .landing-hero p.lede{font-size:18px;line-height:1.55;color:var(--ink-soft);max-width:540px;margin:22px 0 30px;}
 .landing-hero .eyebrow{color:rgba(255,255,255,.78);}
 .landing-hero .btn-outline{color:var(--ink);border-color:var(--line-strong);background:transparent;}
@@ -172,7 +172,7 @@
   margin:0 0 8px; position:relative;padding-top:22px;
   color:var(--ink);
 }
-.hero-cards-row-inner h2 .accent-word{color:var(--signal);}
+.hero-cards-row-inner h2 .accent-word{color:var(--signal-ink);}
 .hero-cards-row-inner h2::before{
   content:'';display:block;width:72px;height:3px;
   background:var(--signal);margin:0 auto 18px;
@@ -198,14 +198,14 @@
   padding:20px;display:flex;flex-direction:column;gap:10px;position:relative;
 }
 .hero-card .ic{
-  width:42px;height:42px;border-radius:0;background:var(--surface);color:var(--signal);
+  width:42px;height:42px;border-radius:0;background:var(--surface);color:var(--signal-ink);
   display:flex;align-items:center;justify-content:center;
 }
 .hero-card h3{font-size:16px;text-transform:uppercase;margin:0; color:var(--ink);}
 .hero-card p{font-size:13px;color:var(--ink-soft);margin:0;line-height:1.5;}
 .hero-card .link{
   margin-top:auto;font-family:var(--font-mono);font-size:11px;letter-spacing:1px;
-  text-transform:uppercase;color:var(--signal);text-decoration:none;font-weight:700;
+  text-transform:uppercase;color:var(--signal-ink);text-decoration:none;font-weight:700;
 }
 .hero-card .link:hover{text-decoration:underline;}
 
@@ -221,7 +221,7 @@
 .promo-strip{background:var(--paper);padding:80px 40px;width:100%;}
 .promo-strip-inner{max-width:1180px;margin:0 auto;width:100%;}
 .promo-strip h2{color:var(--ink);text-align:center;font-size:30px;font-weight:600;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;}
-.promo-strip .sub{text-align:center;color:#E5E5E5;margin-bottom:40px;font-size:14px;}
+.promo-strip .sub{text-align:center;color:var(--ink-soft);margin-bottom:40px;font-size:14px;}
 
 /* Legacy grid kept as a hidden fallback only — carousel is the active view. */
 .promo-grid{ display:none; }
@@ -268,7 +268,7 @@
   .promo-card .thumb{ height:200px; }
 }
 .promo-card .body{ padding:16px 18px 18px; display:flex; flex-direction:column; gap:6px; flex:1; }
-.promo-card .tag{font-family:var(--font-mono);background:var(--signal);color:var(--ink);font-size:11px;padding:4px 10px;border-radius:0;letter-spacing:.5px;display:inline-block;align-self:flex-start;margin-bottom:4px;}
+.promo-card .tag{font-family:var(--font-mono);background:var(--signal);color:var(--on-signal);font-size:11px;padding:4px 10px;border-radius:0;letter-spacing:.5px;display:inline-block;align-self:flex-start;margin-bottom:4px;}
 .promo-card h3{margin:0;font-size:18px;color:var(--ink);font-weight:600;}
 .promo-card p{font-size:13px;color:var(--steel);margin:0;line-height:1.5;}
 .promo-card .valid{font-family:var(--font-mono);font-size:10.5px;color:var(--steel);margin-top:auto;display:block;border-top:1px solid var(--line);padding-top:10px;}
@@ -287,7 +287,7 @@
   transition:background .15s ease, border-color .15s ease, opacity .15s ease, color .15s ease;
 }
 .promo-nav:hover:not(:disabled){
-  background:var(--signal);border-color:var(--signal);color:var(--ink);
+  background:var(--signal);border-color:var(--signal);color:var(--on-signal);
 }
 .promo-nav:focus-visible{
   outline:2px solid var(--ink);outline-offset:3px;
@@ -328,13 +328,13 @@
   display:flex;flex-direction:column;gap:8px;position:relative;
 }
 .trainer-card .avatar{
-  width:56px;height:56px;border-radius:50%;background:var(--surface-2);color:var(--signal);
+  width:56px;height:56px;border-radius:50%;background:var(--surface-2);color:var(--signal-ink);
   border:1.5px solid var(--line-strong);
   display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);
   font-size:18px;font-weight:700;margin-bottom:6px;
 }
 .trainer-card h3{font-size:16px;text-transform:uppercase;margin:0;}
-.trainer-card .spec{font-size:12px;color:var(--signal);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:1px;}
+.trainer-card .spec{font-size:12px;color:var(--signal-ink);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:1px;}
 .trainer-card .meta{font-size:12px;color:var(--steel);margin-top:6px;line-height:1.5;}
 .trainer-card .meta .row{display:flex;justify-content:space-between;padding:2px 0;}
 
@@ -342,7 +342,7 @@
 .plans-strip{background:var(--surface);padding:80px 40px;width:100%;}
 .plans-strip-inner{max-width:1180px;margin:0 auto;}
 .plans-strip h2{color:var(--ink);text-align:center;font-size:26px;font-weight:600;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;}
-.plans-strip .sub{text-align:center;color:#E5E5E5;margin-bottom:34px;font-size:14px;}
+.plans-strip .sub{text-align:center;color:var(--ink-soft);margin-bottom:34px;font-size:14px;}
 .plans-strip .grid-3{display:grid;gap:18px; grid-template-columns:repeat(3,1fr);}
 /* Plans sit on the light band — invert the cards to the dark anchor so they
    still read as separate tiles. */
@@ -369,11 +369,11 @@
 }
 .contact-card .label{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--steel);margin-top:4px;}
 .contact-card .value{font-size:14px;font-weight:600;color:var(--ink);text-decoration:none;}
-a.contact-card .value:hover{ color:var(--signal); }
+a.contact-card .value:hover{ color:var(--signal-ink); }
 
 .feature-strip{max-width:1180px;margin:64px auto;padding:0 40px;display:grid;grid-template-columns:repeat(4,1fr);gap:18px;}
 .feature{border-top:3px solid var(--ink);padding-top:14px;}
-.feature .num{font-family:var(--font-mono);color:var(--signal);font-size:12px;}
+.feature .num{font-family:var(--font-mono);color:var(--signal-ink);font-size:12px;}
 .feature h4{font-size:16px;margin:6px 0 6px;}
 .feature p{font-size:13px;color:var(--steel);margin:0;}
 
@@ -390,7 +390,7 @@ a.contact-card .value:hover{ color:var(--signal); }
   text-transform:uppercase;letter-spacing:1.5px;margin:0 0 28px;
   line-height:1.05;
 }
-.cta-band .accent-word{color:var(--signal);}
+.cta-band .accent-word{color:var(--signal-ink);}
 
 /* ---- Footer ---- */
 .site-footer{
@@ -401,10 +401,16 @@ a.contact-card .value:hover{ color:var(--signal); }
   font-family:var(--font-mono);
   font-size:11.5px; letter-spacing:1px;
 }
+/* Three columns — brand left, Explore centered, Connect right. The outer
+   1fr tracks are equal so the auto-width middle column lands on the true
+   center of the row; justify-self pins the sides to their edges. */
 .site-footer-inner{
   max-width:1180px;margin:0 auto;
-  display:grid; grid-template-columns:1.4fr 1fr 1fr 1fr; gap:36px;
+  display:grid; grid-template-columns:1fr auto 1fr; gap:36px; align-items:start;
 }
+.site-footer-inner > .brand-block{ justify-self:start; }
+.site-footer-inner > .col{ justify-self:center; }
+.site-footer-inner > .col:last-child{ justify-self:end; text-align:right; }
 .site-footer .col h3{
   font-family:var(--font-mono); font-size:11px; font-weight:700;
   text-transform:uppercase; letter-spacing:1.5px;
@@ -415,7 +421,7 @@ a.contact-card .value:hover{ color:var(--signal); }
   color:var(--steel); text-decoration:none; font-size:11.5px;
   transition:color .15s ease;
 }
-.site-footer .col a:hover{ color:var(--signal); }
+.site-footer .col a:hover{ color:var(--signal-ink); }
 .site-footer .brand-block{ display:flex; flex-direction:column; gap:10px; }
 .site-footer .brand-block .brand{ font-size:20px; }
 .site-footer .brand-block p{ font-family:var(--font-body); font-size:13px; color:var(--steel); line-height:1.55; margin:0; letter-spacing:0; }
@@ -426,14 +432,14 @@ a.contact-card .value:hover{ color:var(--signal); }
   font-size:10.5px; letter-spacing:1.2px; text-transform:uppercase;
 }
 .site-footer .legal a{ color:var(--steel); text-decoration:none; }
-.site-footer .legal a:hover{ color:var(--signal); }
+.site-footer .legal a:hover{ color:var(--signal-ink); }
 .site-footer address{ font-style:normal; line-height:1.6; }
 
 /* ---- Back to top ---- */
 .back-to-top{
   position:fixed; right:24px; bottom:24px; z-index:40;
   width:44px; height:44px; border-radius:50%;
-  background:var(--signal); color:var(--ink);
+  background:var(--signal); color:var(--on-signal);
   display:flex; align-items:center; justify-content:center;
   border:none; cursor:pointer;
   box-shadow: 0 8px 20px -6px rgba(126,211,33,.5);
@@ -532,14 +538,19 @@ a.contact-card .value:hover{ color:var(--signal); }
   }
   .landing-nav-links a.active::after{ transform:scaleX(0); }
   .landing-nav-links a.active{
-    color:var(--signal);
+    color:var(--signal-ink);
   }
 
   .hero-cards-grid{ grid-template-columns:repeat(2,1fr); }
   .plans-strip .grid-3{ grid-template-columns:repeat(2,1fr); }
   .contact-grid{ grid-template-columns:repeat(2,1fr); }
 
+  /* Brand spans the full row, then Explore and Connect sit side by side
+     beneath it. The desktop left/center/right justify-self resets here so the
+     stacked columns all start from the same edge. */
   .site-footer-inner{ grid-template-columns:1fr 1fr; gap:28px; }
+  .site-footer-inner > .brand-block{ grid-column:1 / -1; justify-self:start; }
+  .site-footer-inner > .col{ justify-self:start; text-align:left; }
 }
 
 /* ----- ≤ 768px (small tablet / large phone) ----- */
@@ -591,6 +602,7 @@ a.contact-card .value:hover{ color:var(--signal); }
   .landing-hero .btn-group{ flex-direction:column; align-items:stretch; }
   .landing-hero .btn-group .btn{ width:100%; justify-content:center; }
   .site-footer-inner{ grid-template-columns:1fr; }
+  .site-footer-inner > .col{ justify-self:start; text-align:left; }
   .site-footer .legal{ flex-direction:column; align-items:flex-start; }
   .site-footer .legal > span{ overflow-wrap:anywhere; }
   .contact-card .value{ overflow-wrap:anywhere; }
@@ -606,3 +618,42 @@ a.contact-card .value:hover{ color:var(--signal); }
   .plans-strip .grid-3,
   .contact-grid{ grid-template-columns:1fr; }
 }
+
+/* ============================================================
+   Light theme
+   ============================================================
+   The section bands and cards all read tokens, so they flip on their own.
+   Three things on this page are baked to dark and have to be rebased by hand:
+   the hero's gradient base, its white-on-dark texture overlays, and the
+   carousel dots, which are white-on-white invisible in light mode. The hero
+   photo also gets pulled back so it doesn't darken a light band. */
+:root[data-theme="light"] .landing-hero{
+  background:
+    radial-gradient(ellipse 80% 60% at 20% 30%, rgba(126,211,33,.16), transparent 60%),
+    radial-gradient(ellipse 60% 50% at 80% 70%, rgba(116,211,33,.22), transparent 60%),
+    linear-gradient(135deg, #EFEFE8 0%, #EFEFE8 45%, #FFFFFF 100%);
+}
+:root[data-theme="light"] .landing-hero::after{
+  background:
+    repeating-linear-gradient(45deg, rgba(0,0,0,.022) 0 2px, transparent 2px 8px),
+    radial-gradient(ellipse at center, transparent 65%, rgba(0,0,0,.07) 100%);
+}
+:root[data-theme="light"] .landing-hero::before{
+  background:linear-gradient(180deg, rgba(255,255,255,.18) 0%, rgba(255,255,255,.38) 100%);
+}
+:root[data-theme="light"] .hero-photo-bg,
+:root[data-theme="light"] .landing-hero picture.hero-photo-bg > img{ opacity:.32; }
+:root[data-theme="light"] .landing-hero .eyebrow{ color:rgba(20,20,15,.7); }
+:root[data-theme="light"] .hero-stats{ color:rgba(20,20,15,.72); }
+/* Dots are white against a dark strip; on white they need the dark tint. */
+:root[data-theme="light"] .promo-dot{ background:rgba(20,20,15,.22); }
+:root[data-theme="light"] .promo-dot:hover{ background:rgba(20,20,15,.42); }
+:root[data-theme="light"] .promo-card .thumb{ background-color:#E4E4DC; }
+/* The mobile menu panel is a near-black sheet; in light mode it becomes a
+   white sheet with the same soft shadow. */
+:root[data-theme="light"] .mobile-menu-overlay{
+  background:rgba(255,255,255,.97);
+  border-bottom-color:rgba(0,0,0,.10);
+  box-shadow:0 12px 24px rgba(0,0,0,.10);
+}
+:root[data-theme="light"] .mobile-menu-content .landing-nav-links a{ border-bottom-color:rgba(0,0,0,.10); }

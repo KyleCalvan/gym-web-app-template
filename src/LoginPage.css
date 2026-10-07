@@ -6,7 +6,7 @@
 .auth-card .form-control::placeholder{color:var(--steel) !important;opacity:1 !important;}
 .auth-tabs{display:flex;gap:0;margin:18px 0 22px;border:2px solid var(--line);border-radius:var(--radius);overflow:hidden;}
 .auth-tabs button{flex:1;padding:10px;border:none;background:var(--surface);font-family:var(--font-mono);font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--ink-soft);}
-.auth-tabs button.active{background:var(--signal);color:var(--ink);}
+.auth-tabs button.active{background:var(--signal);color:var(--on-signal);}
 
 .auth-page{min-height:100vh;background:var(--paper);display:flex;flex-direction:column;}
 .auth-page-nav{
@@ -16,14 +16,14 @@
 .auth-page-nav .brand{color:var(--ink);}
 .auth-page-nav .brand .brand-mark-img{height:34px;width:auto;display:inline-block;border-radius:0;background:var(--surface);padding:2px;vertical-align:middle;}
 .auth-page-nav a{font-family:var(--font-mono);font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink);text-decoration:none;}
-.auth-page-nav a:hover{color:var(--signal);}
+.auth-page-nav a:hover{color:var(--signal-ink);}
 .auth-page-body{
   flex:1;display:grid;grid-template-columns:1fr 1fr;align-items:center;
   max-width:1180px;margin:0 auto;padding:60px 40px;width:100%;gap:60px;
 }
 .auth-page-aside{color:var(--ink);}
 .auth-page-aside .eyebrow{color:var(--steel);}
-.auth-page-aside h2{font-size:clamp(28px,3.5vw,42px);text-transform:uppercase;margin:14px 0 16px;color:var(--signal);}
+.auth-page-aside h2{font-size:clamp(28px,3.5vw,42px);text-transform:uppercase;margin:14px 0 16px;color:var(--signal-ink);}
 .auth-page-aside p{color:var(--ink-soft);font-size:15px;max-width:420px;line-height:1.55;margin:0 0 24px;}
 .auth-page-aside ul{list-style:none;padding:0;margin:0;color:var(--ink-soft);font-size:13px;}
 .auth-page-aside ul li{padding:6px 0;border-top:1px solid var(--line);}
@@ -40,10 +40,10 @@
 
 .role-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px;}
 .role-pick{border:2px solid var(--line);background:var(--surface);padding:10px 4px;border-radius:var(--radius);font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.5px;text-align:center;color:var(--ink-soft);}
-.role-pick.active{border-color:var(--signal);background:var(--signal);color:var(--paper);}
+.role-pick.active{border-color:var(--signal);background:var(--signal);color:var(--on-signal);}
 
 .side-note{color:var(--ink);}
-.side-note h2{font-size:30px;text-transform:uppercase;color:var(--signal);margin-bottom:14px;}
+.side-note h2{font-size:30px;text-transform:uppercase;color:var(--signal-ink);margin-bottom:14px;}
 .side-note p{color:var(--ink-soft);font-size:14px;max-width:420px;}
 .auth-wrap-dark{background:var(--surface);}
 
@@ -59,7 +59,7 @@
 .terms-row input:checked::after{
   content:'✓';position:absolute;inset:0;
   display:flex;align-items:center;justify-content:center;
-  color:var(--paper);font-size:13px;font-weight:700;line-height:1;
+  color:var(--on-signal);font-size:13px;font-weight:700;line-height:1;
 }
 .terms-row input:focus-visible{outline:2px solid var(--signal);outline-offset:2px;}
 .terms-row label{font-size:12.5px;color:var(--ink-soft);line-height:1.5;cursor:pointer;}
@@ -68,7 +68,7 @@
 .terms-row .terms-text{flex:1;min-width:0;}
 .terms-link{
   border:none;background:none;padding:0;
-  color:var(--signal);font-weight:700;font-size:12.5px;line-height:1.5;
+  color:var(--signal-ink);font-weight:700;font-size:12.5px;line-height:1.5;
   text-decoration:underline;text-underline-offset:2px;cursor:pointer;
 }
 .terms-link:hover{color:var(--signal-dark);}
@@ -87,10 +87,16 @@
 }
 .terms-body p{margin:0 0 12px;}
 .terms-body p strong{color:var(--ink);display:block;margin-bottom:4px;text-transform:uppercase;font-size:11.5px;letter-spacing:.5px;}
+/* "Last updated" date — the Changes clause points at it, so it leads the body. */
+.terms-body p.terms-updated{
+  font-family:var(--font-mono);font-size:11px;letter-spacing:1px;
+  text-transform:uppercase;color:var(--steel);
+  border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:16px;
+}
 .terms-body:focus-visible{outline:2px solid var(--signal);outline-offset:1px;}
 .terms-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:16px;}
 .terms-progress{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.4px;color:var(--steel);line-height:1.5;}
-.terms-progress.done{color:var(--signal);}
+.terms-progress.done{color:var(--signal-ink);}
 
 @media (max-width:980px){
   .auth-page-body{

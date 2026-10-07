@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ComponentType } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Landing from './landing';
@@ -91,6 +91,21 @@ export default function App() {
   const [showNotifModal, setShowNotifModal] = useState<boolean>(false);
   const [showProfileMenu, setShowProfileMenu] = useState<boolean>(false);
   const pillRef = useRef<HTMLDivElement>(null);
+
+  // Theme: dark is the default and the layout script has already applied a
+  // stored light preference to <html> before React mounted, so read the
+  // element back as the source of truth rather than re-reading storage.
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
+    if (typeof document === 'undefined') return 'dark';
+    return document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+  });
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    try { localStorage.setItem('vinathletics-theme', theme); } catch { /* storage blocked — session only */ }
+  }, [theme]);
+
+  const toggleTheme = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'));
 
   const [toastNode, fireToast] = useToast();
 
@@ -243,7 +258,7 @@ export default function App() {
           onProfileMenu={() => setShowProfileMenu((v) => !v)}
           pillRef={pillRef}
           profileMenuOpen={showProfileMenu}
-          bell={role === 'member' ? { count: unread, onClick: () => setShowNotifModal(true) } : null}
+          bell={{ count: unread, onClick: () => setShowNotifModal(true) }}
           nav={NAV_BY_ROLE[role]}
         />
         <div className="content">
@@ -294,6 +309,8 @@ export default function App() {
             notifPrefs={notifPrefs}
             setNotifPrefs={setNotifPrefs}
             toast={fireToast}
+            theme={theme}
+            onToggleTheme={toggleTheme}
           />
         )}
       </AnimatePresence>

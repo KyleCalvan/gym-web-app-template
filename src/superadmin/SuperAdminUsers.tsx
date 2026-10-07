@@ -213,7 +213,7 @@ function SuperAdminUsers({
               <td>
                 <div style={{ display: 'flex', gap: 6 }}>
                   <button className="btn btn-outline btn-sm" onClick={() => startEdit(u)}>Edit</button>
-                  <button className="btn btn-ghost btn-sm" onClick={() => setPendingRemove(u)}>
+                  <button className="btn btn-danger-ghost btn-sm" onClick={() => setPendingRemove(u)}>
                     Remove
                   </button>
                 </div>

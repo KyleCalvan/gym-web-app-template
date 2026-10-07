@@ -61,8 +61,27 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${oswald.variable} ${plexSans.variable} ${plexMono.variable}`}>
-      <body>{children}</body>
+    <html
+      lang="en"
+      className={`${oswald.variable} ${plexSans.variable} ${plexMono.variable}`}
+      suppressHydrationWarning
+    >
+      <body>
+        {/* Applies the saved theme before first paint. Dark is the default, so
+           the attribute is only ever set for light — and only from
+           localStorage, the one source of truth — which keeps the SSR markup
+           and the first client paint identical except when the user has
+           already opted into light. Without this the whole page would flash
+           dark before React mounts and reads the preference. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "try{var t=localStorage.getItem('vinathletics-theme');" +
+              "if(t==='light')document.documentElement.dataset.theme='light';}catch(e){}",
+          }}
+        />
+        {children}
+      </body>
     </html>
   );
 }
