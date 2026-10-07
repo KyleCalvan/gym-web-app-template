@@ -45,19 +45,19 @@
 
   .mobile-tabbar-item{
     position:relative;
-    /* flex:none — items keep their width and scroll past instead of being
-       crushed to fit. min/max-width keeps the row evenly paced and gives long
-       labels ("User Management", "Database Backups") a clean ellipsis. */
+    /* flex:none with no max-width: each tab sizes to its own label and the row
+       scrolls, so "Coaching Sessions" and "My Membership" render in full
+       instead of being ellipsized to fit a fixed slot. min-width keeps the
+       short labels evenly paced against the long ones. */
     flex:none;
-    min-width:84px;
-    max-width:112px;
+    min-width:76px;
     min-height:48px;                   /* 44px+ touch target */
     display:inline-flex;
     flex-direction:column;
     align-items:center;
     justify-content:center;
     gap:3px;
-    padding:6px 10px;
+    padding:6px 12px;
     border:none;
     background:transparent;
     color:var(--steel);
@@ -76,6 +76,7 @@
     flex-shrink:0;
   }
 
+  /* nowrap renders the label whole; ellipsis only as a last-resort guard. */
   .mobile-tabbar-item .lbl{
     max-width:100%;
     overflow:hidden;
