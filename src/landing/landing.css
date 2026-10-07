@@ -6,7 +6,7 @@
 /* ---- Nav ---- */
 .landing-nav{
   display:flex;align-items:center;justify-content:space-between;
-  padding:18px 40px;border-bottom:2px solid var(--ink);
+  padding:18px 40px;border-bottom:2px solid var(--line);
   gap:24px;
   background:var(--paper);
   position:relative;
@@ -16,7 +16,7 @@
 .landing-nav-links{display:flex;align-items:center;gap:26px;flex:1;justify-content:center;}
 .landing-nav-links a{
   font-family:var(--font-mono);font-size:11.5px;letter-spacing:1.5px;text-transform:uppercase;
-  color:var(--ink);text-decoration:none;padding:4px 0;position:relative;
+  color:var(--ink-soft);text-decoration:none;padding:4px 0;position:relative;
 }
 .landing-nav-links a::after{
   content:'';position:absolute;left:0;right:0;bottom:-2px;height:2px;background:var(--signal);
@@ -27,15 +27,15 @@
 .landing-nav.stuck{
   position:sticky;top:0;z-index:30;
   background:var(--paper);
-  box-shadow:0 2px 12px rgba(22,36,31,.08);
+  box-shadow:0 2px 12px rgba(8,8,8,.08);
   border-bottom:1px solid var(--line);
   transition:background .2s ease, box-shadow .2s ease;
 }
 .landing-nav-actions{display:flex; gap:8px; align-items:center; flex-shrink:0;}
 .landing-nav-actions .btn-outline{
-  background:#f4efe9;
+  background:var(--surface);
   color:var(--ink);
-  border-color:var(--ink);
+  border-color:var(--line);
 }
 .landing-nav-actions .btn-outline:hover{
   background:var(--paper);
@@ -51,14 +51,15 @@
   color:var(--ink);flex-shrink:0;
   transition:background .15s ease, color .15s ease, border-color .15s ease;
 }
-.nav-toggle:hover{ background:var(--ink); color:var(--paper); }
-.nav-toggle:focus-visible{ outline:2px solid var(--signal); outline-offset:2px; }
+.nav-toggle:hover{ background:var(--surface); color:var(--ink); border-color:var(--line-strong); }
+.nav-toggle:focus-visible{ outline:2px solid var(--ink); outline-offset:2px; }
 .mobile-menu-overlay{ display:none; }
 .mobile-menu-content{ display:flex; flex-direction:column; gap:14px; }
 
 .brand{display:flex; align-items:center; gap:10px; font-family:var(--font-display); font-size:22px; font-weight:700; letter-spacing:.3px; flex-shrink:0;}
 .brand-mark{
-  width:34px;height:34px;background:var(--ink);color:var(--signal);
+  width:34px;height:34px;background:var(--surface-2);color:var(--signal);
+  border:1.5px solid var(--line-strong);
   display:flex;align-items:center;justify-content:center;font-size:18px;border-radius:0;
 }
 .brand-mark-img{
@@ -73,9 +74,9 @@
   position:relative;
   padding:90px 40px 80px; width:100%;
   background:
-    radial-gradient(ellipse 80% 60% at 20% 30%, rgba(255,90,46,.10), transparent 60%),
-    radial-gradient(ellipse 60% 50% at 80% 70%, rgba(47,107,79,.18), transparent 60%),
-    linear-gradient(135deg, #0E1A15 0%, #16241F 45%, #1E2C26 100%);
+    radial-gradient(ellipse 80% 60% at 20% 30%, rgba(126,211,33,.10), transparent 60%),
+    radial-gradient(ellipse 60% 50% at 80% 70%, rgba(116,211,33,.18), transparent 60%),
+    linear-gradient(135deg, #080808 0%, #080808 45%, #262626 100%);
   overflow:hidden;
   min-height:clamp(640px, 88vh, 880px);
 }
@@ -100,20 +101,20 @@
 }
 .landing-hero::before{
   content:'';position:absolute;inset:0;z-index:1;pointer-events:none;
-  background:linear-gradient(180deg, rgba(22,36,31,.20) 0%, rgba(22,36,31,.40) 100%);
+  background:linear-gradient(180deg, rgba(8,8,8,.20) 0%, rgba(8,8,8,.40) 100%);
 }
 .landing-hero-inner{position:relative;z-index:2;max-width:1080px;margin:0 auto;width:100%;display:grid;grid-template-columns:1fr;gap:40px;align-items:center;text-align:left;}
 .landing-hero h1{
   font-size:clamp(40px, 5.5vw, 68px);
   font-weight:700;
   line-height:.98; letter-spacing:-.5px;
-  text-transform:uppercase;color:var(--paper); margin:0;
+  text-transform:uppercase;color:var(--ink); margin:0;
 }
-.landing-hero .accent-word{color:var(--signal);}
-.landing-hero p.lede{font-size:18px;line-height:1.55;color:rgba(255,255,255,.78);max-width:540px;margin:22px 0 30px;}
+.landing-hero .accent-word{color:var(--signal); font-weight:700;}
+.landing-hero p.lede{font-size:18px;line-height:1.55;color:var(--ink-soft);max-width:540px;margin:22px 0 30px;}
 .landing-hero .eyebrow{color:rgba(255,255,255,.78);}
-.landing-hero .btn-outline{color:var(--paper);border-color:rgba(255,255,255,.55);background:transparent;}
-.landing-hero .btn-outline:hover{background:rgba(255,255,255,.08);box-shadow:none;}
+.landing-hero .btn-outline{color:var(--ink);border-color:var(--line-strong);background:transparent;}
+.landing-hero .btn-outline:hover{background:var(--surface);box-shadow:none;}
 
 .hero-blob{
   position:absolute;border-radius:50%;filter:blur(80px);
@@ -121,11 +122,11 @@
 }
 .hero-blob-1{
   width:420px;height:420px;top:-120px;left:-80px;
-  background:radial-gradient(circle, rgba(255,90,46,.35), transparent 70%);
+  background:radial-gradient(circle, rgba(126,211,33,.35), transparent 70%);
 }
 .hero-blob-2{
   width:520px;height:520px;bottom:-180px;right:-120px;
-  background:radial-gradient(circle, rgba(47,107,79,.40), transparent 70%);
+  background:radial-gradient(circle, rgba(116,211,33,.40), transparent 70%);
 }
 
 .hero-stats{
@@ -147,39 +148,61 @@
 .soft-card:focus-within{
   transform: translateY(-2px);
   border-color: var(--signal);
-  box-shadow: 0 10px 24px -8px rgba(255,90,46,.22),
-              0 2px 6px rgba(22,36,31,.08);
+  box-shadow: 0 10px 24px -8px rgba(126,211,33,.22),
+              0 2px 6px rgba(8,8,8,.08);
 }
+
+/* ---- Section bands ----
+   Strips alternate between the two anchors: --paper (recessed, #080808) and
+   --surface (raised, #1A1A1A). The rhythm is what makes each section read as
+   its own block instead of one continuous shade — hero is dark, so the first
+   content strip picks up the light band and they flip from there.
+   Cards on a light band are inverted to --paper so they still separate from
+   the strip behind them. */
 
 /* ---- Why-cards row ---- */
 .hero-cards-row{
   width:100%;padding:80px 40px 90px;
-  background:var(--paper);
+  background:var(--surface);
   min-height:clamp(560px, 72vh, 760px);
 }
 .hero-cards-row-inner{max-width:1180px;margin:0 auto;text-align:center;}
 .hero-cards-row-inner h2{
-  font-size:24px;font-weight:600;text-transform:uppercase;letter-spacing:1px;
+  font-size:32px;font-weight:700;text-transform:uppercase;letter-spacing:1px;
   margin:0 0 8px; position:relative;padding-top:22px;
+  color:var(--ink);
 }
+.hero-cards-row-inner h2 .accent-word{color:var(--signal);}
 .hero-cards-row-inner h2::before{
   content:'';display:block;width:72px;height:3px;
   background:var(--signal);margin:0 auto 18px;
 }
 .hero-cards-row-inner .sub{font-size:14px;color:var(--steel);margin-bottom:36px;}
+
+/* "More than a workout" block — class-based so media queries can reach it
+   (inline styles win over stylesheets, which broke this at phone widths). */
+.why-bottom-section{ margin-top:64px; border-top:1px solid var(--steel-light); padding-top:64px; }
+.why-bottom-inner{ display:flex; gap:48px; margin-bottom:64px; }
+.why-left{ flex:1; }
+.why-right-grid{ flex:2; display:grid; grid-template-columns:repeat(5,1fr); gap:24px; }
+.why-trust-row{
+  display:flex; justify-content:center; gap:48px;
+  font-size:12px; font-weight:700; color:var(--steel);
+  text-transform:uppercase; letter-spacing:1px;
+}
 .hero-cards-grid{
   display:grid;grid-template-columns:repeat(4,1fr);gap:18px;text-align:left;
 }
 .hero-card{
-  background:var(--surface);border:2px solid var(--ink);border-radius:0;
+  background:var(--paper);border:2px solid var(--line);border-radius:0;
   padding:20px;display:flex;flex-direction:column;gap:10px;position:relative;
 }
 .hero-card .ic{
-  width:42px;height:42px;border-radius:0;background:var(--ink);color:var(--signal);
+  width:42px;height:42px;border-radius:0;background:var(--surface);color:var(--signal);
   display:flex;align-items:center;justify-content:center;
 }
-.hero-card h3{font-size:16px;text-transform:uppercase;margin:0;}
-.hero-card p{font-size:13px;color:var(--steel);margin:0;line-height:1.5;}
+.hero-card h3{font-size:16px;text-transform:uppercase;margin:0; color:var(--ink);}
+.hero-card p{font-size:13px;color:var(--ink-soft);margin:0;line-height:1.5;}
 .hero-card .link{
   margin-top:auto;font-family:var(--font-mono);font-size:11px;letter-spacing:1px;
   text-transform:uppercase;color:var(--signal);text-decoration:none;font-weight:700;
@@ -195,10 +218,10 @@
 }
 
 /* ---- Promotions strip ---- */
-.promo-strip{background:var(--ink);padding:80px 40px;width:100%;}
+.promo-strip{background:var(--paper);padding:80px 40px;width:100%;}
 .promo-strip-inner{max-width:1180px;margin:0 auto;width:100%;}
-.promo-strip h2{color:var(--paper);text-align:center;font-size:30px;font-weight:600;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;}
-.promo-strip .sub{text-align:center;color:#9FB0A6;margin-bottom:40px;font-size:14px;}
+.promo-strip h2{color:var(--ink);text-align:center;font-size:30px;font-weight:600;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;}
+.promo-strip .sub{text-align:center;color:#E5E5E5;margin-bottom:40px;font-size:14px;}
 
 /* Legacy grid kept as a hidden fallback only — carousel is the active view. */
 .promo-grid{ display:none; }
@@ -210,7 +233,7 @@
   outline:none;
 }
 .promo-carousel:focus-visible{
-  outline:2px solid var(--paper);
+  outline:2px solid var(--signal);
   outline-offset:6px;
   border-radius:0;
 }
@@ -224,8 +247,8 @@
   /* Each slide is a flex item; flex-basis controls visible width. */
   flex: 0 0 100%;
   min-width:0;
-  background:var(--paper);border-radius:0;padding:0;position:relative;
-  border:2px solid var(--ink);overflow:hidden;
+  background:var(--surface);border-radius:0;padding:0;position:relative;
+  border:2px solid var(--line);overflow:hidden;
   display:flex;flex-direction:column;
 }
 @media (min-width: 640px){
@@ -239,13 +262,13 @@
 }
 .promo-card .thumb{
   width:100%;height:200px;display:block;
-  object-fit:cover;background-color:#2C4038;
+  object-fit:cover;background-color:#262626;
 }
 @media (min-width: 768px){
   .promo-card .thumb{ height:200px; }
 }
 .promo-card .body{ padding:16px 18px 18px; display:flex; flex-direction:column; gap:6px; flex:1; }
-.promo-card .tag{font-family:var(--font-mono);background:var(--signal);color:#fff;font-size:11px;padding:4px 10px;border-radius:0;letter-spacing:.5px;display:inline-block;align-self:flex-start;margin-bottom:4px;}
+.promo-card .tag{font-family:var(--font-mono);background:var(--signal);color:var(--ink);font-size:11px;padding:4px 10px;border-radius:0;letter-spacing:.5px;display:inline-block;align-self:flex-start;margin-bottom:4px;}
 .promo-card h3{margin:0;font-size:18px;color:var(--ink);font-weight:600;}
 .promo-card p{font-size:13px;color:var(--steel);margin:0;line-height:1.5;}
 .promo-card .valid{font-family:var(--font-mono);font-size:10.5px;color:var(--steel);margin-top:auto;display:block;border-top:1px solid var(--line);padding-top:10px;}
@@ -257,17 +280,17 @@
 }
 .promo-nav{
   width:40px;height:40px;border-radius:50%;
-  background:transparent;color:var(--paper);
-  border:2px solid rgba(255,255,255,.35);
+  background:transparent;color:var(--ink);
+  border:2px solid var(--line-strong);
   display:flex;align-items:center;justify-content:center;
   cursor:pointer;
   transition:background .15s ease, border-color .15s ease, opacity .15s ease, color .15s ease;
 }
 .promo-nav:hover:not(:disabled){
-  background:var(--signal);border-color:var(--signal);color:#fff;
+  background:var(--signal);border-color:var(--signal);color:var(--ink);
 }
 .promo-nav:focus-visible{
-  outline:2px solid var(--paper);outline-offset:3px;
+  outline:2px solid var(--ink);outline-offset:3px;
 }
 .promo-nav:disabled{
   opacity:.35;cursor:not-allowed;
@@ -287,7 +310,7 @@
   width:22px;border-radius:0;
 }
 .promo-dot:focus-visible{
-  outline:2px solid var(--paper);outline-offset:3px;
+  outline:2px solid var(--signal);outline-offset:3px;
 }
 
 /* ---- Trainers strip ---- */
@@ -305,7 +328,8 @@
   display:flex;flex-direction:column;gap:8px;position:relative;
 }
 .trainer-card .avatar{
-  width:56px;height:56px;border-radius:50%;background:var(--ink);color:var(--signal);
+  width:56px;height:56px;border-radius:50%;background:var(--surface-2);color:var(--signal);
+  border:1.5px solid var(--line-strong);
   display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);
   font-size:18px;font-weight:700;margin-bottom:6px;
 }
@@ -315,20 +339,27 @@
 .trainer-card .meta .row{display:flex;justify-content:space-between;padding:2px 0;}
 
 /* ---- Plans strip ---- */
-.plans-strip{background:var(--ink);padding:80px 40px;width:100%;}
+.plans-strip{background:var(--surface);padding:80px 40px;width:100%;}
 .plans-strip-inner{max-width:1180px;margin:0 auto;}
-.plans-strip h2{color:var(--paper);text-align:center;font-size:26px;font-weight:600;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;}
-.plans-strip .sub{text-align:center;color:#9FB0A6;margin-bottom:34px;font-size:14px;}
+.plans-strip h2{color:var(--ink);text-align:center;font-size:26px;font-weight:600;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;}
+.plans-strip .sub{text-align:center;color:#E5E5E5;margin-bottom:34px;font-size:14px;}
 .plans-strip .grid-3{display:grid;gap:18px; grid-template-columns:repeat(3,1fr);}
+/* Plans sit on the light band — invert the cards to the dark anchor so they
+   still read as separate tiles. */
+.plans-strip .plan-card{background:var(--paper);}
+.plans-strip .plan-card.featured{background:var(--paper);border-color:var(--signal);}
+.plans-strip .plan-card ul li{border-top-color:var(--line);}
+/* Plans strip is a light band, so its empty state inverts too. */
+.plans-strip .empty-state{background:var(--paper);}
 
 /* ---- Contact strip ---- */
-.contact-strip{background:var(--paper);padding:80px 40px;}
+.contact-strip{background:var(--surface);padding:80px 40px;}
 .contact-strip-inner{max-width:1180px;margin:0 auto;}
 .contact-strip h2{font-size:24px;font-weight:600;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;text-align:center;}
 .contact-strip .sub{font-size:14px;color:var(--steel);margin-bottom:30px;text-align:center;}
 .contact-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;}
 .contact-card{
-  background:var(--surface);border:2px solid var(--ink);border-radius:0;padding:22px;text-align:center;
+  background:var(--paper);border:2px solid var(--ink);border-radius:0;padding:22px;text-align:center;
   display:flex;flex-direction:column;align-items:center;gap:8px;
 }
 .contact-card .ic{
@@ -348,7 +379,9 @@ a.contact-card .value:hover{ color:var(--signal); }
 
 /* ---- CTA band ---- */
 .cta-band{
-  background:var(--ink);color:var(--paper);
+  background:var(--paper);
+  border-top:2px solid var(--line);
+  color:var(--ink);
   padding:80px 40px;text-align:center;
 }
 .cta-band h2{
@@ -361,8 +394,8 @@ a.contact-card .value:hover{ color:var(--signal); }
 
 /* ---- Footer ---- */
 .site-footer{
-  background:var(--paper);
-  border-top:2px solid var(--ink);
+  background:var(--surface);
+  border-top:2px solid var(--line);
   padding:48px 40px 28px;
   color:var(--steel);
   font-family:var(--font-mono);
@@ -400,10 +433,10 @@ a.contact-card .value:hover{ color:var(--signal); }
 .back-to-top{
   position:fixed; right:24px; bottom:24px; z-index:40;
   width:44px; height:44px; border-radius:50%;
-  background:var(--signal); color:#fff;
+  background:var(--signal); color:var(--ink);
   display:flex; align-items:center; justify-content:center;
   border:none; cursor:pointer;
-  box-shadow: 0 8px 20px -6px rgba(255,90,46,.5);
+  box-shadow: 0 8px 20px -6px rgba(126,211,33,.5);
   opacity:0; pointer-events:none;
   transform: translateY(8px);
   transition: opacity .18s ease, transform .18s ease, background .15s ease;
@@ -446,9 +479,9 @@ a.contact-card .value:hover{ color:var(--signal); }
     left:0;
     right:0;
     top:100%;
-    background:rgba(14, 26, 21, 0.96);
+    background:rgba(8, 8, 8, 0.96);
     border-bottom:1px solid rgba(255,255,255,0.08);
-    box-shadow:0 12px 24px rgba(12,18,15,0.16);
+    box-shadow:0 12px 24px rgba(0,0,0,0.16);
     z-index:30;
   }
   .mobile-menu-content{
@@ -477,7 +510,7 @@ a.contact-card .value:hover{ color:var(--signal); }
     font-size:11px;
     letter-spacing:1.2px;
     border-bottom:1px solid rgba(255,255,255,0.08);
-    color:var(--paper);
+    color:var(--ink);
   }
   .mobile-menu-content .landing-nav-actions{
     flex-direction:row;
@@ -493,7 +526,7 @@ a.contact-card .value:hover{ color:var(--signal); }
     font-size:11px;
   }
   .mobile-menu-content .landing-nav-actions .btn-outline{
-    background:#f4efe9;
+    background:var(--paper);
     color:var(--ink);
     border-color:var(--ink);
   }

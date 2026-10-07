@@ -44,16 +44,16 @@ function WhyCardsRow() {
           })}
         </div>
 
-        <div className="why-bottom-section" style={{ marginTop: 64, borderTop: '1px solid var(--steel-light)', paddingTop: 64 }}>
-          <div className="why-bottom-inner" style={{ display: 'flex', gap: 48, marginBottom: 64 }}>
-            <div className="why-left" style={{ flex: 1 }}>
+        <div className="why-bottom-section">
+          <div className="why-bottom-inner">
+            <div className="why-left">
               <h3 style={{ fontSize: 24, margin: '0 0 8px' }}>MORE THAN A WORKOUT.</h3>
               <h3 style={{ fontSize: 24, margin: '0 0 16px', color: 'var(--signal)' }}>A BETTER YOU.</h3>
               <p style={{ color: 'var(--steel)', fontSize: 15, lineHeight: 1.6 }}>
                 We're here to support every part of your fitness journey, inside and outside the gym.
               </p>
             </div>
-            <div className="why-right-grid" style={{ flex: 2, display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 24 }}>
+            <div className="why-right-grid">
               {[
                 { label: 'ACHIEVE YOUR GOALS', text: 'Programs and tools designed to help you stay focused and make real progress.' },
                 { label: 'STAY CONSISTENT', text: 'Easy booking, reminders, and tracking to keep you on track.' },
@@ -68,7 +68,7 @@ function WhyCardsRow() {
               ))}
             </div>
           </div>
-          <div className="why-trust-row" style={{ display: 'flex', justifyContent: 'center', gap: 48, fontSize: 12, fontWeight: 'bold', color: 'var(--steel)', textTransform: 'uppercase', letterSpacing: 1 }}>
+          <div className="why-trust-row">
             <span>YOUR DATA IS SECURE</span>
             <span>TRUSTED BY THOUSANDS</span>
             <span>WE'RE WITH YOU EVERY STEP</span>

@@ -1,7 +1,6 @@
 // @ts-nocheck
 import { useState, useRef, useEffect } from 'react';
 import type { RefObject } from 'react';
-import './landing/landing.css';
 import type { Plan, Promotion, Trainer } from './types.ts';
 import { LANDING_PLANS, LANDING_TRAINERS } from './landing/landing-mock.ts';
 import LandingNav from './landing/LandingNav.tsx';

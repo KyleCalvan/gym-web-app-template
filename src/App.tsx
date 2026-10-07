@@ -1,11 +1,12 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import type { ComponentType } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import './shared/shell/app-shell.css';
 import Landing from './landing';
 import LoginPage from './LoginPage.tsx';
 import Sidebar from './shared/shell/Sidebar.tsx';
 import { Topbar } from './shared/shell/Topbar.tsx';
+import { MobileTabBar } from './shared/shell/MobileTabBar.tsx';
+import { ProfileMenu } from './shared/shell/ProfileMenu.tsx';
 import { useToast } from './shared/hooks/useToast.tsx';
 import {
   CURRENT,
@@ -50,8 +51,6 @@ const VIEWS: Record<Role, Record<string, ComponentType<ViewProps>>> = {
   superadmin: SUPERADMIN_VIEWS as unknown as Record<string, ComponentType<ViewProps>>,
 };
 
-const SEARCHABLE_ROLES: Role[] = ['admin', 'staff', 'superadmin'];
-
 const today = (): string => new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
 
 const toISODate = (d: Date): string => {
@@ -90,6 +89,8 @@ export default function App() {
   const [role, setRole]                     = useState<Role>('member');
   const [view, setView]                     = useState<string>('dashboard');
   const [showNotifModal, setShowNotifModal] = useState<boolean>(false);
+  const [showProfileMenu, setShowProfileMenu] = useState<boolean>(false);
+  const pillRef = useRef<HTMLDivElement>(null);
 
   const [toastNode, fireToast] = useToast();
 
@@ -162,15 +163,15 @@ export default function App() {
     setRoute('landing');
   };
 
-  const handleSwitchRole = (r: Role) => {
-    const fromName = CURRENT[role].name;
-    const toName = CURRENT[r].name;
-    addAudit('warn', 'Role switched', `${fromName} → ${toName}`);
-    setRole(r);
-    setView('dashboard');
-    if (r === 'member') setCurrentUserId(null);
-    else if (r === 'trainer') setCurrentUserId(null);
-    else setCurrentUserId(null);
+  // A member permanently deletes their own account. The record is removed and
+  // the session ends — there's nothing left to be signed in as.
+  const handleDeleteAccount = (userId: string) => {
+    const target = members.find((m) => m.id === userId);
+    const name = target?.name || CURRENT[role].name;
+    setMembers((prev) => prev.filter((m) => m.id !== userId));
+    addAudit('warn', 'Account deleted', `${name} deleted their own account`);
+    handleLogout();
+    fireToast('Account deleted');
   };
 
   const handleNav = (id: string) => {
@@ -179,6 +180,12 @@ export default function App() {
       return;
     }
     setView(id);
+  };
+
+  const handleProfileMenuNav = (id: string) => {
+    handleNav(id);
+    setShowProfileMenu(false);
+    setIsSidebarOpen(false);
   };
 
   if (route === 'landing') {
@@ -224,15 +231,21 @@ export default function App() {
         nav={NAV_BY_ROLE[role]}
         active={view}
         onNav={(id) => { handleNav(id); setIsSidebarOpen(false); }}
-        onLogout={handleLogout}
-        onSwitchRole={handleSwitchRole}
-        searchable={SEARCHABLE_ROLES.includes(role)}
-        bell={role === 'member' ? { count: unread, onClick: () => setShowNotifModal(true) } : null}
         isOpen={isSidebarOpen}
         setIsOpen={setIsSidebarOpen}
       />
       <div style={{ flex: 1, minWidth: 0 }}>
-        <Topbar role={role} view={view} onNav={handleNav} toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
+        <Topbar
+          role={role}
+          view={view}
+          onNav={handleNav}
+          toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+          onProfileMenu={() => setShowProfileMenu((v) => !v)}
+          pillRef={pillRef}
+          profileMenuOpen={showProfileMenu}
+          bell={role === 'member' ? { count: unread, onClick: () => setShowNotifModal(true) } : null}
+          nav={NAV_BY_ROLE[role]}
+        />
         <div className="content">
           <AnimatePresence mode="wait">
             <motion.div
@@ -265,6 +278,7 @@ export default function App() {
                 toast={fireToast}
                 today={today()}
                 addAudit={addAudit}
+                onDeleteAccount={handleDeleteAccount}
               />
             </motion.div>
           </AnimatePresence>
@@ -283,6 +297,20 @@ export default function App() {
           />
         )}
       </AnimatePresence>
+      <ProfileMenu
+        role={role}
+        open={showProfileMenu}
+        onClose={() => setShowProfileMenu(false)}
+        onProfile={() => handleProfileMenuNav('profile')}
+        onLogout={() => { handleLogout(); setShowProfileMenu(false); }}
+        triggerRef={pillRef}
+      />
+      <MobileTabBar
+        role={role}
+        nav={NAV_BY_ROLE[role]}
+        active={view}
+        onNav={handleProfileMenuNav}
+      />
       {toastNode}
     </div>
   );

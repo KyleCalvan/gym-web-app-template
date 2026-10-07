@@ -2,7 +2,7 @@
 
 .metrics-tracker{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;}
 .metric-tile{
-  border:2px solid var(--ink);border-radius:0;padding:10px 12px;background:var(--paper);
+  border:2px solid var(--ink);border-radius:0;padding:10px 12px;background:var(--surface);
 }
 .metric-tile .lbl{font-family:var(--font-mono);font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--steel);}
 .metric-tile .val{font-family:var(--font-mono);font-size:20px;font-weight:600;margin-top:4px;}
@@ -15,7 +15,7 @@
 .cal-title{font-family:var(--font-display);font-size:14px;text-transform:uppercase;letter-spacing:.5px;font-weight:600;}
 .check-calendar{
   display:grid;grid-template-columns:repeat(7,1fr);gap:6px;
-  background:var(--paper);border:2px solid var(--ink);border-radius:0;padding:10px;
+  background:var(--surface);border:2px solid var(--ink);border-radius:0;padding:10px;
 }
 .check-calendar .cal-head{
   font-family:var(--font-mono);font-size:10px;letter-spacing:1px;text-transform:uppercase;
@@ -33,10 +33,10 @@
   width:6px;height:6px;border-radius:50%;background:var(--court);margin-top:4px;display:block;
 }
 .check-calendar .cal-cell.checked{
-  background:var(--court);color:#fff;border-color:var(--ink);
+  background:var(--court);color:var(--ink);border-color:var(--ink);
 }
-.check-calendar .cal-cell.checked .cal-dot{background:#fff;}
-.check-calendar .cal-cell.today{outline:2px solid var(--signal);outline-offset:-2px;}
+.check-calendar .cal-cell.checked .cal-dot{background:var(--ink);}
+.check-calendar .cal-cell.today{outline:2px solid var(--ink);outline-offset:-2px;}
 .check-calendar .cal-cell:hover{border-color:var(--signal);}
 .cal-legend{
   display:flex;align-items:center;gap:8px;margin-top:10px;

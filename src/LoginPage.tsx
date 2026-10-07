@@ -1,6 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import './LoginPage.css';
 import { Field, TextInput, Modal } from './shared';
 import { dur, ease } from './motion.tsx';
 import type { Member, Plan, Role, Setter } from './types.ts';
@@ -54,6 +53,27 @@ export default function LoginPage({
   const [regPhone, setRegPhone] = useState<string>('');
   const [regPassword, setRegPassword] = useState<string>('');
 
+  // Terms & agreement gate on the register form. Create Account stays locked
+  // until the member has both scrolled through the agreement and ticked the box.
+  const [agreedToTerms, setAgreedToTerms] = useState<boolean>(false);
+  const [termsOpen, setTermsOpen] = useState<boolean>(false);
+  const [termsRead, setTermsRead] = useState<boolean>(false);
+  const termsBodyRef = useRef<HTMLDivElement | null>(null);
+
+  // "Fully read" is reached when the agreement is scrolled to the bottom.
+  const handleTermsScroll = () => {
+    const el = termsBodyRef.current;
+    if (!el) return;
+    if (el.scrollHeight - el.scrollTop - el.clientHeight < 4) setTermsRead(true);
+  };
+
+  useEffect(() => {
+    if (!termsOpen) return;
+    // An agreement short enough to fit without scrolling counts as read on open.
+    const el = termsBodyRef.current;
+    if (el && el.scrollHeight - el.clientHeight < 4) setTermsRead(true);
+  }, [termsOpen]);
+
   const [toast, setToast] = useState<string | null>(null);
   const showToast = (msg: string) => {
     setToast(msg);
@@ -99,6 +119,8 @@ export default function LoginPage({
     if (!regName.trim()) { showToast('Name is required'); return; }
     if (!/^\S+@\S+\.\S+$/.test(regEmail)) { showToast('Please enter a valid email'); return; }
     if (regPassword.length < 8) { showToast('Password must be at least 8 characters'); return; }
+    if (!termsRead) { showToast('Please read the Terms and Agreements first'); return; }
+    if (!agreedToTerms) { showToast('You must agree to the Terms and Agreements'); return; }
     const id = 'M-' + (1042 + members.length);
     setMembers((prev) => [...prev, {
       id,
@@ -195,7 +217,38 @@ export default function LoginPage({
                 <input className="form-control" type="password" required placeholder="At least 8 characters"
                   value={regPassword} onChange={(e) => setRegPassword(e.target.value)} />
               </Field>
-              <button type="submit" className="btn btn-signal btn-block">Create Account</button>
+
+              <div className="terms-row">
+                <input
+                  type="checkbox"
+                  id="agree-terms"
+                  checked={agreedToTerms}
+                  onChange={(e) => setAgreedToTerms(e.target.checked)}
+                />
+                <label htmlFor="agree-terms" className="terms-text">I have read and agree to the</label>
+                <button
+                  type="button"
+                  className="terms-link"
+                  onClick={() => setTermsOpen(true)}
+                >
+                  Terms and Agreements
+                </button>
+              </div>
+
+              <button
+                type="submit"
+                className="btn btn-signal btn-block"
+                disabled={!termsRead || !agreedToTerms}
+              >
+                Create Account
+              </button>
+              {!termsRead ? (
+                <p className="terms-hint">
+                  Open and scroll through the Terms and Agreements to unlock the button.
+                </p>
+              ) : !agreedToTerms ? (
+                <p className="terms-hint">Tick the agreement box above to continue.</p>
+              ) : null}
             </form>
           ) : (
             <form onSubmit={handleSignIn}>
@@ -289,6 +342,108 @@ export default function LoginPage({
             >
               BACK TO LOG IN
             </button>
+          </div>
+        </Modal>
+      )}
+
+      {termsOpen && (
+        <Modal
+          title="Terms and Agreements"
+          className="modal-dark"
+          wide
+          onClose={() => setTermsOpen(false)}
+        >
+          <div style={{ padding: '0 24px 20px' }}>
+            <div
+              ref={termsBodyRef}
+              onScroll={handleTermsScroll}
+              className="terms-body"
+              role="region"
+              aria-label="Membership agreement"
+              tabIndex={0}
+            >
+              <p><strong>1. Acceptance of Terms</strong></p>
+              <p>
+                By registering a VinAthletics account you accept this agreement in full. If you do
+                not accept any part of it, do not create an account. Membership is offered by
+                VinAthletics Gym, Makati, Philippines ("the Gym", "we").
+              </p>
+
+              <p><strong>2. Membership &amp; Billing</strong></p>
+              <p>
+                Your chosen membership plan begins on the date of activation and renews
+                automatically at the stated rate until cancelled by either party. Dues are billed in
+                advance and are non-transferable. A returned payment or declined card places the
+                account on hold until settled; access to the floor is suspended while a balance is
+                outstanding.
+              </p>
+
+              <p><strong>3. Health &amp; Assumption of Risk</strong></p>
+              <p>
+                Exercise carries inherent risk. You confirm that you are in suitable physical
+                condition to train and that you have consulted a physician where any doubt exists.
+                You assume all risk of injury, illness or loss arising from your use of the
+                equipment, classes and facilities, and you release the Gym, its owners, trainers and
+                staff from any claim arising from such use except where caused by our gross
+                negligence.
+              </p>
+
+              <p><strong>4. Code of Conduct</strong></p>
+              <p>
+                Members train in a shared space. Harassment, intimidation, misuse of equipment,
+                training under the influence, or disregard for staff instruction will result in
+                immediate removal and, at our discretion, termination of membership without refund.
+              </p>
+
+              <p><strong>5. Cancellation, Freeze &amp; Refunds</strong></p>
+              <p>
+                You may cancel a membership at any time from your profile; cancellation takes effect
+                at the end of the current billing period and stops the next renewal. Prepaid months
+                are not refunded for partial use. Accounts may be frozen for medical or travel
+                reasons for a maximum of three months per membership year.
+              </p>
+
+              <p><strong>6. Personal Belongings &amp; Liability</strong></p>
+              <p>
+                Lockers are provided for the session only. The Gym is not liable for lost, stolen or
+                damaged property on the premises, including items left overnight.
+              </p>
+
+              <p><strong>7. Privacy &amp; Personal Data</strong></p>
+              <p>
+                We collect your name, contact details, health disclosures and payment information
+                solely to operate your membership — check-ins, coaching bookings, billing and
+                emergency contact. We do not sell your data. Deleting your account removes your
+                record from the active ledger.
+              </p>
+
+              <p><strong>8. Changes to These Terms</strong></p>
+              <p>
+                We may revise this agreement as our services or the law changes; material changes
+                are notified to the email on file, and continued use after notice is acceptance.
+              </p>
+
+              <p style={{ marginBottom: 0 }}>
+                Questions about this agreement may be raised with front desk staff or written to
+                management at any time.
+              </p>
+            </div>
+
+            <div className="terms-foot">
+              {!termsRead ? (
+                <span className="terms-progress">Scroll to the bottom to acknowledge you've read it.</span>
+              ) : (
+                <span className="terms-progress done">✓ Read — you can now agree and continue.</span>
+              )}
+              <button
+                type="button"
+                className="btn btn-signal btn-sm"
+                onClick={() => setTermsOpen(false)}
+                style={{ width: 'auto' }}
+              >
+                Close
+              </button>
+            </div>
           </div>
         </Modal>
       )}

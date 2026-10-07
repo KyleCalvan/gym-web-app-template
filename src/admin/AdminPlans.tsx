@@ -62,7 +62,7 @@ function AdminPlans({ plans, setPlans, toast }){
           return (
             <div className={"plan-card"+(isFeatured?' featured':'')} key={p.name} style={isInactive?{opacity:.55}:undefined}>
               {isFeatured && <span className="ribbon">Most Popular</span>}
-              <div className="eyebrow" style={{color:isFeatured?'#9FB0A6':'var(--steel)'}}>{p.members} active members{p.status?` · ${p.status}`:''}</div>
+              <div className="eyebrow" style={{color:isFeatured?'var(--ink-soft)':'var(--steel)'}}>{p.members} active members{p.status?` · ${p.status}`:''}</div>
               <h3 style={{fontSize:20}}>{p.name}</h3>
               <div className="price">{peso(p.price)}<span>/{p.period}</span></div>
               <ul>{p.perks.map((perk,i)=><li key={i}>✓ {perk}</li>)}</ul>

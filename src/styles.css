@@ -1,11 +1,18 @@
 /* ===== VinAthletics Gym — Athletic Ledger design system =====
    This file is a barrel: each section/component owns its CSS in its own folder.
-   Edit the file matching the component you are updating, not this one. */
+   Edit the file matching the component you are updating, not this one.
+
+   Imported once by app/layout.tsx. Next.js' App Router only allows global
+   stylesheets to be loaded from the root layout, so every stylesheet in the
+   app is aggregated here. */
 @import './styles/global.css';
 @import './styles/components.css';
 @import './styles/responsive.css';
 @import './shared/shell/app-shell.css';
 @import './shared/shell/sidebar.css';
+@import './shared/shell/global-search.css';
+@import './shared/shell/mobile-tabbar.css';
+@import './shared/shell/profile-menu.css';
 @import './LoginPage.css';
 @import './landing/landing.css';
 @import './member/checkout.css';

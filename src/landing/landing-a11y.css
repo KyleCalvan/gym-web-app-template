@@ -5,7 +5,8 @@
 /* Skip-link: hidden offscreen until focused via keyboard. */
 .skip-link{
   position:absolute; left:8px; top:8px; z-index:100;
-  background:var(--ink); color:var(--paper);
+  background:var(--surface); color:var(--ink);
+  border:1.5px solid var(--signal);
   padding:10px 14px; border-radius:0;
   font-family:var(--font-mono); font-size:12px; letter-spacing:1px;
   text-transform:uppercase; text-decoration:none;
@@ -14,10 +15,11 @@
 }
 .skip-link:focus{ transform:translateY(0); outline:2px solid var(--signal); outline-offset:2px; }
 
-/* Dark sections: the global --signal focus outline is invisible on dark
-   ink backgrounds. Override to paper-white for visibility. */
+/* Dark sections: the global --signal focus outline needs more contrast
+   against lime-accented surfaces. Override to ink-white for visibility.
+   (Note: --paper is the black page token — use --ink for outlines.) */
 .dark-section :focus-visible{
-  outline-color: var(--paper);
+  outline-color: var(--ink);
   outline-offset: 3px;
 }
 

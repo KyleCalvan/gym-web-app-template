@@ -1,9 +1,10 @@
-// @ts-nocheck
 import { useState } from 'react';
-import { Avatar, Badge, TabbedCard, Field, TextInput } from '../shared';
+import { Avatar, Badge, Modal, TabbedCard, Field, TextInput } from '../shared';
 import { onPickImage } from '../shared/imageUpload.ts';
+import { SecurityFlow } from '../shared/components/SecurityFlow';
+import type { ViewProps } from '../types.ts';
 
-function MemberProfile({ members, setMembers, currentUserId, toast, addAudit }){
+function MemberProfile({ members, setMembers, currentUserId, toast, addAudit, onDeleteAccount }: ViewProps){
   const me = members.find(m => m.id === currentUserId) || members[0];
   const [info, setInfo] = useState({
     name: me?.name || '',
@@ -12,31 +13,17 @@ function MemberProfile({ members, setMembers, currentUserId, toast, addAudit }){
     emergency: '',
   });
 
-  const [password, setPassword] = useState({
-    current: '',
-    new: '',
-    confirm: '',
-  });
+  const [showSecurityFlow, setShowSecurityFlow] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
-  const submit = (e) => {
+  const submit = (e: React.FormEvent) => {
     e.preventDefault();
     setMembers(prev => prev.map(m => m.id === me.id ? {...m, ...info} : m));
     toast('Profile updated');
     addAudit?.('info', 'Profile updated', me?.id || 'member');
   };
 
-  const submitPassword = (e) => {
-    e.preventDefault();
-    if (password.new !== password.confirm) {
-      toast('Passwords do not match');
-      return;
-    }
-    toast('Password changed successfully');
-    setPassword({ current: '', new: '', confirm: '' });
-    addAudit?.('info', 'Password changed', me?.id || 'member');
-  };
-
-  const handleAvatarFile = (e) => {
+  const handleAvatarFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     onPickImage(file, url => {
@@ -48,6 +35,12 @@ function MemberProfile({ members, setMembers, currentUserId, toast, addAudit }){
   };
 
   const isFrozen = me?.status === 'Frozen';
+
+  const requestDelete = () => {
+    if (!me) return;
+    setConfirmDelete(false);
+    onDeleteAccount?.(me.id);
+  };
 
   return (
     <div className="grid grid-1-2">
@@ -72,7 +65,7 @@ function MemberProfile({ members, setMembers, currentUserId, toast, addAudit }){
           </div>
         </div>
         {isFrozen && (
-          <div style={{padding:'8px 10px', background:'var(--paper)', border:'1.5px solid var(--amber)', borderRadius:0, fontSize:12, color:'var(--steel)', marginBottom:10}}>
+          <div style={{padding:'8px 10px', background:'var(--paper)', border:'1.5px solid var(--amber)', borderRadius:'var(--radius)', fontSize:12, color:'var(--steel)', marginBottom:10}}>
             <Badge status="Frozen" /> &nbsp;Account frozen — admin must unfreeze to resume activity.
           </div>
         )}
@@ -91,20 +84,44 @@ function MemberProfile({ members, setMembers, currentUserId, toast, addAudit }){
               <Field label="Phone"><TextInput value={info.phone} onChange={v=>setInfo(i=>({...i, phone:v}))} /></Field>
               <Field label="Emergency Contact"><TextInput placeholder="+63 9XX XXX XXXX" value={info.emergency} onChange={v=>setInfo(i=>({...i, emergency:v}))} /></Field>
             </div>
-            <button className="btn btn-signal btn-sm" type="submit">Save Changes</button>
+            <div style={{display:'flex', gap:12, marginTop:12}}>
+              <button className="btn btn-signal btn-sm" type="submit" style={{width: 'auto'}}>Save Changes</button>
+              <button className="btn btn-outline btn-sm" type="button" style={{width: 'auto'}} onClick={() => setShowSecurityFlow(true)}>Security Settings</button>
+            </div>
           </form>
         </TabbedCard>
-        <TabbedCard label="Security" title="Change Password">
-          <form onSubmit={submitPassword}>
-            <div className="grid grid-1">
-              <Field label="Current Password"><TextInput type="password" required value={password.current} onChange={v=>setPassword(p=>({...p, current:v}))} /></Field>
-              <Field label="New Password"><TextInput type="password" required value={password.new} onChange={v=>setPassword(p=>({...p, new:v}))} /></Field>
-              <Field label="Confirm New Password"><TextInput type="password" required value={password.confirm} onChange={v=>setPassword(p=>({...p, confirm:v}))} /></Field>
-            </div>
-            <button className="btn btn-signal btn-block" type="submit">Change Password</button>
-          </form>
+
+        <TabbedCard label="Danger Zone" title="Delete Account">
+          <p style={{ margin: '0 0 14px', fontSize: 12.5, color: 'var(--steel)', lineHeight: 1.5 }}>
+            Permanently remove your membership record. This clears your profile, plan and history
+            from the gym ledger and cannot be undone — you'd need to register again to come back.
+          </p>
+          <button
+            type="button"
+            className="btn btn-danger btn-sm"
+            style={{ width: 'auto' }}
+            onClick={() => setConfirmDelete(true)}
+          >
+            Delete Account
+          </button>
         </TabbedCard>
       </div>
+      <SecurityFlow isOpen={showSecurityFlow} onClose={() => setShowSecurityFlow(false)} toast={toast} />
+
+      {confirmDelete && (
+        <Modal title="Delete Account" showCloseButton={false} onClose={() => setConfirmDelete(false)}>
+          <div style={{ padding: '0 24px 24px' }}>
+            <p style={{ margin: '0 0 18px', color: 'var(--steel)', fontSize: 14, lineHeight: 1.5 }}>
+              Are you sure you want to delete your account? Your membership, plan and activity
+              history will be permanently removed, and you'll be signed out.
+            </p>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button className="btn btn-outline" type="button" onClick={() => setConfirmDelete(false)}>Cancel</button>
+              <button className="btn btn-danger" type="button" onClick={requestDelete}>Delete Permanently</button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

@@ -14,6 +14,6 @@ export { Avatar } from './primitives/Avatar.tsx';
 export { Switch } from './primitives/Switch.tsx';
 export { StepTrack } from './primitives/StepTrack.tsx';
 export { AnimatedStepTrack } from './primitives/AnimatedStepTrack.tsx';
-export { SidebarSearch } from './shell/SidebarSearch.tsx';
+export { GlobalSearch } from './shell/GlobalSearch.tsx';
 export { Topbar } from './shell/Topbar.tsx';
 export { default as Sidebar } from './shell/Sidebar.tsx';

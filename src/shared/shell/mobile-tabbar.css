@@ -1,0 +1,90 @@
+/* ===== Mobile bottom tab bar (used only by MobileTabBar.tsx) =====
+   Hidden on desktop (≥981px). On phones it replaces the drawer as the
+   primary navigation surface; the drawer keeps the full nav list. */
+
+.mobile-tabbar{
+  display:none;
+}
+
+@media (max-width: 980px){
+  .mobile-tabbar{
+    display:block;
+    position:fixed;
+    left:0; right:0; bottom:0;
+    z-index:75;
+    background:var(--surface);
+    border-top:1.5px solid var(--line-strong);
+    /* Keep the bar clear of the iOS home indicator / Android nav bar. */
+    padding-bottom:env(safe-area-inset-bottom, 0px);
+    box-shadow:0 -6px 24px rgba(0,0,0,0.5);
+  }
+
+  .mobile-tabbar-list{
+    display:flex;
+    align-items:stretch;
+    justify-content:space-around;
+    gap:0;
+    max-width:560px;
+    margin:0 auto;
+    padding:4px 4px calc(4px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .mobile-tabbar-item{
+    position:relative;
+    flex:1 1 0;
+    min-width:0;
+    min-height:48px;                 /* 44px+ touch target */
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:3px;
+    padding:6px 2px;
+    border:none;
+    background:transparent;
+    color:var(--steel);
+    font-family:var(--font-mono);
+    font-size:10px;
+    letter-spacing:.4px;
+    text-transform:uppercase;
+    cursor:pointer;
+    border-radius:var(--radius);
+    transition:color .15s ease, background .15s ease;
+  }
+
+  .mobile-tabbar-item .ic{
+    font-size:18px;
+    line-height:1;
+  }
+
+  .mobile-tabbar-item .lbl{
+    max-width:100%;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+
+  .mobile-tabbar-item:hover{ color:var(--ink-soft); }
+
+  .mobile-tabbar-item.active{ color:var(--signal); }
+  .mobile-tabbar-item.active::before{
+    content:'';
+    position:absolute;
+    top:0; left:50%;
+    transform:translateX(-50%);
+    width:26px; height:2.5px;
+    background:var(--signal);
+    border-radius:0 0 var(--radius) var(--radius);
+  }
+
+  .mobile-tabbar-item:focus-visible{
+    outline:2px solid var(--signal);
+    outline-offset:-2px;
+  }
+}
+
+/* Very small phones: shrink labels so five tabs still fit. */
+@media (max-width: 380px){
+  .mobile-tabbar-item{ font-size:9px; }
+  .mobile-tabbar-item .ic{ font-size:16px; }
+}

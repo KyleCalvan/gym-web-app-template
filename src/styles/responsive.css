@@ -10,6 +10,52 @@
   .grid-2-1, .grid-1-2{grid-template-columns:1fr;}
   .landing-nav{flex-wrap:wrap;gap:14px;}
   .landing-nav-links{order:3;width:100%;justify-content:flex-start;gap:18px;}
+
+  /* --- Mobile UX pass ------------------------------------------------
+     Thumb-reachable controls (44px+), tighter spacing, and content that
+     stacks instead of shrinking past readability. Applies to phones and
+     small tablets; desktop (≥981px) is untouched. */
+
+  /* Touch targets: anything a finger taps grows to 44px.
+     (.promo-dot is deliberately excluded — carousel dots stay visually small.) */
+  .btn-sm, .pill-tabs button, .modal-close, .promo-nav,
+  .auth-tabs button, .role-pick{
+    min-height:44px;
+    min-width:44px;
+  }
+  .pill-tabs button{ padding:10px 14px; }
+  .promo-nav{ width:44px; height:44px; }
+
+  /* Nav items in the drawer get real touch targets too. */
+  .nav-item{ min-height:44px; padding:11px 10px; }
+
+  /* Spacing: less air on small screens so more fits above the fold. */
+  .content{ padding:16px 16px 96px; }   /* 96px clears the bottom tab bar */
+  .card{ padding:16px; }
+
+  /* Grids that carry real content collapse earlier than the decorative ones. */
+  .metrics-tracker{ grid-template-columns:repeat(2, minmax(0, 1fr)) !important; }
+  .role-grid, .site-footer-inner{
+    grid-template-columns:1fr !important;
+  }
+  /* Five text columns can't survive a phone width; pair them up. */
+  .why-right-grid{ grid-template-columns:repeat(2, minmax(0, 1fr)) !important; }
+
+  /* Tables: keep the first column pinned while the rest scrolls sideways,
+     so row identity stays visible. */
+  .table-wrap{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  .table-wrap table.tbl{ min-width:560px; font-size:12.5px; }
+  .table-wrap table.tbl th:first-child,
+  .table-wrap table.tbl td:first-child{
+    position:sticky;
+    left:0;
+    background:var(--surface);
+    z-index:1;
+  }
+  .table-wrap table.tbl tbody tr:hover td:first-child{ background:var(--surface-2); }
+
+  /* Forms inside modals stack instead of squeezing into two thin columns. */
+  .modal form{ grid-template-columns:1fr !important; }
 }
 
 @media (max-width:600px){
@@ -24,7 +70,7 @@
     padding: 12px 16px !important;
   }
   .content{
-    padding: 16px 16px 40px !important;
+    padding: 16px 16px 96px !important;
   }
 
   /* Sidebar mobile adjustments */

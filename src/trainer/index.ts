@@ -13,13 +13,6 @@ export const TRAINER_NAV: NavSection[] = [
       { id: 'dashboard', label: 'Dashboard', ic: '▤' },
       { id: 'sessions',  label: 'Assigned Sessions', ic: '◉' },
       { id: 'schedule',  label: 'Schedule & Availability', ic: '◷' },
-      { id: 'profile',   label: 'My Profile', ic: '◆' },
-    ],
-  },
-  {
-    section: 'Session',
-    items: [
-      // Log Out lives in the shell sidebar itself; kept here for reference.
     ],
   },
 ];

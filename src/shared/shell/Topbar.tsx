@@ -1,9 +1,12 @@
 // @ts-nocheck
+import { useAnimationControls } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { CURRENT } from '../../data.ts';
 import { Menu } from 'lucide-react';
-import type { Role } from '../../types.ts';
+import { ease } from '../../motion.tsx';
+import type { Bell, NavSection, Role } from '../../types.ts';
 import { Avatar } from '../primitives/Avatar.tsx';
-import './app-shell.css';
+import { GlobalSearch } from './GlobalSearch.tsx';
 
 const VIEW_TITLES: Record<string, string> = {
   dashboard: 'Dashboard', members: 'Member Management', plans: 'Membership Plans', payments: 'Payments / Point of Sale',
@@ -18,22 +21,35 @@ const VIEW_TITLES_BY_ROLE: Record<string, Record<string, string>> = {
   member: { dashboard: 'My Progress' },
 };
 
-// Roles that have a Profile nav item — clicking the top-right pill routes there.
-const HAS_PROFILE_NAV: Record<Role, boolean> = {
-  admin: true,
-  staff: true,
-  trainer: true,
-  member: true,
-  superadmin: true,
-};
-
-export function Topbar({ role, view, onNav, toggleSidebar }: { role: Role; view: string; onNav?: (id: string) => void; toggleSidebar?: () => void }) {
+export function Topbar({ role, view, onNav, toggleSidebar, onProfileMenu, pillRef, profileMenuOpen, bell, nav }: {
+  role: Role;
+  view: string;
+  onNav?: (id: string) => void;
+  toggleSidebar?: () => void;
+  onProfileMenu?: () => void;
+  pillRef?: React.RefObject<HTMLElement> | null;
+  profileMenuOpen?: boolean;
+  bell?: Bell | null;
+  nav?: NavSection[];
+}) {
   const user = CURRENT[role];
-  const hasProfile = HAS_PROFILE_NAV[role];
   const title = VIEW_TITLES_BY_ROLE[role]?.[view] || VIEW_TITLES[view] || view;
+  const bellControls = useAnimationControls();
 
   const handlePillClick = () => {
-    if (hasProfile && onNav) onNav('profile');
+    // The pill opens the profile dropdown (which holds Profile / Log out)
+    // rather than jumping straight to the profile page.
+    if (onProfileMenu) onProfileMenu();
+    else if (onNav) onNav('profile');
+  };
+
+  // Bell rings to attention, then hands off to the notification handler.
+  const wiggle = () => {
+    bellControls.start({
+      rotate: [0, -14, 14, -10, 10, -6, 6, 0],
+      transition: { duration: 0.55, ease: ease.out },
+    });
+    if (bell && bell.onClick) bell.onClick();
   };
 
   return (
@@ -51,15 +67,44 @@ export function Topbar({ role, view, onNav, toggleSidebar }: { role: Role; view:
           <h1 style={{ margin: 0 }}>{title}</h1>
         </div>
       </div>
-      <div
-        className={'role-pill' + (hasProfile ? ' clickable' : '')}
-        onClick={handlePillClick}
-        role={hasProfile ? 'button' : undefined}
-        tabIndex={hasProfile ? 0 : undefined}
-        onKeyDown={(e) => { if (hasProfile && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); handlePillClick(); } }}
-      >
-        <Avatar src={user.avatarUrl} name={user.name} size={28} />
-        <span className="who"><b>{user.name}</b><span>{user.role}</span></span>
+
+      {/* Global page search — same place on every view, for every role. */}
+      {nav && onNav && (
+        <GlobalSearch nav={nav} active={view} onNav={onNav} />
+      )}
+
+      <div className="topbar-right">
+        {bell && (
+          <motion.button
+            className="bell-btn"
+            aria-label="Notifications"
+            onClick={wiggle}
+            animate={bellControls}
+            whileTap={{ scale: 0.92 }}
+          >
+            🔔
+            {bell.count > 0 && (
+              <motion.span
+                className="bell-dot"
+                animate={{ scale: [1, 1.25, 1] }}
+                transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+              />
+            )}
+          </motion.button>
+        )}
+        <div
+          className="role-pill clickable"
+          ref={pillRef}
+          onClick={handlePillClick}
+          role="button"
+          tabIndex={0}
+          aria-haspopup="menu"
+          aria-expanded={onProfileMenu ? Boolean(profileMenuOpen) : undefined}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handlePillClick(); } }}
+        >
+          <Avatar src={user.avatarUrl} name={user.name} size={28} />
+          <span className="who"><b>{user.name}</b><span>{user.role}</span></span>
+        </div>
       </div>
     </div>
   );

@@ -1,40 +1,28 @@
 import { useState } from 'react';
 import { Avatar, Badge, TabbedCard, Field, TextInput } from '../shared';
 import { onPickImage } from '../shared/imageUpload.ts';
+import { SecurityFlow } from '../shared/components/SecurityFlow';
+import type { ViewProps } from '../types.ts';
 
-function StaffProfile({ staff, setStaff, currentUserId, toast, addAudit }) {
+function StaffProfile({ staff, setStaff, currentUserId, toast, addAudit }: ViewProps) {
   const me = staff.find(s => s.id === currentUserId) || staff[0];
   const [info, setInfo] = useState({
     name: me?.name || '',
     email: me?.email || '',
     phone: me?.phone || '',
+    phoneSecondary: me?.phoneSecondary || '',
   });
 
-  const [password, setPassword] = useState({
-    current: '',
-    new: '',
-    confirm: '',
-  });
+  const [showSecurityFlow, setShowSecurityFlow] = useState(false);
 
-  const submitInfo = (e) => {
+  const submitInfo = (e: React.FormEvent) => {
     e.preventDefault();
     setStaff(prev => prev.map(s => s.id === me.id ? {...s, ...info} : s));
     toast('Profile updated');
     addAudit?.('info', 'Profile updated', me?.id || 'staff');
   };
 
-  const submitPassword = (e) => {
-    e.preventDefault();
-    if (password.new !== password.confirm) {
-      toast('Passwords do not match');
-      return;
-    }
-    toast('Password changed successfully');
-    setPassword({ current: '', new: '', confirm: '' });
-    addAudit?.('info', 'Password changed', me?.id || 'staff');
-  };
-
-  const handleAvatarFile = (e) => {
+  const handleAvatarFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     onPickImage(file, url => {
@@ -69,7 +57,7 @@ function StaffProfile({ staff, setStaff, currentUserId, toast, addAudit }) {
         </div>
         <div style={{fontSize:12.5}}>
           <div className="eyebrow">Staff ID</div><p className="mono">{me?.id || '—'}</p>
-          <div className="eyebrow">Staff Since</div><p className="mono">{me?.joined || '—'}</p>
+          <div className="eyebrow">Staff Since</div><p className="mono">{me?.hireDate || '—'}</p>
         </div>
       </TabbedCard>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
@@ -81,20 +69,14 @@ function StaffProfile({ staff, setStaff, currentUserId, toast, addAudit }) {
               <Field label="Phone"><TextInput value={info.phone} onChange={v=>setInfo(i=>({...i, phone:v}))} /></Field>
               <Field label="Phone (Secondary)"><TextInput value={info.phoneSecondary || ''} onChange={v=>setInfo(i=>({...i, phoneSecondary:v}))} /></Field>
             </div>
-            <button className="btn btn-signal btn-sm" type="submit">Save Changes</button>
-          </form>
-        </TabbedCard>
-        <TabbedCard label="Security" title="Change Password">
-          <form onSubmit={submitPassword}>
-            <div className="grid grid-1">
-              <Field label="Current Password"><TextInput type="password" required value={password.current} onChange={v=>setPassword(p=>({...p, current:v}))} /></Field>
-              <Field label="New Password"><TextInput type="password" required value={password.new} onChange={v=>setPassword(p=>({...p, new:v}))} /></Field>
-              <Field label="Confirm New Password"><TextInput type="password" required value={password.confirm} onChange={v=>setPassword(p=>({...p, confirm:v}))} /></Field>
+            <div style={{display:'flex', gap:12, marginTop:12}}>
+              <button className="btn btn-signal btn-sm" type="submit" style={{width: 'auto'}}>Save Changes</button>
+              <button className="btn btn-outline btn-sm" type="button" style={{width: 'auto'}} onClick={() => setShowSecurityFlow(true)}>Security Settings</button>
             </div>
-            <button className="btn btn-signal btn-block" type="submit">Change Password</button>
           </form>
         </TabbedCard>
       </div>
+      <SecurityFlow isOpen={showSecurityFlow} onClose={() => setShowSecurityFlow(false)} toast={toast} />
     </div>
   );
 }

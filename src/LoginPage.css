@@ -1,47 +1,96 @@
 /* ===== Login page (used only by LoginPage.tsx) ===== */
 
 .auth-wrap{max-width:1180px;margin:0 auto;padding:70px 40px 100px;display:grid;grid-template-columns:.9fr 1.1fr;gap:60px;align-items:start;}
-.auth-card{background:var(--surface);border:2px solid var(--ink);border-radius:0;padding:34px;position:relative;box-shadow:var(--shadow-card);}
-.auth-tabs{display:flex;gap:0;margin:18px 0 22px;border:2px solid var(--ink);border-radius:0;overflow:hidden;}
-.auth-tabs button{flex:1;padding:10px;border:none;background:var(--surface);font-family:var(--font-mono);font-size:12px;letter-spacing:1px;text-transform:uppercase;}
-.auth-tabs button.active{background:var(--ink);color:var(--signal);}
+.auth-card{background:var(--surface);border:2px solid var(--line);border-radius:var(--radius);padding:34px;position:relative;box-shadow:none;}
+.auth-card .form-control{background:var(--paper);color:var(--ink) !important;}
+.auth-card .form-control::placeholder{color:var(--steel) !important;opacity:1 !important;}
+.auth-tabs{display:flex;gap:0;margin:18px 0 22px;border:2px solid var(--line);border-radius:var(--radius);overflow:hidden;}
+.auth-tabs button{flex:1;padding:10px;border:none;background:var(--surface);font-family:var(--font-mono);font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--ink-soft);}
+.auth-tabs button.active{background:var(--signal);color:var(--ink);}
 
-.auth-page{min-height:100vh;background:var(--ink);display:flex;flex-direction:column;}
+.auth-page{min-height:100vh;background:var(--paper);display:flex;flex-direction:column;}
 .auth-page-nav{
   display:flex;align-items:center;justify-content:space-between;
-  padding:22px 40px;border-bottom:2px solid var(--ink);
+  padding:22px 40px;border-bottom:2px solid var(--line);
 }
-.auth-page-nav .brand{color:var(--paper);}
-.auth-page-nav .brand .brand-mark-img{height:34px;width:auto;display:inline-block;border-radius:0;background:var(--paper);padding:2px;vertical-align:middle;}
-.auth-page-nav a{font-family:var(--font-mono);font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--paper);text-decoration:none;}
+.auth-page-nav .brand{color:var(--ink);}
+.auth-page-nav .brand .brand-mark-img{height:34px;width:auto;display:inline-block;border-radius:0;background:var(--surface);padding:2px;vertical-align:middle;}
+.auth-page-nav a{font-family:var(--font-mono);font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink);text-decoration:none;}
 .auth-page-nav a:hover{color:var(--signal);}
 .auth-page-body{
   flex:1;display:grid;grid-template-columns:1fr 1fr;align-items:center;
   max-width:1180px;margin:0 auto;padding:60px 40px;width:100%;gap:60px;
 }
-.auth-page-aside{color:var(--paper);}
-.auth-page-aside .eyebrow{color:#7E9186;}
-.auth-page-aside h2{font-size:clamp(28px,3.5vw,42px);text-transform:uppercase;margin:14px 0 16px;}
-.auth-page-aside p{color:#B9C7BF;font-size:15px;max-width:420px;line-height:1.55;margin:0 0 24px;}
-.auth-page-aside ul{list-style:none;padding:0;margin:0;color:#B9C7BF;font-size:13px;}
-.auth-page-aside ul li{padding:6px 0;border-top:1px solid #2C4038;}
-.auth-page-aside ul li:last-child{border-bottom:1px solid #2C4038;}
+.auth-page-aside{color:var(--ink);}
+.auth-page-aside .eyebrow{color:var(--steel);}
+.auth-page-aside h2{font-size:clamp(28px,3.5vw,42px);text-transform:uppercase;margin:14px 0 16px;color:var(--signal);}
+.auth-page-aside p{color:var(--ink-soft);font-size:15px;max-width:420px;line-height:1.55;margin:0 0 24px;}
+.auth-page-aside ul{list-style:none;padding:0;margin:0;color:var(--ink-soft);font-size:13px;}
+.auth-page-aside ul li{padding:6px 0;border-top:1px solid var(--line);}
+.auth-page-aside ul li:last-child{border-bottom:1px solid var(--line);}
 
-.modal-dark{background:var(--ink);border-color:var(--ink-soft);color:var(--paper);}
-.modal-dark .modal-head h2{color:var(--paper);}
+/* Dark modal variant — sits on the dark auth page without inverting. */
+.modal-dark{background:var(--surface);border-color:var(--line-strong);color:var(--ink);}
+.modal-dark .modal-head h2{color:var(--ink);}
 .modal-dark .modal-close{color:var(--steel);}
-.modal-dark p, .modal-dark .eyebrow{color:#B9C7BF;}
-.modal-dark .form-control{background:var(--ink-soft);border-color:var(--line-strong);color:var(--paper);}
+.modal-dark p, .modal-dark .eyebrow{color:var(--ink-soft);}
+.modal-dark .form-control{background:var(--paper);border-color:var(--line-strong);color:var(--ink);}
 .modal-dark .form-control::placeholder{color:var(--steel);}
+.modal-dark .form-control:focus{border-color:var(--signal);}
 
 .role-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px;}
-.role-pick{border:2px solid var(--line);background:var(--surface);padding:10px 4px;border-radius:0;font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.5px;text-align:center;}
-.role-pick.active{border-color:var(--ink);background:var(--ink);color:var(--signal);}
+.role-pick{border:2px solid var(--line);background:var(--surface);padding:10px 4px;border-radius:var(--radius);font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.5px;text-align:center;color:var(--ink-soft);}
+.role-pick.active{border-color:var(--signal);background:var(--signal);color:var(--paper);}
 
-.side-note{color:var(--paper);}
-.side-note h2{font-size:30px;text-transform:uppercase;color:var(--paper);margin-bottom:14px;}
-.side-note p{color:#B9C7BF;font-size:14px;max-width:420px;}
-.auth-wrap-dark{background:var(--ink);}
+.side-note{color:var(--ink);}
+.side-note h2{font-size:30px;text-transform:uppercase;color:var(--signal);margin-bottom:14px;}
+.side-note p{color:var(--ink-soft);font-size:14px;max-width:420px;}
+.auth-wrap-dark{background:var(--surface);}
+
+/* ---------- Terms & agreement gate on the register form ---------- */
+.terms-row{display:flex;align-items:flex-start;gap:10px;margin:2px 0 16px;}
+.terms-row input{
+  appearance:none;-webkit-appearance:none;
+  width:20px;height:20px;flex-shrink:0;margin-top:1px;
+  border:2px solid var(--line-strong);border-radius:var(--radius);background:var(--paper);
+  cursor:pointer;position:relative;
+}
+.terms-row input:checked{background:var(--signal);border-color:var(--signal);}
+.terms-row input:checked::after{
+  content:'✓';position:absolute;inset:0;
+  display:flex;align-items:center;justify-content:center;
+  color:var(--paper);font-size:13px;font-weight:700;line-height:1;
+}
+.terms-row input:focus-visible{outline:2px solid var(--signal);outline-offset:2px;}
+.terms-row label{font-size:12.5px;color:var(--ink-soft);line-height:1.5;cursor:pointer;}
+/* Kept as a sibling of the label rather than nested inside it — an interactive
+   element inside a label can double-fire (toggling the checkbox too). */
+.terms-row .terms-text{flex:1;min-width:0;}
+.terms-link{
+  border:none;background:none;padding:0;
+  color:var(--signal);font-weight:700;font-size:12.5px;line-height:1.5;
+  text-decoration:underline;text-underline-offset:2px;cursor:pointer;
+}
+.terms-link:hover{color:var(--signal-dark);}
+.terms-hint{
+  margin:10px 0 0;font-family:var(--font-mono);font-size:10.5px;
+  letter-spacing:.4px;color:var(--steel);text-align:center;line-height:1.5;
+}
+
+/* Scrollable agreement body inside the terms modal. */
+.terms-body{
+  max-height:min(52vh, 360px);
+  overflow-y:auto;overscroll-behavior:contain;
+  border:1.5px solid var(--line);border-radius:var(--radius);
+  background:var(--paper);padding:16px 18px;
+  font-size:12.5px;line-height:1.65;color:var(--ink-soft);
+}
+.terms-body p{margin:0 0 12px;}
+.terms-body p strong{color:var(--ink);display:block;margin-bottom:4px;text-transform:uppercase;font-size:11.5px;letter-spacing:.5px;}
+.terms-body:focus-visible{outline:2px solid var(--signal);outline-offset:1px;}
+.terms-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:16px;}
+.terms-progress{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.4px;color:var(--steel);line-height:1.5;}
+.terms-progress.done{color:var(--signal);}
 
 @media (max-width:980px){
   .auth-page-body{
@@ -62,4 +111,6 @@
   .auth-page-aside h2{font-size:clamp(30px,10vw,38px);}
   .auth-card{padding:24px 20px;}
   .role-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .terms-row input{width:24px;height:24px;}
+  .terms-foot{flex-wrap:wrap;}
 }

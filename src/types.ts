@@ -29,6 +29,8 @@ export interface Admin {
   id: string;
   name: string;
   email: string;
+  phone?: string;
+  phoneSecondary?: string;
   status: AdminStatus;
   createdAt: string;
   avatarUrl?: string;
@@ -117,6 +119,7 @@ export interface Staff {
   status: StaffStatus;
   email: string;
   phone: string;
+  phoneSecondary?: string;
   hireDate: string;
   avatarUrl?: string;
   deletedAt?: string | null;
@@ -247,4 +250,7 @@ export interface ViewProps {
   toast: (msg: string) => void;
   today: string;
   addAudit: (level: AuditLevel, action: string, details?: string) => void;
+  // Lets a member permanently remove their own account. App-level because the
+  // session can't outlive the record it's signed in as.
+  onDeleteAccount?: (userId: string) => void;
 }
