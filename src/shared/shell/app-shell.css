@@ -14,7 +14,7 @@
   padding:16px 28px;border-bottom:2px solid var(--line);background:var(--surface);
   position:sticky;top:0;z-index:5;
 }
-.topbar > div:first-child{min-width:0;}
+.topbar .path-title{min-width:0;}
 .nav-toggle-btn {
   display:none;
   align-items:center;
@@ -67,17 +67,53 @@
 .role-pill .who{font-size:12.5px;}
 .role-pill .who b{display:block;font-size:12.5px;}
 .role-pill .who span{color:var(--steel);font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;}
+/* role-short is the compact badge used on mobile only (see the 980px block). */
+.role-pill .who .role-short{display:none;}
 
 .content{padding:26px 28px 60px;max-width:1320px;background:var(--paper);min-height:100vh;}
 
-@media (max-width:600px){
-  /* The row can't hold title + search + bell + pill at once, so the search
-     wraps to its own full-width row beneath them. */
+/* Tablet down: the topbar becomes one compact row — hamburger, the page title,
+   the profile as a bare avatar, then the bell — with the search dropping to its
+   own full-width row beneath. The title leads, and the pill is avatar-only so
+   it can never crowd the title off the row; the name and role badge already
+   live in the drawer (.drawer-user) and the profile sheet. Desktop order is
+   untouched because the pill stays grouped with the bell in .topbar-right,
+   which is only flattened here. */
+@media (max-width:980px){
   .topbar{flex-wrap:wrap;gap:12px;padding:12px 16px;}
   .topbar h1{font-size:20px;line-height:1.1;overflow-wrap:anywhere;}
-  .topbar .path{font-size:10px;overflow-wrap:anywhere;}
-  .global-search{flex:1 1 100%;order:3;}
-  .role-pill{flex-shrink:1;min-width:0;padding-right:8px;gap:6px;}
-  .role-pill .who{min-width:0;}
-  .role-pill .who b,.role-pill .who span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  /* The breadcrumb just repeats the role badge and the title; dropping it keeps
+     the mobile header to one title line. */
+  .topbar .path{display:none;}
+
+  /* Flatten the right-hand group so its children can take their own places in
+     the row; on desktop this box is what keeps the bell and pill together. */
+  .topbar-right{display:contents;}
+
+  .nav-toggle-btn{order:1;}
+  .path-title{order:2;flex:1 1 auto;}
+  .role-pill{order:3;}
+  .bell-btn{order:4;}
+  /* The search's own order and sizing live in global-search.css. */
+
+  /* The pill collapses to a bare avatar: no name, no badge, no frame. Its
+     content can't shrink, so anything wider than the avatar itself eventually
+     overflows the row and wraps — a 28px avatar inside a 44px hit area keeps
+     the row to one line and still reads as the account control. The identity
+     text lives in the drawer and the profile sheet instead. */
+  .role-pill{
+    flex-shrink:0;min-width:44px;min-height:44px;
+    padding:4px;gap:0;
+    background:transparent;border-color:transparent;
+  }
+  /* There's no border left to lift, so the desktop hover-shift would just look
+     like a jump. */
+  .role-pill.clickable:hover{transform:none;box-shadow:none;}
+  .role-pill .who{display:none;}
+}
+
+/* Small phones: give long titles ("My Schedule & Availability") as much of the
+   row as possible. */
+@media (max-width:480px){
+  .topbar h1{font-size:17px;}
 }

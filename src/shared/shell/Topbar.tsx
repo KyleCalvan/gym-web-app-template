@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { useAnimationControls } from 'framer-motion';
 import { motion } from 'framer-motion';
-import { CURRENT } from '../../data.ts';
+import { CURRENT, ROLE_LABEL } from '../../data.ts';
 import { Menu } from 'lucide-react';
 import { ease } from '../../motion.tsx';
 import type { Bell, NavSection, Role } from '../../types.ts';
@@ -54,18 +54,21 @@ export function Topbar({ role, view, onNav, toggleSidebar, onProfileMenu, pillRe
 
   return (
     <div className="topbar">
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <button
-          className="nav-toggle-btn"
-          onClick={toggleSidebar}
-          aria-label="Open navigation"
-        >
-          <Menu size={24} />
-        </button>
-        <div>
-          <div className="path">{role.toUpperCase()} / {title.toUpperCase()}</div>
-          <h1 style={{ margin: 0 }}>{title}</h1>
-        </div>
+      {/* The hamburger and the title are siblings (not one nested group) so the
+         mobile layout can reorder them with flex `order` and place the profile
+         widget after the title — see app-shell.css. Desktop keeps its usual
+         [title] [search] [bell + pill] row, with the pill grouped beside the
+         bell in .topbar-right. */}
+      <button
+        className="nav-toggle-btn"
+        onClick={toggleSidebar}
+        aria-label="Open navigation"
+      >
+        <Menu size={24} />
+      </button>
+      <div className="path-title">
+        <div className="path">{role.toUpperCase()} / {title.toUpperCase()}</div>
+        <h1 style={{ margin: 0 }}>{title}</h1>
       </div>
 
       {/* Global page search — same place on every view, for every role. */}
@@ -103,7 +106,13 @@ export function Topbar({ role, view, onNav, toggleSidebar, onProfileMenu, pillRe
           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handlePillClick(); } }}
         >
           <Avatar src={user.avatarUrl} name={user.name} size={28} />
-          <span className="who"><b>{user.name}</b><span>{user.role}</span></span>
+          {/* role-full is the verbose job title for desktop; role-short is the
+             compact badge shown on mobile. CSS swaps them at the breakpoint. */}
+          <span className="who">
+            <b>{user.name}</b>
+            <span className="role-full">{user.role}</span>
+            <span className="role-short">{ROLE_LABEL[role]}</span>
+          </span>
         </div>
       </div>
     </div>

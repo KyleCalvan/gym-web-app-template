@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { dur, ease } from '../../motion.tsx';
-import { CURRENT } from '../../data.ts';
+import { CURRENT, ROLE_LABEL } from '../../data.ts';
 import { Avatar } from '../primitives/Avatar.tsx';
 import { Modal } from '../primitives/Modal.tsx';
 import type { Role } from '../../types.ts';
@@ -14,14 +14,6 @@ export interface ProfileMenuProps {
   onLogout: () => void;
   triggerRef?: React.RefObject<HTMLElement> | null;
 }
-
-const ROLE_LABEL: Record<Role, string> = {
-  member: 'Member',
-  staff: 'Staff',
-  trainer: 'Trainer',
-  admin: 'Admin',
-  superadmin: 'Super Admin',
-};
 
 export function ProfileMenu({ role, open, onClose, onProfile, onLogout, triggerRef }: ProfileMenuProps) {
   const user = CURRENT[role];

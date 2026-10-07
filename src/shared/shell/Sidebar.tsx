@@ -1,7 +1,9 @@
 import { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { dur, ease, stagger } from '../../motion.tsx';
+import { CURRENT, ROLE_LABEL } from '../../data.ts';
 import type { NavSection, Role } from '../../types.ts';
+import { Avatar } from '../primitives/Avatar.tsx';
 
 export interface SidebarProps {
   role: Role;
@@ -17,9 +19,11 @@ export default function Sidebar({
   // Page search moved to the top header (GlobalSearch), so the sidebar is now
   // a plain, unfiltered nav list.
 
-  // Close the drawer on Escape (matches the Android back-button expectation),
-  // move focus inside on open, and Tab-trap so focus can't leak behind it.
+  // Close the drawer on Escape / Android hardware back, move focus inside on
+  // open, and Tab-trap so focus can't leak behind it.
   const drawerRef = useRef<HTMLDivElement | null>(null);
+  // Marks the history entry this drawer pushed, so we only ever pop our own.
+  const backMarker = useRef(false);
   useEffect(() => {
     if (!isOpen) return;
     const el = drawerRef.current;
@@ -28,7 +32,9 @@ export default function Sidebar({
     const focusables = () =>
       Array.from(
         el.querySelectorAll<HTMLElement>('button, a[href], input, [tabindex]:not([tabindex="-1"])')
-      ).filter((n) => !(n as HTMLButtonElement).disabled && n.offsetParent !== null);
+      // offsetParent is null for position:fixed subtrees in some engines; rects
+      // are a reliable "is this actually laid out" check either way.
+      ).filter((n) => !(n as HTMLButtonElement).disabled && n.getClientRects().length > 0);
 
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') { setIsOpen(false); return; }
@@ -41,9 +47,42 @@ export default function Sidebar({
       else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
     };
 
+    // Keep the page behind the drawer from scrolling while it's open.
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    // Android back should close the drawer rather than leave the page: push a
+    // placeholder entry we own, then pop it again when the drawer closes.
+    if (!backMarker.current) {
+      backMarker.current = true;
+      window.history.pushState(null, '');
+    }
+    const onPop = () => { backMarker.current = false; setIsOpen(false); };
+    window.addEventListener('popstate', onPop);
+
+    // Crossing to desktop while the drawer is open would leave the page scroll
+    // locked, so close it at the breakpoint instead.
+    const onResize = () => { if (window.innerWidth > 980) setIsOpen(false); };
+    window.addEventListener('resize', onResize);
+
     window.addEventListener('keydown', onKey);
     el.focus();
-    return () => window.removeEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('popstate', onPop);
+      window.removeEventListener('resize', onResize);
+      document.body.style.overflow = prevOverflow;
+      // Closed by something other than the back button — hand our entry back.
+      if (backMarker.current) {
+        backMarker.current = false;
+        window.history.back();
+      }
+      // Focus was moved inside the drawer on open; don't strand it on an element
+      // that is now visibility:hidden. Send it back to the hamburger.
+      if (el.contains(document.activeElement)) {
+        (document.querySelector('.nav-toggle-btn') as HTMLButtonElement | null)?.focus();
+      }
+    };
   }, [isOpen, setIsOpen]);
 
   return (
@@ -61,6 +100,17 @@ export default function Sidebar({
             <img src="/logo.jpg" alt="VinAthletics" className="brand-mark-img" /> {brand}
           </div>
           <button className="nav-close-btn" onClick={() => setIsOpen(false)} style={{ display: 'none' }}>✕</button>
+        </div>
+
+        {/* Who's signed in — mobile only. The desktop sidebar keeps its compact
+           brand header; on phones the drawer doubles as the account surface, so
+           it leads with the member's details before the role's shortcuts. */}
+        <div className="drawer-user">
+          <Avatar src={CURRENT[role].avatarUrl} name={CURRENT[role].name} size={36} />
+          <span className="who">
+            <b>{CURRENT[role].name}</b>
+            <span>{ROLE_LABEL[role]}</span>
+          </span>
         </div>
 
         {nav.map((sec) => (

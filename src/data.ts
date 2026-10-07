@@ -8,6 +8,17 @@ import type {
 export const INITIALS = (n: string): string =>
   n.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
 
+/* Short, badge-friendly name for each role. CURRENT[role].role is the verbose
+   job title ("Front Desk Staff", "Super Administrator") — too wide for a mobile
+   header chip, so the compact surfaces use this instead. */
+export const ROLE_LABEL: Record<Role, string> = {
+  member: 'Member',
+  staff: 'Staff',
+  trainer: 'Trainer',
+  admin: 'Admin',
+  superadmin: 'Super Admin',
+};
+
 export const MEMBERS: Member[] = [];
 
 export const TRAINERS: Trainer[] = [];
