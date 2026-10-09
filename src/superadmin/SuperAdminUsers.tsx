@@ -229,7 +229,7 @@ function SuperAdminUsers({
           <form onSubmit={submitAdd}>
             {addKind === 'admin' && (
               <>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 14 }}>
+                <div className="name-row">
                   <Field label="LAST NAME"><TextInput required value={addForm.lastName} onChange={(v) => setAddForm((f) => ({ ...f, lastName: v }))} /></Field>
                   <Field label="FIRST NAME"><TextInput required value={addForm.firstName} onChange={(v) => setAddForm((f) => ({ ...f, firstName: v }))} /></Field>
                   <Field label="MIDDLE NAME"><TextInput value={addForm.middleName} onChange={(v) => setAddForm((f) => ({ ...f, middleName: v }))} /></Field>
@@ -245,7 +245,7 @@ function SuperAdminUsers({
             )}
             {addKind === 'member' && (
               <>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 14 }}>
+                <div className="name-row">
                   <Field label="LAST NAME"><TextInput required value={addForm.lastName} onChange={(v) => setAddForm((f) => ({ ...f, lastName: v }))} /></Field>
                   <Field label="FIRST NAME"><TextInput required value={addForm.firstName} onChange={(v) => setAddForm((f) => ({ ...f, firstName: v }))} /></Field>
                   <Field label="MIDDLE NAME"><TextInput value={addForm.middleName} onChange={(v) => setAddForm((f) => ({ ...f, middleName: v }))} /></Field>
@@ -261,7 +261,7 @@ function SuperAdminUsers({
             )}
             {addKind === 'trainer' && (
               <>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 14 }}>
+                <div className="name-row">
                   <Field label="LAST NAME"><TextInput required value={addForm.lastName} onChange={(v) => setAddForm((f) => ({ ...f, lastName: v }))} /></Field>
                   <Field label="FIRST NAME"><TextInput required value={addForm.firstName} onChange={(v) => setAddForm((f) => ({ ...f, firstName: v }))} /></Field>
                   <Field label="MIDDLE NAME"><TextInput value={addForm.middleName} onChange={(v) => setAddForm((f) => ({ ...f, middleName: v }))} /></Field>
@@ -280,7 +280,7 @@ function SuperAdminUsers({
             )}
             {addKind === 'staff' && (
               <>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 14 }}>
+                <div className="name-row">
                   <Field label="LAST NAME"><TextInput required value={addForm.lastName} onChange={(v) => setAddForm((f) => ({ ...f, lastName: v }))} /></Field>
                   <Field label="FIRST NAME"><TextInput required value={addForm.firstName} onChange={(v) => setAddForm((f) => ({ ...f, firstName: v }))} /></Field>
                   <Field label="MIDDLE NAME"><TextInput value={addForm.middleName} onChange={(v) => setAddForm((f) => ({ ...f, middleName: v }))} /></Field>
@@ -335,7 +335,7 @@ function SuperAdminUsers({
       {editing && editForm && (
         <Modal title={`Edit ${editing.name}`} onClose={() => { setEditing(null); setEditForm(null); }}>
           <form onSubmit={submitEdit}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 14 }}>
+            <div className="name-row">
               <Field label="LAST NAME"><TextInput required value={editForm.lastName} onChange={(v) => setEditForm((f) => ({ ...f, lastName: v }))} /></Field>
               <Field label="FIRST NAME"><TextInput required value={editForm.firstName} onChange={(v) => setEditForm((f) => ({ ...f, firstName: v }))} /></Field>
               <Field label="MIDDLE NAME"><TextInput value={editForm.middleName} onChange={(v) => setEditForm((f) => ({ ...f, middleName: v }))} /></Field>

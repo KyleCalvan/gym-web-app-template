@@ -41,6 +41,13 @@
 .resource-detail-row .lbl{font-family:var(--font-mono);font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--steel);}
 .resource-detail-row .val{font-weight:600;}
 
+/* Last/First/Middle name row in the Add and Edit user modals. Three text
+   fields sit side by side on desktop; on a phone that's ~112px per field,
+   which is too narrow to type in, so it collapses to one column. Declared as
+   a class rather than inline grid-template-columns because media queries
+   cannot reach inline styles. */
+.name-row{display:grid;grid-template-columns:repeat(3, minmax(0,1fr));gap:8px;margin-bottom:14px;}
+
 @media (max-width:600px){
   .resource-card .head,
   .resource-card .foot,
@@ -48,4 +55,6 @@
   .resource-card .head .ttl,
   .resource-detail-row .val{min-width:0;overflow-wrap:anywhere;}
   .resource-card .foot .open{margin-left:auto;}
+  /* Name fields stack so each gets the full modal width. */
+  .name-row{grid-template-columns:1fr;}
 }

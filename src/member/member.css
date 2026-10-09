@@ -46,7 +46,14 @@
 .cal-legend .cal-legend-dot{width:8px;height:8px;border-radius:50%;background:var(--court);display:inline-block;}
 
 @media (max-width:600px){
-  .metrics-tracker{grid-template-columns:1fr;}
+  /* The three metrics are short mono numbers (72.0, 172, BMI), so they keep
+     the desktop's single row instead of stacking into three tall tiles.
+     A 390px screen gives each column ~112px, which is plenty for the digits. */
+  .metrics-tracker{grid-template-columns:repeat(3, minmax(0,1fr)) !important;gap:8px;}
+  .metric-tile{padding:8px 8px;}
+  .metric-tile .lbl{font-size:9px;letter-spacing:.5px;}
+  .metric-tile .val{font-size:16px;margin-top:2px;}
+  .metric-tile .sub{font-size:9px;margin-top:1px;}
   .cal-toolbar{align-items:flex-start;flex-wrap:wrap;}
   .cal-legend{align-items:flex-start;flex-wrap:wrap;line-height:1.4;}
   .cal-legend > span:last-child{margin-left:0 !important;}

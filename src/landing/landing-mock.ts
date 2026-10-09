@@ -105,11 +105,10 @@ export const LANDING_TRAINERS: Trainer[] = [
   },
 ];
 
-// Stat tiles shown under the hero (currently hard-coded in LandingHero,
-// but exposing them here so they're easy to wire up later without
-// re-touching the hero).
+// Stat tiles shown under the hero. `icon` is an optional lucide name; the hero
+// renders the matching SVG so a rating keeps its star without a text glyph.
 export const LANDING_STATS = [
   { label: 'Active Members', value: '1,200+' },
   { label: 'Classes Weekly',  value: '50+'    },
-  { label: 'Avg Rating',      value: '4.8★'   },
+  { label: 'Avg Rating',      value: '4.8', icon: 'star' },
 ] as const;

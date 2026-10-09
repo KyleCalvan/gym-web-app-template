@@ -3,34 +3,76 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X } from 'lucide-react';
 import { dur, ease } from '../motion.tsx';
+import { cx, scrollToSection } from './landing-utils.ts';
+
+const NAV_LINKS = [
+  // "About Us" points at the contact strip rather than a section of its own —
+  // the page has no About section, and this link used to dangle at #about.
+  { label: 'About Us',         href: '#contact' },
+  { label: 'Promotions',       href: '#promotions' },
+  { label: 'Membership Plans', href: '#plans' },
+  { label: 'Trainers',         href: '#trainers' },
+  { label: 'Contact',          href: '#contact' },
+];
+
+// The nav renders its links and actions twice — once inside the mobile drawer,
+// once as the inline desktop bar — so each list is written once here and
+// rendered in both places. The inline copy carries the id the hamburger's
+// aria-controls points at (a duplicate id on both would be worse than none).
+function NavLinks({ id, activeSection, onNavigate }) {
+  return (
+    <div className="landing-nav-links" id={id}>
+      {NAV_LINKS.map((l) => {
+        const id = l.href.slice(1);
+        const isActive = activeSection === id;
+        return (
+          <a
+            // Two links point at #contact (About Us has no section of its own),
+            // so the href isn't unique — key on the label instead.
+            key={l.label}
+            href={l.href}
+            className={cx('nav-link', isActive && 'active')}
+            aria-current={isActive ? 'location' : undefined}
+            onClick={(e) => onNavigate(e, l.href)}
+          >{l.label}</a>
+        );
+      })}
+    </div>
+  );
+}
+
+function NavActions({ onAction }) {
+  return (
+    <div className="landing-nav-actions">
+      <button
+        className="btn btn-outline btn-sm"
+        onClick={() => onAction('/login?flow=register')}
+      >Join Now</button>
+      <button
+        className="btn btn-signal btn-sm"
+        onClick={() => onAction('/login')}
+      >Member Login</button>
+    </div>
+  );
+}
 
 function LandingNav({ stuck, activeSection, onNavigate }) {
   const [open, setOpen] = useState<boolean>(false);
-  const navLinks = [
-    { label: 'About Us',         href: '#about' },
-    { label: 'Promotions',       href: '#promotions' },
-    { label: 'Membership Plans', href: '#plans' },
-    { label: 'Trainers',         href: '#trainers' },
-    { label: 'Contact',          href: '#contact' },
-  ];
 
+  // Navigates to a section and closes the drawer behind it. The drawer's links
+  // and the inline bar's share this handler via the sub-components above.
   const handleLink = (e, href) => {
-    const id = href.slice(1);
-    const el = document.getElementById(id);
-    if (el) {
-      e.preventDefault();
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      setOpen(false);
-    }
+    if (scrollToSection(e, href.slice(1))) setOpen(false);
+  };
+
+  const handleAction = (route) => {
+    setOpen(false);
+    onNavigate && onNavigate(route);
   };
 
   return (
     <motion.nav
-      className={
-        "landing-nav" +
-        (stuck ? " stuck" : "") +
-        (open ? " mobile-open" : "")
-      }
+      className={cx('landing-nav', stuck && 'stuck', open && 'mobile-open')}
       initial={{ opacity: 0, y: -8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: dur.base, ease: ease.out }}
@@ -50,62 +92,15 @@ function LandingNav({ stuck, activeSection, onNavigate }) {
             className="mobile-menu-overlay"
           >
             <div className="mobile-menu-content">
-              <div className="landing-nav-links">
-                {navLinks.map((l) => {
-                  const id = l.href.slice(1);
-                  const isActive = activeSection === id;
-                  return (
-                    <a
-                      key={l.href}
-                      href={l.href}
-                      className={"nav-link" + (isActive ? " active" : "")}
-                      aria-current={isActive ? 'location' : undefined}
-                      onClick={(e) => handleLink(e, l.href)}
-                    >{l.label}</a>
-                  );
-                })}
-              </div>
-              <div className="landing-nav-actions">
-                <button
-                  className="btn btn-outline btn-sm"
-                  onClick={() => { setOpen(false); onNavigate && onNavigate('/login?flow=register'); }}
-                >Join Now</button>
-                <button
-                  className="btn btn-signal btn-sm"
-                  onClick={() => { setOpen(false); onNavigate && onNavigate('/login'); }}
-                >Member Login</button>
-              </div>
+              <NavLinks activeSection={activeSection} onNavigate={handleLink} />
+              <NavActions onAction={handleAction} />
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <div className="landing-nav-links">
-        {navLinks.map((l) => {
-          const id = l.href.slice(1);
-          const isActive = activeSection === id;
-          return (
-            <a
-              key={l.href}
-              href={l.href}
-              className={"nav-link" + (isActive ? " active" : "")}
-              aria-current={isActive ? 'location' : undefined}
-              onClick={(e) => handleLink(e, l.href)}
-            >{l.label}</a>
-          );
-        })}
-      </div>
-
-      <div className="landing-nav-actions">
-        <button
-          className="btn btn-outline btn-sm"
-          onClick={() => { setOpen(false); onNavigate && onNavigate('/login?flow=register'); }}
-        >Join Now</button>
-        <button
-          className="btn btn-signal btn-sm"
-          onClick={() => { setOpen(false); onNavigate && onNavigate('/login'); }}
-        >Member Login</button>
-      </div>
+      <NavLinks id="nav-links" activeSection={activeSection} onNavigate={handleLink} />
+      <NavActions onAction={handleAction} />
 
       <button
         type="button"

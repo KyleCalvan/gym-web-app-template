@@ -22,7 +22,7 @@
   content:'';position:absolute;left:0;right:0;bottom:-2px;height:2px;background:var(--signal);
   transform:scaleX(0);transform-origin:left center;transition:transform .2s ease;
 }
-.landing-nav-links a:hover::after{transform:scaleX(1);}
+.landing-nav-links a:hover::after,
 .landing-nav-links a.active::after{transform:scaleX(1);}
 .landing-nav.stuck{
   position:sticky;top:0;z-index:30;
@@ -57,11 +57,6 @@
 .mobile-menu-content{ display:flex; flex-direction:column; gap:14px; }
 
 .brand{display:flex; align-items:center; gap:10px; font-family:var(--font-display); font-size:22px; font-weight:700; letter-spacing:.3px; flex-shrink:0;}
-.brand-mark{
-  width:34px;height:34px;background:var(--surface-2);color:var(--signal-ink);
-  border:1.5px solid var(--line-strong);
-  display:flex;align-items:center;justify-content:center;font-size:18px;border-radius:0;
-}
 .brand-mark-img{
   height:42px;width:auto;display:block;border-radius:0;
   object-fit:contain;
@@ -112,7 +107,8 @@
 }
 .landing-hero .accent-word{color:var(--signal-ink); font-weight:700;}
 .landing-hero p.lede{font-size:18px;line-height:1.55;color:var(--ink-soft);max-width:540px;margin:22px 0 30px;}
-.landing-hero .eyebrow{color:rgba(255,255,255,.78);}
+.landing-hero .eyebrow{color:rgba(255,255,255,.78); margin-bottom:14px;}
+.landing-hero .btn-group{display:flex;gap:12px;flex-wrap:wrap;}
 .landing-hero .btn-outline{color:var(--ink);border-color:var(--line-strong);background:transparent;}
 .landing-hero .btn-outline:hover{background:var(--surface);box-shadow:none;}
 
@@ -139,6 +135,8 @@
   width:5px;height:5px;border-radius:50%;background:var(--signal);
   display:inline-block;
 }
+/* Rating star in the hero stat row. Sits inline with the number it belongs to. */
+.hero-stats .star-ic{color:var(--signal-ink);flex-shrink:0;}
 
 /* ---- Soft-hover (replaces neo-brutalist hard shadows) ---- */
 .soft-card{
@@ -168,7 +166,7 @@
 }
 .hero-cards-row-inner{max-width:1180px;margin:0 auto;text-align:center;}
 .hero-cards-row-inner h2{
-  font-size:32px;font-weight:700;text-transform:uppercase;letter-spacing:1px;
+  font-size:clamp(24px, 4.2vw, 32px);font-weight:700;text-transform:uppercase;letter-spacing:1px;
   margin:0 0 8px; position:relative;padding-top:22px;
   color:var(--ink);
 }
@@ -183,10 +181,19 @@
    (inline styles win over stylesheets, which broke this at phone widths). */
 .why-bottom-section{ margin-top:64px; border-top:1px solid var(--steel-light); padding-top:64px; }
 .why-bottom-inner{ display:flex; gap:48px; margin-bottom:64px; }
-.why-left{ flex:1; }
-.why-right-grid{ flex:2; display:grid; grid-template-columns:repeat(5,1fr); gap:24px; }
+.why-left{ flex:1; min-width:0; }
+.why-left .why-head{
+  font-size:clamp(20px, 3.4vw, 24px); font-weight:700;
+  margin:0 0 8px; line-height:1.1;
+}
+.why-left .why-head.accent{ color:var(--signal-ink); margin-bottom:16px; }
+.why-left .why-lede{ color:var(--steel); font-size:15px; line-height:1.6; margin:0; }
+.why-right-grid{ flex:2; min-width:0; display:grid; grid-template-columns:repeat(5,1fr); gap:24px; }
+.why-item{ display:flex; flex-direction:column; min-width:0; }
+.why-item-label{ font-size:12px; font-weight:700; margin:0 0 8px; text-transform:uppercase; }
+.why-item-text{ font-size:13px; color:var(--steel); line-height:1.5; margin:0; }
 .why-trust-row{
-  display:flex; justify-content:center; gap:48px;
+  display:flex; justify-content:center; flex-wrap:wrap; gap:12px 48px;
   font-size:12px; font-weight:700; color:var(--steel);
   text-transform:uppercase; letter-spacing:1px;
 }
@@ -206,8 +213,10 @@
 .hero-card .link{
   margin-top:auto;font-family:var(--font-mono);font-size:11px;letter-spacing:1px;
   text-transform:uppercase;color:var(--signal-ink);text-decoration:none;font-weight:700;
+  display:inline-flex;align-items:center;gap:5px;
 }
 .hero-card .link:hover{text-decoration:underline;}
+.hero-card .link svg{flex-shrink:0;}
 
 .empty-state{
   grid-column:1/-1;
@@ -220,11 +229,8 @@
 /* ---- Promotions strip ---- */
 .promo-strip{background:var(--paper);padding:80px 40px;width:100%;}
 .promo-strip-inner{max-width:1180px;margin:0 auto;width:100%;}
-.promo-strip h2{color:var(--ink);text-align:center;font-size:30px;font-weight:600;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;}
+.promo-strip h2{color:var(--ink);text-align:center;font-size:clamp(23px, 3.6vw, 30px);font-weight:600;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;}
 .promo-strip .sub{text-align:center;color:var(--ink-soft);margin-bottom:40px;font-size:14px;}
-
-/* Legacy grid kept as a hidden fallback only — carousel is the active view. */
-.promo-grid{ display:none; }
 
 /* Carousel viewport */
 .promo-carousel{
@@ -244,28 +250,27 @@
   touch-action: pan-y pinch-zoom;
 }
 .promo-carousel .promo-card{
-  /* Each slide is a flex item; flex-basis controls visible width. */
-  flex: 0 0 100%;
+  /* Each slide is a flex item; flex-basis controls visible width. The page is
+     laid out at the 1180px design width at every viewport, so a fixed basis is
+     safe here. The size is chosen so the carousel ends up with exactly three
+     usable snaps, each of which fills the frame: the four slides total 2294px
+     against a 1180px viewport, so max scroll is 1114px, while the start-aligned
+     snaps fall at 0, 578, 1156 and 1734. The last two both lie past max scroll,
+     so embla clamps them to it, which makes snap 3 identical to snap 2 — and
+     trimSnaps only drops snaps identical to a boundary one. That is the whole
+     trick: the third snap ends up flush against the content's end, and the
+     fourth evaporates instead of surviving as a dot that shuffles the track by
+     a single gap width. Two cards plus the gap measure 1138px, so 42px of the
+     third card peeks in as the scroll affordance. */
+  flex: 0 0 560px;
   min-width:0;
   background:var(--surface);border-radius:0;padding:0;position:relative;
   border:2px solid var(--line);overflow:hidden;
   display:flex;flex-direction:column;
 }
-@media (min-width: 640px){
-  .promo-carousel .promo-card{ flex-basis: calc(50% - 9px); }
-}
-@media (min-width: 960px){
-  .promo-carousel .promo-card{ flex-basis: calc(33.333% - 12px); }
-}
-@media (min-width: 1180px){
-  .promo-carousel .promo-card{ flex-basis: calc(25% - 14px); }
-}
 .promo-card .thumb{
   width:100%;height:200px;display:block;
   object-fit:cover;background-color:#262626;
-}
-@media (min-width: 768px){
-  .promo-card .thumb{ height:200px; }
 }
 .promo-card .body{ padding:16px 18px 18px; display:flex; flex-direction:column; gap:6px; flex:1; }
 .promo-card .tag{font-family:var(--font-mono);background:var(--signal);color:var(--on-signal);font-size:11px;padding:4px 10px;border-radius:0;letter-spacing:.5px;display:inline-block;align-self:flex-start;margin-bottom:4px;}
@@ -316,12 +321,15 @@
 /* ---- Trainers strip ---- */
 .trainers-strip{background:var(--paper);padding:80px 40px;}
 .trainers-strip-inner{max-width:1180px;margin:0 auto;}
-.trainers-strip h2{font-size:24px;font-weight:600;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;text-align:center;}
+.trainers-strip h2{font-size:clamp(20px, 3vw, 24px);font-weight:600;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;text-align:center;}
 .trainers-strip .sub{font-size:14px;color:var(--steel);margin-bottom:30px;text-align:center;}
 .trainers-grid{
   display:grid;
-  grid-template-columns:repeat(auto-fit, minmax(240px, 280px));
-  justify-content:center;gap:18px;
+  /* Four across at the 1180px design width, matching the contact cards below
+     so the two strips stay aligned. The whole page scales down together, so
+     the grid never needs its own breakpoint. */
+  grid-template-columns:repeat(4, minmax(0,1fr));
+  gap:18px;
 }
 .trainer-card{
   background:var(--surface);border:2px solid var(--ink);border-radius:0;padding:22px;
@@ -336,14 +344,24 @@
 .trainer-card h3{font-size:16px;text-transform:uppercase;margin:0;}
 .trainer-card .spec{font-size:12px;color:var(--signal-ink);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:1px;}
 .trainer-card .meta{font-size:12px;color:var(--steel);margin-top:6px;line-height:1.5;}
-.trainer-card .meta .row{display:flex;justify-content:space-between;padding:2px 0;}
+.trainer-card .meta .row{display:flex;justify-content:space-between;gap:4px 12px;flex-wrap:wrap;padding:2px 0;}
+/* Rating row: star + number, same monospace weight as the certs above it. */
+.trainer-card .meta .row .rating{display:inline-flex;align-items:center;gap:4px;color:var(--signal-ink);}
+.trainer-card .meta .row .rating svg{flex-shrink:0;}
+/* Book button sits a fixed 10px under the meta block. Not margin-top:auto —
+   pinning it to the card bottom like the plan cards would change the design. */
+.trainer-card .btn{margin-top:10px;}
 
 /* ---- Plans strip ---- */
 .plans-strip{background:var(--surface);padding:80px 40px;width:100%;}
 .plans-strip-inner{max-width:1180px;margin:0 auto;}
-.plans-strip h2{color:var(--ink);text-align:center;font-size:26px;font-weight:600;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;}
+.plans-strip h2{color:var(--ink);text-align:center;font-size:clamp(21px, 3.2vw, 26px);font-weight:600;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;}
 .plans-strip .sub{text-align:center;color:var(--ink-soft);margin-bottom:34px;font-size:14px;}
 .plans-strip .grid-3{display:grid;gap:18px; grid-template-columns:repeat(3,1fr);}
+/* The plan name sits at 18px on desktop; the ≤900px block below brings it down
+   to 15px and wins by source order, so no !important is needed on either side
+   (an inline style on the h3 used to force the issue — see git history). */
+.plan-card h3{font-size:18px;margin:0;}
 /* Plans sit on the light band — invert the cards to the dark anchor so they
    still read as separate tiles. */
 .plans-strip .plan-card{background:var(--paper);}
@@ -351,31 +369,24 @@
 .plans-strip .plan-card ul li{border-top-color:var(--line);}
 /* Plans strip is a light band, so its empty state inverts too. */
 .plans-strip .empty-state{background:var(--paper);}
+/* Dot indicators for the phone-width carousel. Desktop shows all three plans
+   side by side, so the dots are hidden until that carousel exists (see the
+   ≤900px block). */
+.plan-carousel-dots{display:none;}
 
 /* ---- Contact strip ---- */
 .contact-strip{background:var(--surface);padding:80px 40px;}
 .contact-strip-inner{max-width:1180px;margin:0 auto;}
-.contact-strip h2{font-size:24px;font-weight:600;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;text-align:center;}
+.contact-strip h2{font-size:clamp(20px, 3vw, 24px);font-weight:600;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;text-align:center;}
 .contact-strip .sub{font-size:14px;color:var(--steel);margin-bottom:30px;text-align:center;}
 .contact-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;}
 .contact-card{
-  background:var(--paper);border:2px solid var(--ink);border-radius:0;padding:22px;text-align:center;
-  display:flex;flex-direction:column;align-items:center;gap:8px;
+  background:var(--paper);border:2px solid var(--ink);border-radius:0;padding:20px;text-align:center;
+  display:flex;flex-direction:column;align-items:center;gap:6px;
 }
-.contact-card .ic{
-  width:44px;height:44px;border-radius:0;
-  background:var(--court-soft);color:var(--court);
-  display:flex;align-items:center;justify-content:center;
-}
-.contact-card .label{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--steel);margin-top:4px;}
+.contact-card .label{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--steel);}
 .contact-card .value{font-size:14px;font-weight:600;color:var(--ink);text-decoration:none;}
 a.contact-card .value:hover{ color:var(--signal-ink); }
-
-.feature-strip{max-width:1180px;margin:64px auto;padding:0 40px;display:grid;grid-template-columns:repeat(4,1fr);gap:18px;}
-.feature{border-top:3px solid var(--ink);padding-top:14px;}
-.feature .num{font-family:var(--font-mono);color:var(--signal-ink);font-size:12px;}
-.feature h4{font-size:16px;margin:6px 0 6px;}
-.feature p{font-size:13px;color:var(--steel);margin:0;}
 
 /* ---- CTA band ---- */
 .cta-band{
@@ -454,170 +465,270 @@ a.contact-card .value:hover{ color:var(--signal-ink); }
 .back-to-top:focus-visible{ outline:2px solid var(--ink); outline-offset:3px; }
 
 /* ============================================================
-   Responsive breakpoints
-   ============================================================ */
+   Miniaturized desktop view
+   ============================================================
+   The landing page keeps its exact desktop structure at every width rather
+   than collapsing into a single column. It lays out at the 1180px design
+   width -- the same max-width the section containers use on desktop -- and is
+   scaled down to fit the viewport, so rows, gutters, alignment and relative
+   spacing are all preserved; only the whole page shrinks.
 
-/* ----- ≤ 1024px (tablet + mobile): nav collapses to hamburger ----- */
-@media (max-width: 1024px){
-  .landing-nav{
-    position:relative;
-    padding:12px 14px;
-    gap:8px;
-    flex-wrap:nowrap;
-    min-height:60px;
-    z-index:20;
-  }
-  .landing-nav .brand{
-    font-size:18px;
-    min-width:0;
-  }
-  .landing-nav .brand-mark-img{
-    height:34px;
-  }
-  .nav-toggle{ display:flex; }
-  .landing-nav > .landing-nav-links,
-  .landing-nav > .landing-nav-actions{
-    display:none !important;
-  }
-  .mobile-menu-overlay{
-    display:block;
-    position:absolute;
-    left:0;
-    right:0;
-    top:100%;
-    background:rgba(8, 8, 8, 0.96);
-    border-bottom:1px solid rgba(255,255,255,0.08);
-    box-shadow:0 12px 24px rgba(0,0,0,0.16);
-    z-index:30;
-  }
-  .mobile-menu-content{
-    display:flex;
-    flex-direction:column;
-    gap:12px;
-    padding:12px 14px 16px;
-  }
-  .mobile-menu-content .landing-nav-links,
-  .mobile-menu-content .landing-nav-actions{
-    display:flex;
-    width:100%;
-    align-items:flex-start;
-    justify-content:flex-start;
-    flex-direction:column;
-    gap:10px;
-    background:transparent;
-    border:none;
-    box-shadow:none;
-    padding:0;
-    z-index:auto;
-  }
-  .mobile-menu-content .landing-nav-links a{
-    width:100%;
-    padding:8px 0;
-    font-size:11px;
-    letter-spacing:1.2px;
-    border-bottom:1px solid rgba(255,255,255,0.08);
-    color:var(--ink);
-  }
-  .mobile-menu-content .landing-nav-actions{
-    flex-direction:row;
-    flex-wrap:wrap;
-    gap:8px;
-  }
-  .mobile-menu-content .landing-nav-actions .btn{
-    width:auto;
-    min-width:0;
-    flex:1 1 120px;
-    justify-content:center;
-    padding:9px 10px;
-    font-size:11px;
-  }
-  .mobile-menu-content .landing-nav-actions .btn-outline{
-    background:var(--paper);
-    color:var(--ink);
-    border-color:var(--ink);
-  }
-  .landing-nav-links a.active::after{ transform:scaleX(0); }
-  .landing-nav-links a.active{
-    color:var(--signal-ink);
-  }
-
-  .hero-cards-grid{ grid-template-columns:repeat(2,1fr); }
-  .plans-strip .grid-3{ grid-template-columns:repeat(2,1fr); }
-  .contact-grid{ grid-template-columns:repeat(2,1fr); }
-
-  /* Brand spans the full row, then Explore and Connect sit side by side
-     beneath it. The desktop left/center/right justify-self resets here so the
-     stacked columns all start from the same edge. */
-  .site-footer-inner{ grid-template-columns:1fr 1fr; gap:28px; }
-  .site-footer-inner > .brand-block{ grid-column:1 / -1; justify-self:start; }
-  .site-footer-inner > .col{ justify-self:start; text-align:left; }
-}
-
-/* ----- ≤ 768px (small tablet / large phone) ----- */
-@media (max-width: 768px){
-  .landing-hero{ min-height:auto; padding:52px 20px 48px; }
-  .landing-hero h1{ font-size:clamp(36px, 9vw, 52px); }
-  .landing-hero p.lede{ font-size:16px; }
-  .hero-stats{ gap:12px; font-size:11px; }
-  .hero-cards-row{ padding:48px 20px; }
-  .promo-strip{ padding:48px 20px; }
-  .trainers-strip{ padding:48px 20px; }
-  .plans-strip{ padding:48px 20px; }
-  .contact-strip{ padding:48px 20px; }
-  .cta-band{ padding:48px 20px; }
-  .site-footer{ padding:36px 20px 24px; }
-
-  .promo-card .thumb{ height:200px; }
-}
-
-/* ----- ≤ 480px (small phone) ----- */
-@media (max-width: 480px){
+   The scale factor itself is applied from JS (src/landing.tsx) via `zoom`,
+   which re-flows the document, so there is no leftover horizontal scroll and
+   no dead space below the content. The fixed width lives here next to the
+   breakpoint that gates it, and only applies below the design width -- on a
+   wide monitor the page is unchanged. */
+@media (max-width: 1200px){
   .landing{
-    width:100vw;
-    max-width:100vw;
-    overflow-x:hidden;
+    width:1180px;
+    overflow-x:clip;
   }
-  .landing-nav,
-  .landing-hero,
-  .hero-cards-row,
-  .promo-strip,
-  .trainers-strip,
-  .plans-strip,
-  .contact-strip,
+
+  /* ----- Readable sections -----
+     The page scales down as a whole to preserve the desktop structure, but the
+     text-dense strips would render at a third of their size. Each one's
+     container is un-zoomed instead: zooming it back up by 1/--fit-scale makes
+     everything inside it (headings, cards, body text) render at true device
+     pixels, and the container still fills the strip because Chrome resolves
+     width:100% for a zoomed element in the element's own units. Desktop
+     (≥1201px) never enters this block.
+
+     The landing nav isn't in this list — it's un-zoomed inside the ≤900px block
+     below instead, where its desktop bar is hidden anyway and the hamburger
+     drawer takes over. Zooming it here too would double-apply below 900px. */
+  .landing-hero-inner,
+  .hero-cards-row-inner,
+  .promo-strip-inner,
+  .plans-strip-inner,
+  .trainers-strip-inner,
+  .contact-strip-inner,
   .cta-band,
   .site-footer{
-    width:100%;
+    zoom:calc(1 / var(--fit-scale, 1));
   }
-  .landing-hero{min-height:auto;padding-left:16px;padding-right:16px;}
-  .hero-cards-row,
-  .promo-strip,
-  .trainers-strip,
-  .plans-strip,
-  .contact-strip,
-  .cta-band{padding-left:16px;padding-right:16px;}
-  .hero-cards-grid{ grid-template-columns:1fr; }
-  .plans-strip .grid-3{ grid-template-columns:1fr; }
-  .contact-grid{ grid-template-columns:1fr; }
-  .hero-stats{ flex-direction:column; align-items:flex-start; gap:8px; }
-  .landing-hero .btn-group{ flex-direction:column; align-items:stretch; }
-  .landing-hero .btn-group .btn{ width:100%; justify-content:center; }
-  .site-footer-inner{ grid-template-columns:1fr; }
-  .site-footer-inner > .col{ justify-self:start; text-align:left; }
-  .site-footer .legal{ flex-direction:column; align-items:flex-start; }
-  .site-footer .legal > span{ overflow-wrap:anywhere; }
-  .contact-card .value{ overflow-wrap:anywhere; }
 
-  .why-bottom-section{ margin-top:40px !important; padding-top:40px !important; }
-  .why-bottom-inner{ flex-direction:column; gap:32px !important; margin-bottom:40px !important; }
-  .why-right-grid{ grid-template-columns:1fr !important; gap:20px !important; }
-  .why-trust-row{ flex-direction:column; align-items:center; gap:12px !important; text-align:center; }
+  /* 901–1200px keeps the desktop column counts — only the *scale* changes, so a
+     narrow window still shows the real desktop layout, just smaller. This
+     re-assert is needed because responsive.css collapses the shared .grid-3
+     utility for the app dashboards at ≤980px; without it the plans strip would
+     follow the dashboards into two columns while the trainers strip beside it
+     stayed four across. */
+  .plans-strip .grid-3{
+    display:grid; gap:18px;
+    grid-template-columns:repeat(3, minmax(0,1fr));
+  }
+
+  @media (max-width:900px){
+    /* Nav. The desktop bar is too wide to survive at device scale, so the inline
+       links and action buttons are swapped for the hamburger drawer that's
+       already wired up in LandingNav.tsx. The nav is un-zoomed like the sections
+       and made sticky outright — the hamburger has to stay reachable — and its
+       padding comes down so the bar doesn't eat a third of the fold. */
+    .landing-nav{
+      zoom:calc(1 / var(--fit-scale, 1));
+      position:sticky; top:0; z-index:40;
+      padding:10px 20px;
+      min-height:56px;
+    }
+    .landing-nav-links,
+    .landing-nav .landing-nav-actions{ display:none; }
+    .nav-toggle{ display:flex; }
+
+    /* Drawer: drops the full width of the bar and stacks everything vertically
+       so every link and button is a full-width, 44px+ target. Scoped through
+       .mobile-menu-overlay so the inline bar that's hidden above stays hidden. */
+    .landing-nav.mobile-open .mobile-menu-overlay{
+      display:block;
+      position:absolute; top:100%; left:0; right:0;
+      background:var(--paper);
+      border-bottom:2px solid var(--line);
+      padding:6px 20px 20px;
+      box-shadow:0 24px 40px -16px rgba(0,0,0,.55);
+    }
+    .landing-nav.mobile-open .mobile-menu-overlay .landing-nav-links{
+      display:flex; flex-direction:column; align-items:stretch; gap:0;
+    }
+    .landing-nav.mobile-open .mobile-menu-overlay .landing-nav-links a{
+      font-size:14px; letter-spacing:1px;
+      padding:13px 0;
+      border-bottom:1px solid var(--line);
+      text-align:left;
+    }
+    /* The desktop underline animation doesn't read on a stacked list. */
+    .landing-nav.mobile-open .mobile-menu-overlay .landing-nav-links a::after{ display:none; }
+    .landing-nav.mobile-open .mobile-menu-overlay .landing-nav-actions{
+      display:flex; flex-direction:column; gap:10px; margin-top:16px;
+    }
+    .landing-nav.mobile-open .mobile-menu-overlay .landing-nav-actions .btn{
+      width:100%; justify-content:center;
+      min-height:44px;
+    }
+
+    /* Two-up everywhere. Every multi-item section pairs its cards side by side:
+     nothing stacks into one long single column. The cards are already at true
+     device size (the section inners are un-zoomed above), so a 390px screen gets
+     ~174px cells — wide enough for the tightened type below to wrap cleanly
+     without overflowing. The plans strip is the one exception: it carousels
+     (see below). */
+    .hero-cards-grid,
+    .why-right-grid,
+    .contact-grid,
+    .trainers-grid{
+      grid-template-columns:repeat(2, minmax(0,1fr));
+      gap:14px;
+    }
+    /* Plans carousel. The plans go back to one-per-swipe at phone width, with
+       the next card peeking in from the right to advertise the scroll. This is a
+       native scroll-snap scroller rather than embla: embla measures slide
+       geometry and the counter-zoom above corrupts those measurements (that's
+       why the promo carousel stands down here instead). A real scroller is
+       indifferent to zoom, so it's the safe fit. responsive.css only ever sets
+       grid-template-columns on .grid-3, never display, so this flex sticks. */
+    .plans-strip .grid-3{
+      display:flex; gap:14px;
+      overflow-x:auto;
+      scroll-snap-type:x mandatory;
+      overscroll-behavior-x:contain;
+      /* Clearance for the featured ribbon (top:-11px), which would otherwise
+         clip at the scrollport's top edge once overflow stops being visible. */
+      padding:14px 0 4px;
+      scrollbar-width:none;
+    }
+    .plans-strip .grid-3::-webkit-scrollbar{ display:none; }
+    .plans-strip .grid-3 > .plan-card{
+      flex:0 0 78%;
+      min-width:260px; max-width:300px;
+      scroll-snap-align:start;
+      /* Flex items stretch to the tallest card by default, so a short plan
+         doesn't leave its Choose button dangling mid-card. */
+      margin:0;
+    }
+    .plans-strip .grid-3 > .empty-state{ flex:1 1 100%; }
+
+    /* Dot indicators. The button carries a 44px hit area while the visible dot
+       is drawn on ::before, so the touch target stays generous without the
+       spacing of a row of 44px circles. */
+    .plan-carousel-dots{
+      display:flex; justify-content:center; gap:4px;
+      margin-top:16px;
+    }
+    .plan-dot{
+      width:44px; height:28px; padding:0; border:none; cursor:pointer;
+      display:flex; align-items:center; justify-content:center;
+      background:transparent; border-radius:var(--radius);
+    }
+    .plan-dot::before{
+      content:''; width:8px; height:8px; border-radius:50%;
+      background:var(--line-strong);
+      transition:background .18s ease, width .18s ease, border-radius .18s ease;
+    }
+    .plan-dot.active::before{
+      width:24px; border-radius:99px; background:var(--signal);
+    }
+    .plan-dot:focus-visible{
+      outline:2px solid var(--signal); outline-offset:2px;
+    }
+
+    /* The promotions carousel is stood down at this width (see PromoStrip.tsx),
+       so its track becomes the same two-column grid and its arrows/dots hide. */
+    .promo-carousel-track{
+      display:grid;
+      grid-template-columns:repeat(2, minmax(0,1fr));
+      gap:14px;
+      touch-action:auto;
+    }
+    .promo-carousel-controls{ display:none; }
+
+    /* The heading column moves above the benefit grid at this width; the five
+       benefits themselves stay side by side, two across. */
+    .why-bottom-section{ margin-top:40px; padding-top:40px; }
+    .why-bottom-inner{ flex-direction:column; align-items:stretch; gap:28px; margin-bottom:40px; }
+    .why-right-grid{ gap:16px 14px; }
+
+    /* Card contents drop one step — each cell is half a desktop card wide, so
+       padding and type come down to match, staying just above body-text size so
+       nothing shrinks past legibility. */
+    .hero-card{ padding:14px; gap:8px; }
+    .hero-card .ic{ width:36px; height:36px; }
+    .hero-card h3{ font-size:14px; }
+    .hero-card p{ font-size:12.5px; }
+
+    .why-item-label{ font-size:11.5px; margin-bottom:6px; }
+    .why-item-text{ font-size:12px; line-height:1.45; }
+
+    .contact-card{ padding:14px; gap:5px; }
+    .contact-card .value{ font-size:13px; }
+
+    .plan-card{ padding:14px; }
+    .plan-card h3{ font-size:15px; }  /* beats the 18px base by source order */
+    .plan-card .price{ font-size:24px; margin:4px 0; }
+    .plan-card ul{ margin:8px 0; font-size:12px; }
+    .plan-card ul li{ padding:3px 0; }
+
+    .trainer-card{ padding:14px; gap:6px; }
+    .trainer-card .avatar{ width:44px; height:44px; font-size:15px; margin-bottom:2px; }
+    .trainer-card h3{ font-size:14px; }
+    .trainer-card .spec{ font-size:11.5px; }
+    .trainer-card .meta{ font-size:12px; margin-top:4px; }
+
+    .promo-card .thumb{ height:120px; }
+    .promo-card .body{ padding:12px 14px 14px; gap:5px; }
+    .promo-card .tag{ font-size:10.5px; padding:3px 8px; margin-bottom:2px; }
+    .promo-card h3{ font-size:15px; }
+    .promo-card p{ font-size:12px; }
+    .promo-card .valid{ font-size:10px; padding-top:8px; }
+
+    /* Hero: the headline and lede come down a step so they wrap in the phone
+       column without dominating it, and the stat row pairs up two across. */
+    .landing-hero h1{ font-size:clamp(30px, 9vw, 42px); }
+    .landing-hero p.lede{ font-size:15px; margin:16px 0 22px; }
+    .hero-stats{
+      display:grid;
+      grid-template-columns:repeat(2, minmax(0,1fr));
+      gap:10px 18px;
+      margin-top:22px;
+    }
+
+    /* CTA band: single centered block, so it only needs its band padding
+       brought down to phone scale. */
+    .cta-band{ padding:56px 24px; }
+    .cta-band h2{ font-size:clamp(24px, 7vw, 34px); margin-bottom:22px; }
+
+    /* Footer: the brand block spans the full row, then Explore and Connect pair
+       up beneath it. The desktop column alignment (centered / right-justified)
+       is reset so both columns read left-aligned in the grid. */
+    .site-footer{ padding:40px 24px 24px; }
+    .site-footer-inner{
+      grid-template-columns:repeat(2, minmax(0,1fr));
+      gap:28px 24px;
+    }
+    .site-footer-inner > .brand-block{ grid-column:1 / -1; }
+    .site-footer-inner > .col,
+    .site-footer-inner > .col:last-child{ justify-self:stretch; text-align:left; }
+    /* The columns are half a desktop column wide now, and the footer is
+       monospace with 1px letter-spacing, so the email address is an unbreakable
+       ~174px string in a ~159px cell. Without this it pokes past the grid and
+       gets clipped by .landing's overflow-x:hidden. */
+    .site-footer-inner > *{ min-width:0; }
+    .site-footer .col a,
+    .site-footer address{ overflow-wrap:break-word; }
+    .site-footer .legal{ margin-top:28px; font-size:10px; gap:8px 20px; }
+  }
+
+  /* The shared 44px touch-target minimums in responsive.css are meant for the
+     app's stacked mobile views. On this page every element already scales down
+     with the layout, so controls keep their desktop metrics instead of being
+     inflated relative to everything around them. */
+  .landing .btn-sm{ min-height:0; min-width:0; }
+  .landing .promo-nav{ width:40px; height:40px; }
 }
 
-@media (min-width: 481px) and (max-width: 600px){
-  .hero-cards-grid,
-  .plans-strip .grid-3,
-  .contact-grid{ grid-template-columns:1fr; }
-}
+/* The mobile nav is wired up inside the miniaturized-desktop block below: the
+   desktop bar (brand + five links + two buttons) is ~850px of content and can't
+   fit at device scale on a phone, so below 900px the inline bar is hidden and
+   the hamburger drawer that's already in LandingNav.tsx takes over. The drawer
+   markup, toggle, and open/close wiring all predate this — only the CSS was
+   switched off. */
 
 /* ============================================================
    Light theme

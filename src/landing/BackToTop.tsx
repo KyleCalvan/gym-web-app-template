@@ -6,6 +6,7 @@
  */
 import { useEffect, useState } from 'react';
 import { ArrowUp } from 'lucide-react';
+import { cx } from './landing-utils.ts';
 
 export default function BackToTop() {
   const [visible, setVisible] = useState<boolean>(false);
@@ -29,7 +30,7 @@ export default function BackToTop() {
   return (
     <button
       type="button"
-      className={'back-to-top' + (visible ? ' visible' : '')}
+      className={cx('back-to-top', visible && 'visible')}
       onClick={onClick}
       aria-label="Back to top"
       tabIndex={visible ? 0 : -1}

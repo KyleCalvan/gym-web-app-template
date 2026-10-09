@@ -3,13 +3,13 @@
 @media (max-width:980px){
   .app-shell{grid-template-columns:1fr;}
   .sidebar{position:relative;height:auto;}
-  .landing-hero-inner, .auth-wrap{grid-template-columns:1fr;}
-  .auth-page-body{grid-template-columns:1fr;}
-  .promo-grid, .feature-strip, .grid-4, .trainers-grid, .contact-grid, .hero-cards-grid{grid-template-columns:repeat(2,1fr);}
+  .auth-wrap, .auth-page-body{grid-template-columns:1fr;}
+  /* Only the app dashboards' grids collapse here. The landing page keeps the
+     desktop structure at every width (it is laid out at 1180px and scaled
+     down in landing.css), so its grids are deliberately not in this list. */
+  .grid-4{grid-template-columns:repeat(2,1fr);}
   .grid-3{grid-template-columns:repeat(2,1fr);}
   .grid-2-1, .grid-1-2{grid-template-columns:1fr;}
-  .landing-nav{flex-wrap:wrap;gap:14px;}
-  .landing-nav-links{order:3;width:100%;justify-content:flex-start;gap:18px;}
 
   /* --- Mobile UX pass ------------------------------------------------
      Thumb-reachable controls (44px+), tighter spacing, and content that
@@ -35,11 +35,8 @@
 
   /* Grids that carry real content collapse earlier than the decorative ones. */
   .metrics-tracker{ grid-template-columns:repeat(2, minmax(0, 1fr)) !important; }
-  .role-grid, .site-footer-inner{
-    grid-template-columns:1fr !important;
-  }
-  /* Five text columns can't survive a phone width; pair them up. */
-  .why-right-grid{ grid-template-columns:repeat(2, minmax(0, 1fr)) !important; }
+  /* The login role picker must collapse on phones. */
+  .role-grid{ grid-template-columns:1fr !important; }
 
   /* Tables: keep the first column pinned while the rest scrolls sideways,
      so row identity stays visible. */
@@ -59,11 +56,22 @@
 }
 
 @media (max-width:600px){
-  /* Collapse all grids to 1 column */
-  .grid-2, .grid-3, .grid-4, .grid-2-1, .grid-1-2,
-  .promo-grid, .feature-strip, .trainers-grid, .contact-grid, .hero-cards-grid{
+  /* Content grids stack — forms, wide tables, and text-heavy cards all need
+     the full phone width to stay legible. Landing grids are intentionally
+     absent: the landing page is scaled down as a desktop view, not stacked. */
+  .grid-2, .grid-3, .grid-2-1, .grid-1-2{
     grid-template-columns: 1fr !important;
   }
+  /* Stat-tile rows are the exception. .grid-4 is only ever used for a row of
+     four StatTiles, and stacking them turned every dashboard into a long scroll
+     of single numbers. A 2x2 block keeps the desktop's at-a-glance rhythm and
+     cuts that section's height in half. */
+  .grid-4{ grid-template-columns:repeat(2, minmax(0,1fr)) !important; }
+
+  /* Tiles tighten to match the denser grid. */
+  .stat-tile{ padding:12px 14px; }
+  .stat-tile .n{ font-size:22px; margin-top:4px; }
+  .stat-tile .d{ font-size:11px; margin-top:2px; }
 
   /* Reduce padding for App Shell and Content */
   .topbar{

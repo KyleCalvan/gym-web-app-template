@@ -11,6 +11,9 @@
 .topbar{
   display:flex;align-items:center;justify-content:space-between;
   gap:20px;
+  /* Same cap + centering as .content, so the header's edges line up with the
+     dashboard field under it on wide monitors. */
+  max-width:1600px;margin-inline:auto;width:100%;
   padding:16px 28px;border-bottom:2px solid var(--line);background:var(--surface);
   position:sticky;top:0;z-index:5;
 }
@@ -70,7 +73,18 @@
 /* role-short is the compact badge used on mobile only (see the 980px block). */
 .role-pill .who .role-short{display:none;}
 
-.content{padding:26px 28px 60px;max-width:1320px;background:var(--paper);min-height:100vh;}
+/* The dashboard field. .app-shell gives this column a 1fr track, so the only
+   thing stopping it from filling a wide monitor is the max-width below. The cap
+   used to sit at 1320px with no auto margins, which pinned the content to the
+   left and stacked every leftover pixel into one dead zone on the right.
+   Centering the cap splits the remainder across both sides, so a 4K monitor
+   reads as balanced margins instead of a broken layout. 1600px is wide enough
+   that a 1920px panel is effectively full-bleed. */
+.content{
+  padding:26px 28px 60px;
+  max-width:1600px;margin-inline:auto;width:100%;
+  background:var(--paper);min-height:100vh;
+}
 
 /* Tablet down: the topbar becomes one compact row — hamburger, the page title,
    the profile as a bare avatar, then the bell — with the search dropping to its

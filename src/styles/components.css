@@ -105,7 +105,10 @@ table.tbl tbody tr:hover{background:var(--surface-2);}
 .plan-card .price{font-family:var(--font-mono);font-size:32px;font-weight:700;margin:8px 0;}
 .plan-card .price span{font-size:13px;font-weight:400;}
 .plan-card ul{list-style:none;padding:0;margin:14px 0;font-size:12.5px;}
-.plan-card ul li{padding:5px 0;border-top:1px solid var(--line);}
+/* The checkmark is a real SVG glyph now (see PlansStrip), so each row lays out
+   as icon + text with the check pinned to the first line's cap height. */
+.plan-card ul li{display:flex;align-items:flex-start;gap:7px;padding:5px 0;border-top:1px solid var(--line);}
+.plan-card ul li svg{flex-shrink:0;margin-top:2px;color:var(--signal-ink);}
 .plan-card.featured ul li{border-top:1px solid var(--line);}
 .plan-card .ribbon{position:absolute;top:-11px;left:16px;background:var(--signal);color:var(--on-signal);font-family:var(--font-mono);
   font-size:10px;padding:3px 10px;border-radius:var(--radius);text-transform:uppercase;letter-spacing:1px;}

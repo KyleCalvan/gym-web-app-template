@@ -34,6 +34,41 @@ export default function Landing({ plans, promotions, trainers, onNavigate }: Lan
   };
   const [activeSection, setActiveSection] = useState<string | null>(null);
   const [stuck, setStuck] = useState<boolean>(false);
+  const landingRef = useRef<HTMLElement>(null);
+
+  // The landing page renders at the desktop design width and is scaled down to
+  // fit whatever viewport it's given, so the desktop structure is preserved at
+  // every size (see the "Miniaturized desktop view" block in landing.css).
+  // `zoom` is used rather than `transform: scale()` because it re-flows the
+  // document, leaving no overflow to clip and no empty space below the page.
+  const DESIGN_WIDTH = 1180;
+  useEffect(() => {
+    const el = landingRef.current;
+    if (!el) return;
+    const fit = () => {
+      // window.innerWidth is the wrong anchor for this calculation on mobile.
+      // When a page lays out wider than the screen, mobile browsers expand the
+      // *layout* viewport to fit the content, so innerWidth reports the
+      // content width (1180) rather than the glass (390) -- the scale would
+      // come out as 1 and the page would never zoom. Anchoring to the device's
+      // own width keeps the fit tied to the actual screen; on desktop the two
+      // agree, and on mobile the smaller of the two is always the screen.
+      const vw = Math.min(window.innerWidth, window.screen.width || window.innerWidth);
+      const scale = Math.min(1, vw / DESIGN_WIDTH);
+      el.style.zoom = scale < 1 ? String(scale) : '';
+      // Publish the scale so CSS can divide it back out: each content strip
+      // counter-zooms by 1/--fit-scale so its text renders at true device
+      // pixels instead of the zoomed-down ones (see landing.css).
+      el.style.setProperty('--fit-scale', String(scale));
+    };
+    fit();
+    window.addEventListener('resize', fit);
+    window.addEventListener('orientationchange', fit);
+    return () => {
+      window.removeEventListener('resize', fit);
+      window.removeEventListener('orientationchange', fit);
+    };
+  }, []);
 
   useEffect(() => {
     const onScroll = () => setStuck(window.scrollY > 60);
@@ -65,7 +100,7 @@ export default function Landing({ plans, promotions, trainers, onNavigate }: Lan
   return (
     <>
       <a href="#main" className="skip-link">Skip to main content</a>
-      <main id="main" className="landing" tabIndex={-1}>
+      <main id="main" className="landing" ref={landingRef} tabIndex={-1}>
         <LandingNav stuck={stuck} activeSection={activeSection} onNavigate={onNavigate} />
         <LandingHero onNavigate={onNavigate} />
         <WhyCardsRow />

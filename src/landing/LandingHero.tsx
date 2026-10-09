@@ -1,7 +1,9 @@
 // @ts-nocheck
 import { motion } from 'framer-motion';
+import { Star } from 'lucide-react';
 import { dur, ease, stagger } from '../motion.tsx';
 import HeroImage from './HeroImage.tsx';
+import { scrollToSection } from './landing-utils.ts';
 import { LANDING_STATS } from './landing-mock.ts';
 
 function LandingHero({ onNavigate }) {
@@ -18,7 +20,7 @@ function LandingHero({ onNavigate }) {
       <HeroImage className="hero-photo-bg" />
       <div className="landing-hero-inner">
         <div>
-          <motion.div className="eyebrow" style={{ marginBottom: 14 }} {...heroItem(0)}>
+          <motion.div className="eyebrow" {...heroItem(0)}>
             Gym Management, Squared Away
           </motion.div>
           <motion.h1 id="hero-heading" {...heroItem(1)}>
@@ -38,7 +40,7 @@ function LandingHero({ onNavigate }) {
           <motion.p className="lede" {...heroItem(2)}>
             Memberships, coaching schedules, point-of-sale and reporting — one ledger for admins, staff, trainers and members alike.
           </motion.p>
-          <motion.div className="btn-group" style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }} {...heroItem(3)}>
+          <motion.div className="btn-group" {...heroItem(3)}>
             <button
               className="btn btn-signal"
               onClick={() => onNavigate && onNavigate('/login')}
@@ -46,16 +48,17 @@ function LandingHero({ onNavigate }) {
             <a
               href="#promotions"
               className="btn btn-outline"
-              onClick={(e) => {
-                const el = document.getElementById('promotions');
-                if (el) { e.preventDefault(); el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
-              }}
+              onClick={(e) => scrollToSection(e, 'promotions')}
             >View Promotions</a>
           </motion.div>
           <motion.div className="hero-stats" {...heroItem(4)}>
             {LANDING_STATS.map((s) => (
               <span key={s.label} className="stat">
-                <span className="dot" aria-hidden="true" /> {s.value} {s.label}
+                <span className="dot" aria-hidden="true" /> {s.value}
+                {s.icon === 'star' && (
+                  <Star size={12} fill="currentColor" strokeWidth={0} className="star-ic" aria-hidden="true" />
+                )}
+                {' '}{s.label}
               </span>
             ))}
           </motion.div>
