@@ -5,27 +5,53 @@ import { Modal, AnimatedStepTrack, Field, TextInput, Select } from '../shared';
 import { peso } from '../data.ts';
 import { dur, ease, spring } from '../motion.tsx';
 
-function BookingCheckoutModal({ initialTrainer, trainers = [], onClose, onComplete, onPersistBooking }){
+function BookingCheckoutModal({ initialTrainer, trainers = [], onClose, onComplete, onPersistBookings }){
   const [step, setStep] = useState(0);
   const [trainerName, setTrainerName] = useState(initialTrainer || trainers[0]?.name || '');
   const [date, setDate] = useState('');
+  const [dates, setDates] = useState([]);
   const [time, setTime] = useState('');
   const [method, setMethod] = useState('GCash');
   const [processing, setProcessing] = useState(false);
   const [confirmedId, setConfirmedId] = useState(null);
   const [amount] = useState(900);
+  const totalAmount = amount * dates.length;
+  const now = new Date();
+  const minDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
-  const goPayment = (e) => { e.preventDefault(); if (!date || !time) return; setStep(1); };
+  const addDate = () => {
+    if (!date || date < minDate || dates.includes(date)) return;
+    setDates(prev => [...prev, date].sort());
+    setDate('');
+  };
+
+  const removeDate = (selectedDate) => {
+    setDates(prev => prev.filter(d => d !== selectedDate));
+  };
+
+  const goPayment = (e) => {
+    e.preventDefault();
+    if (!dates.length || !time) return;
+    setStep(1);
+  };
 
   const processPayment = (e) => {
     e.preventDefault();
     setProcessing(true);
     setTimeout(()=>{
       setProcessing(false);
-      const id = 'S-' + (401 + Math.floor(Math.random()*900));
+      const id = 'S-' + Date.now();
       setConfirmedId(id);
       setStep(2);
-      onPersistBooking && onPersistBooking({id, trainer: trainerName, date, time, amount, method});
+      onPersistBookings && onPersistBookings({
+        id,
+        trainer: trainerName,
+        dates,
+        time,
+        amount,
+        totalAmount,
+        method,
+      });
     }, 900);
   };
 
@@ -52,10 +78,48 @@ function BookingCheckoutModal({ initialTrainer, trainers = [], onClose, onComple
               <Field label="Session Rate">
                 <input className="form-control mono" value={peso(amount)} readOnly />
               </Field>
-              <Field label="Date"><TextInput type="date" required value={date} onChange={setDate} /></Field>
+              <Field label="Session dates">
+                <div className="booking-date-picker">
+                  <input
+                    className="form-control"
+                    type="date"
+                    value={date}
+                    min={minDate}
+                    onChange={e => setDate(e.target.value)}
+                    aria-label="Choose a session date"
+                  />
+                  <button
+                    className="btn btn-outline"
+                    type="button"
+                    onClick={addDate}
+                    disabled={!date || date < minDate || dates.includes(date)}
+                  >
+                    Add date
+                  </button>
+                </div>
+                <div className="booking-selected-dates" aria-live="polite">
+                  {dates.length ? dates.map(selectedDate => (
+                    <div className="booking-selected-date" key={selectedDate}>
+                      <span>{selectedDate}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeDate(selectedDate)}
+                        aria-label={`Remove ${selectedDate}`}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  )) : (
+                    <span className="booking-date-hint">Choose a date and add it. You can add several days.</span>
+                  )}
+                </div>
+              </Field>
               <Field label="Time"><TextInput type="time" required value={time} onChange={setTime} /></Field>
             </div>
-            <button className="btn btn-signal btn-block" type="submit">Continue to Payment</button>
+            <p className="booking-total-preview">
+              {dates.length} session{dates.length === 1 ? '' : 's'} · Total {peso(totalAmount)}
+            </p>
+            <button className="btn btn-signal btn-block" type="submit" disabled={!dates.length || !time}>Continue to Payment</button>
           </motion.form>
         )}
 
@@ -70,28 +134,24 @@ function BookingCheckoutModal({ initialTrainer, trainers = [], onClose, onComple
           >
             <div className="checkout-summary">
               <div className="row"><span>Trainer</span><span>{trainerName}</span></div>
-              <div className="row"><span>Date / Time</span><span className="mono">{date || '—'} {time || ''}</span></div>
-              <div className="row" style={{fontWeight:700}}><span>Total Due</span><span className="mono">{peso(amount)}</span></div>
+              <div className="row"><span>Session dates</span><span className="mono booking-date-summary">{dates.join(', ')}</span></div>
+              <div className="row"><span>Time for each session</span><span className="mono">{time}</span></div>
+              <div className="row"><span>Rate per session</span><span className="mono">{peso(amount)}</span></div>
+              <div className="row" style={{fontWeight:700}}><span>Total Due ({dates.length} sessions)</span><span className="mono">{peso(totalAmount)}</span></div>
             </div>
             <Field label="Payment Method">
               <div className="pay-method-grid">
-                {['GCash','Card','Cash'].map(m=>(
+                {['GCash','Cash'].map(m=>(
                   <div key={m} className={"pay-method"+(method===m?' active':'')} onClick={()=>setMethod(m)}>{m}</div>
                 ))}
               </div>
             </Field>
-            {method==='Card' && (
-              <div className="grid grid-2">
-                <Field label="Card Number"><TextInput placeholder="4242 4242 4242 4242" /></Field>
-                <Field label="Expiry / CVC"><TextInput placeholder="MM/YY · CVC" /></Field>
-              </div>
-            )}
             <div style={{display:'flex', gap:8}}>
               <button type="button" className="btn btn-outline" onClick={()=>setStep(0)} disabled={processing}>Back</button>
               <button className="btn btn-signal btn-block" type="submit" disabled={processing}>
                 {processing
                   ? <><span className="vm-spinner" style={{marginRight:8}}/>Processing Payment…</>
-                  : `Pay ${peso(amount)}`}
+                  : `Pay ${peso(totalAmount)}`}
               </button>
             </div>
           </motion.form>
@@ -119,14 +179,15 @@ function BookingCheckoutModal({ initialTrainer, trainers = [], onClose, onComple
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: dur.base, delay: 0.12, ease: ease.out }}
             >
-              <div style={{textAlign:'center', fontFamily:'var(--font-display)', fontSize:15}}>🏋 VINATHLETICS GYM</div>
+              <div style={{textAlign:'center', fontFamily:'var(--font-display)', fontSize:15}}>VINATHLETICS GYM</div>
               <div style={{textAlign:'center', fontSize:10.5, color:'var(--steel)'}}>Session Receipt · {confirmedId}</div>
               <hr/>
               <div className="row"><span>Trainer</span><span>{trainerName}</span></div>
-              <div className="row"><span>Date / Time</span><span>{date} {time}</span></div>
+              <div className="row"><span>Session dates</span><span>{dates.join(', ')}</span></div>
+              <div className="row"><span>Time</span><span>{time}</span></div>
               <div className="row"><span>Method</span><span>{method}</span></div>
               <hr/>
-              <div className="row" style={{fontWeight:700}}><span>TOTAL PAID</span><span>{peso(amount)}</span></div>
+              <div className="row" style={{fontWeight:700}}><span>TOTAL PAID</span><span>{peso(totalAmount)}</span></div>
             </motion.div>
             <button className="btn btn-signal btn-block" style={{marginTop:14}} onClick={onComplete}>Done</button>
           </motion.div>

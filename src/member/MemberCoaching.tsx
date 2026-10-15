@@ -16,20 +16,32 @@ function MemberCoaching({ bookings, setBookings, sessions, setSessions, setTrans
 
   const openBookingFor = (trainerName) => { setBookingTrainer(trainerName); setShowBooking(true); };
 
-  const handlePersistBooking = ({ id, trainer, date, time, amount, method }) => {
+  const handlePersistBookings = ({ id, trainer, dates, time, amount, totalAmount, method }) => {
     const memberName = me?.name || '';
-    setBookings(prev => [...prev, {id, member: memberName, trainer, date, time, type:'Coaching', status:'Pending', paid:true, amount}]);
-    setSessions(prev => [...prev, {id, member: memberName, trainer, date, time, type:'Coaching', status:'Pending', paid:true, amount}]);
+    const newBookings = dates.map((date, index) => ({
+      id: index === 0 ? id : `${id}-${index + 1}`,
+      member: memberName,
+      trainer,
+      date,
+      time,
+      type:'Coaching',
+      status:'Pending',
+      paid:true,
+      amount,
+    }));
+    setBookings(prev => [...prev, ...newBookings]);
+    setSessions(prev => [...prev, ...newBookings]);
     setTransactions(prev => [{
       id: 'TXN-' + (8821 + prev.length),
       member: memberName,
-      type: 'PT Session (' + trainer + ')',
-      amount, method,
+      type: `PT Sessions (${trainer}) × ${dates.length}`,
+      amount: totalAmount,
+      method,
       date: today,
       status: 'Paid',
     }, ...prev]);
-    toast('Session booked and paid — ' + peso(amount));
-    addAudit?.('info', 'Session booked', trainer + ' — ' + peso(amount));
+    toast(`${dates.length} session${dates.length === 1 ? '' : 's'} booked and paid — ${peso(totalAmount)}`);
+    addAudit?.('info', 'Sessions booked', `${trainer} — ${dates.length} dates — ${peso(totalAmount)}`);
   };
 
   const saveEdit = (id, changes) => {
@@ -111,7 +123,7 @@ function MemberCoaching({ bookings, setBookings, sessions, setSessions, setTrans
           trainers={trainers}
           onClose={()=>setShowBooking(false)}
           onComplete={()=>setShowBooking(false)}
-          onPersistBooking={handlePersistBooking}
+          onPersistBookings={handlePersistBookings}
         />
       )}
       {editing && (

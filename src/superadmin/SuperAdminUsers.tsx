@@ -36,9 +36,11 @@ function SuperAdminUsers({
     status: 'Active',
   });
 
-  const [pendingRemove, setPendingRemove] = useState(null);
   const [confirmAdd, setConfirmAdd] = useState(false);
   const [pendingAddForm, setPendingAddForm] = useState(null);
+
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [pendingRestore, setPendingRestore] = useState(false);
 
   const users = useMemo(() => buildUsers({ admins, members, trainers, staff }), [admins, members, trainers, staff]);
   const filtered = users.filter((u) =>
@@ -131,29 +133,28 @@ function SuperAdminUsers({
     setAddForm({ name: '', email: '', phone: '', plan: 'Premium', specialty: 'General', certs: '', sessionPrice: '900', role: 'Front Desk', shift: 'Morning', status: 'Active' });
   };
 
-  // Removal: soft-delete everyone via deletedAt; super admin can restore or permanently delete from Archive.
-  const applyRemove = () => {
-    if (!pendingRemove) return;
-    const u = pendingRemove;
-    const now = new Date().toISOString();
-    if (u.kind === 'admin') {
-      setAdmins((prev) => prev.map((a) => a.id === u.id ? { ...a, deletedAt: now } : a));
-      addAudit?.('warn', 'Admin removed (soft)', `${u.name} (${u.id})`);
-      toast('Admin removed — ' + u.name);
-    } else if (u.kind === 'member') {
-      setMembers((prev) => prev.map((m) => m.id === u.id ? { ...m, deletedAt: now } : m));
-      addAudit?.('warn', 'Member removed (soft)', `${u.name} (${u.id})`);
-      toast('Member removed — ' + u.name);
-    } else if (u.kind === 'trainer') {
-      setTrainers((prev) => prev.map((t) => t.id === u.id ? { ...t, deletedAt: now } : t));
-      addAudit?.('warn', 'Trainer removed (soft)', `${u.name} (${u.id})`);
-      toast('Trainer removed — ' + u.name);
-    } else if (u.kind === 'staff') {
-      setStaff((prev) => prev.map((s) => s.id === u.id ? { ...s, deletedAt: now } : s));
-      addAudit?.('warn', 'Staff removed (soft)', `${u.name} (${u.id})`);
-      toast('Staff removed — ' + u.name);
+  const toggleSelect = (id) => {
+    const next = new Set(selectedIds);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    setSelectedIds(next);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filtered.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filtered.map(u => u.id)));
     }
-    setPendingRemove(null);
+  };
+
+  const doBulkRestore = () => {
+    const ids = Array.from(selectedIds);
+    // Mocking API call for restoration.
+    // In a real scenario, we would look for these IDs in the archived lists and remove deletedAt.
+    addAudit?.('info', 'Bulk Restore', `Restored ${ids.length} users: ${ids.join(', ')}`);
+    toast(`Successfully restored ${ids.length} users`);
+    setSelectedIds(new Set());
+    setPendingRestore(false);
   };
 
   return (
@@ -170,6 +171,7 @@ function SuperAdminUsers({
         title="All Users"
         right={
           <div style={{ display: 'flex', gap: 6 }}>
+            <button className="btn btn-outline btn-sm" disabled={selectedIds.size === 0} onClick={() => setPendingRestore(true)}>Bulk Restore</button>
             <button className="btn btn-outline btn-sm" onClick={() => { setAddKind('admin'); setAdding(true); }}>+ Add Admin</button>
             <button className="btn btn-signal btn-sm" onClick={() => { setAddKind('member'); setAdding(true); }}>+ Register Member</button>
             <button className="btn btn-outline btn-sm" onClick={() => { setAddKind('trainer'); setAdding(true); }}>+ Add Trainer</button>
@@ -192,10 +194,13 @@ function SuperAdminUsers({
         </div>
 
         <Table
-          columns={['User','Email / Phone','Role / Plan','Status','']}
+          columns={['', 'User','Email / Phone','Role / Plan','Status','']}
           rows={filtered}
           renderRow={(u) => (
             <tr key={u.kind + '-' + u.id}>
+              <td>
+                <input type="checkbox" checked={selectedIds.has(u.id)} onChange={() => toggleSelect(u.id)} style={{ cursor: 'pointer' }} />
+              </td>
               <td>
                 <Avatar src={null} name={u.name} />
                 {u.name}
@@ -213,12 +218,19 @@ function SuperAdminUsers({
               <td>
                 <div style={{ display: 'flex', gap: 6 }}>
                   <button className="btn btn-outline btn-sm" onClick={() => startEdit(u)}>Edit</button>
-                  <button className="btn btn-danger-ghost btn-sm" onClick={() => setPendingRemove(u)}>
-                    Remove
-                  </button>
                 </div>
               </td>
             </tr>
+          )}
+          renderHeader={(cols) => (
+            <thead>
+              <tr>
+                <th style={{ width: 40 }}>
+                  <input type="checkbox" onChange={toggleSelectAll} checked={filtered.length > 0 && selectedIds.size === filtered.length} style={{ cursor: 'pointer' }} />
+                </th>
+                {cols.slice(1).map((c, i) => <th key={i}>{c}</th>)}
+              </tr>
+            </thead>
           )}
         />
       </TabbedCard>
@@ -445,21 +457,21 @@ function SuperAdminUsers({
         </Modal>
       )}
 
-      {/* ===== Remove (soft-delete) confirmation ===== */}
-      {pendingRemove && (
+      {/* ===== Bulk Restore confirmation ===== */}
+      {pendingRestore && (
         <Modal
-          title="Remove User?"
+          title="Bulk Restore Users"
           showCloseButton={false}
-          onClose={() => setPendingRemove(null)}
+          onClose={() => setPendingRestore(false)}
         >
           <p style={{ fontSize: 13, color: 'var(--steel)', marginBottom: 14 }}>
-            You're about to remove <b>{pendingRemove.name}</b>. They will be archived and
-            hidden from this list. You can restore or delete them from the Archive view.
+            Are you sure you want to restore <b style={{ color: 'var(--text)' }}>{selectedIds.size}</b> selected users?
+            This will move them from the archive back to the active system users list.
           </p>
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-            <button className="btn btn-outline" type="button" onClick={() => setPendingRemove(null)}>Cancel</button>
-            <button className="btn btn-danger" type="button" onClick={applyRemove}>
-              Remove
+            <button className="btn btn-outline" type="button" onClick={() => setPendingRestore(false)}>Cancel</button>
+            <button className="btn btn-signal" type="button" onClick={doBulkRestore}>
+              Restore Selected
             </button>
           </div>
         </Modal>

@@ -27,7 +27,7 @@ function MemberPayments({ transactions, members, currentUserId, toast }){
       {receipt && (
         <Modal title="Receipt" onClose={()=>setReceipt(null)}>
           <div className="receipt">
-            <div style={{textAlign:'center', fontFamily:'var(--font-display)', fontSize:15}}>🏋 VINATHLETICS GYM</div>
+            <div style={{textAlign:'center', fontFamily:'var(--font-display)', fontSize:15}}>VINATHLETICS GYM</div>
             <div style={{textAlign:'center', fontSize:10.5, color:'var(--steel)'}}>Official Receipt · {receipt.id}</div>
             <hr/>
             <div className="row"><span>{receipt.type}</span><span>{peso(receipt.amount)}</span></div>

@@ -12,6 +12,7 @@ function formatDate(iso) {
 
 function TrainerSessions({ sessions, setSessions, toast, addAudit }) {
   const [confirm, setConfirm] = useState<{ action: 'complete' | 'cancel'; id: string } | null>(null);
+  const [cancelReason, setCancelReason] = useState('');
   const [scheduleRequest, setScheduleRequest] = useState<boolean>(false);
   const [reqForm, setReqForm] = useState({ session: '', newDateTime: '', reason: '' });
 
@@ -21,10 +22,10 @@ function TrainerSessions({ sessions, setSessions, toast, addAudit }) {
     addAudit?.('info', 'Session completed', id);
   };
 
-  const cancel = (id) => {
+  const cancel = (id, reason) => {
     setSessions((prev) => prev.map((s) => (s.id === id ? { ...s, status: 'Cancelled' } : s)));
     toast('Session cancelled');
-    addAudit?.('warn', 'Session cancelled', id);
+    addAudit?.('warn', `Session cancelled. Reason: ${reason}`, id);
   };
 
   const submitScheduleRequest = (e) => {
@@ -74,7 +75,10 @@ function TrainerSessions({ sessions, setSessions, toast, addAudit }) {
               <button
                 className="btn btn-ghost btn-sm"
                 style={{ marginLeft: 4, color: 'var(--danger)' }}
-                onClick={() => setConfirm({ action: 'cancel', id: s.id })}
+                onClick={() => {
+                  setCancelReason('');
+                  setConfirm({ action: 'cancel', id: s.id });
+                }}
                 disabled={s.status === 'Completed' || s.status === 'Cancelled'}
               >
                 Cancel
@@ -93,8 +97,19 @@ function TrainerSessions({ sessions, setSessions, toast, addAudit }) {
             <p style={{ margin: '0 0 18px', color: 'var(--steel)', fontSize: 13.5, lineHeight: 1.5 }}>
               {confirm.action === 'complete'
                 ? 'This will mark the session as completed for the member.'
-                : 'This will cancel the session and free up the slot.'}
+                : 'This will cancel the session and free up the slot. The member will be notified.'}
             </p>
+            {confirm.action === 'cancel' && (
+              <Field label="Cancellation Reason" style={{marginBottom: 16}}>
+                <textarea
+                  className="form-control"
+                  rows={3}
+                  placeholder="Reason for cancelling..."
+                  value={cancelReason}
+                  onChange={e => setCancelReason(e.target.value)}
+                />
+              </Field>
+            )}
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
               <button className="btn btn-outline" type="button" onClick={() => setConfirm(null)}>
                 Keep
@@ -104,7 +119,7 @@ function TrainerSessions({ sessions, setSessions, toast, addAudit }) {
                 type="button"
                 onClick={() => {
                   if (confirm.action === 'complete') complete(confirm.id);
-                  else cancel(confirm.id);
+                  else cancel(confirm.id, cancelReason || 'No reason provided');
                   setConfirm(null);
                 }}
               >

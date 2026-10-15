@@ -5,6 +5,7 @@ import TrainerDashboard from './TrainerDashboard.tsx';
 import TrainerSessions from './TrainerSessions.tsx';
 import TrainerSchedule from './TrainerSchedule.tsx';
 import TrainerProfile from './TrainerProfile.tsx';
+import Chat from './Chat.tsx';
 
 export const TRAINER_NAV: NavSection[] = [
   {
@@ -13,6 +14,7 @@ export const TRAINER_NAV: NavSection[] = [
       { id: 'dashboard', label: 'Dashboard', ic: '▤' },
       { id: 'sessions',  label: 'Assigned Sessions', ic: '◉' },
       { id: 'schedule',  label: 'Schedule & Availability', ic: '◷' },
+      { id: 'chat',      label: 'Messages', ic: '✉' },
     ],
   },
 ];
@@ -22,4 +24,5 @@ export const TRAINER_VIEWS: Record<string, ComponentType<ViewProps>> = {
   sessions: TrainerSessions as unknown as ComponentType<ViewProps>,
   schedule: TrainerSchedule as unknown as ComponentType<ViewProps>,
   profile: TrainerProfile as unknown as ComponentType<ViewProps>,
+  chat: Chat as unknown as ComponentType<ViewProps>,
 };

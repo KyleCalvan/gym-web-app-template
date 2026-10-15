@@ -169,7 +169,7 @@ export function SecurityFlow({ isOpen, onClose, toast }: SecurityFlowProps) {
 
       {step === 3 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20, textAlign: 'center', alignItems: 'center' }}>
-          <div style={{ fontSize: 48 }}>📧</div>
+          <div style={{ fontSize: 48 }}></div>
           <div>
             <h2 style={{ fontSize: 20, marginBottom: 12 }}>Check your email</h2>
             <p style={{ fontSize: 13, color: 'var(--steel)', marginBottom: 20 }}>

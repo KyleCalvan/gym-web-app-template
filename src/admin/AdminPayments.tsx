@@ -82,7 +82,7 @@ function AdminPayments({ transactions, setTransactions, today, toast, addAudit }
       {viewTxn && (
         <Modal title="Receipt" onClose={()=>setViewTxn(null)}>
           <div className="receipt">
-            <div style={{textAlign:'center', fontFamily:'var(--font-display)', fontSize:15}}>🏋 VINATHLETICS GYM</div>
+            <div style={{textAlign:'center', fontFamily:'var(--font-display)', fontSize:15}}>VINATHLETICS GYM</div>
             <div style={{textAlign:'center', fontSize:10.5, color:'var(--steel)'}}>Official Receipt · {viewTxn.id}</div>
             <hr/>
             <div className="row"><span>{viewTxn.type}</span><span>{peso(viewTxn.amount)}</span></div>

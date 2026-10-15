@@ -30,7 +30,7 @@
   .nav-item{ min-height:44px; padding:11px 10px; }
 
   /* Spacing: less air on small screens so more fits above the fold. */
-  .content{ padding:16px 16px 96px; }   /* 96px clears the bottom tab bar */
+  .content{ padding:16px; }
   .card{ padding:16px; }
 
   /* Grids that carry real content collapse earlier than the decorative ones. */
@@ -78,7 +78,7 @@
     padding: 12px 16px !important;
   }
   .content{
-    padding: 16px 16px 96px !important;
+    padding: 16px !important;
   }
 
   /* Sidebar mobile adjustments */

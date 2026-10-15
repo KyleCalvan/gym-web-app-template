@@ -2,6 +2,44 @@
 
 .app-shell{display:grid;grid-template-columns:238px 1fr;min-height:100vh;background:var(--paper);}
 
+.app-main{min-width:0;}
+
+.chat-app-shell{
+  grid-template-rows:minmax(0, 1fr);
+  height:100vh;
+  height:100dvh;
+  min-height:0;
+  overflow:hidden;
+}
+
+.chat-app-main{
+  display:flex;
+  flex-direction:column;
+  flex:1 1 0%;
+  height:100%;
+  min-height:0;
+  overflow:hidden;
+}
+
+.chat-page-content{
+  display:flex;
+  flex:1 1 0%;
+  flex-direction:column;
+  height:0;
+  min-height:0;
+  overflow:hidden;
+  padding-bottom:0 !important;
+}
+
+.chat-page-view{
+  display:flex;
+  flex:1 1 0%;
+  flex-direction:column;
+  width:100%;
+  height:0;
+  min-height:0;
+}
+
 @media (max-width: 980px) {
   .app-shell {
     grid-template-columns: 1fr !important;
@@ -11,11 +49,18 @@
 .topbar{
   display:flex;align-items:center;justify-content:space-between;
   gap:20px;
-  /* Same cap + centering as .content, so the header's edges line up with the
-     dashboard field under it on wide monitors. */
-  max-width:1600px;margin-inline:auto;width:100%;
-  padding:16px 28px;border-bottom:2px solid var(--line);background:var(--surface);
+  width:100%;
+  padding:16px 20px;
+  border-bottom:2px solid var(--line);background:var(--surface);
   position:sticky;top:0;z-index:5;
+}
+/* Desktop fluid padding, scoped to >=981px for the same cascade reason as
+   .content (responsive.css owns the small-screen padding and imports before
+   this file). This mirrors .content's clamp exactly so the header's edges
+   stay flush with the dashboard field under it — the two are a single visual
+   column, and desynced edges read as a broken layout. */
+@media (min-width:981px){
+  .topbar{ padding:16px clamp(20px, 3vw, 56px); }
 }
 .topbar .path-title{min-width:0;}
 .nav-toggle-btn {
@@ -32,8 +77,8 @@
   padding:0;
 }
 .nav-toggle-btn:hover { background: var(--surface-2); border-radius: var(--radius); }
-.topbar .path{font-family:var(--font-mono);font-size:11px;color:var(--steel);text-transform:uppercase;letter-spacing:1px;}
-.topbar h1{font-size:24px;text-transform:uppercase;}
+.topbar .path{font-family:var(--font-mono);font-size:13px;color:var(--steel);text-transform:uppercase;letter-spacing:1px;}
+.topbar h1{font-size:28px;text-transform:uppercase;}
 
 /* Right-hand group: the notification bell sits beside the profile pill. */
 .topbar-right{display:flex;align-items:center;gap:10px;flex-shrink:0;}
@@ -59,31 +104,52 @@
 }
 
 .role-pill{
-  display:flex;align-items:center;gap:10px;border:2px solid var(--line);border-radius:var(--radius);
-  padding:5px 14px 5px 5px;background:var(--surface);transition:transform .12s ease,box-shadow .12s ease;
+  display:flex;align-items:center;gap:12px;border:2px solid var(--line);border-radius:var(--radius);
+  padding:6px 16px 6px 6px;background:var(--surface);transition:transform .12s ease,box-shadow .12s ease;
 }
 .role-pill.clickable{cursor:pointer;}
 .role-pill.clickable:hover{transform:translate(-1px,-1px);box-shadow:2px 2px 0 var(--line);}
 .role-pill.clickable:focus-visible{outline:2px solid var(--ink);outline-offset:2px;}
-.role-pill .av{width:28px;height:28px;border-radius:50%;background:var(--surface);color:var(--signal-ink);
-  display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:12px;font-weight:700;}
-.role-pill .who{font-size:12.5px;}
-.role-pill .who b{display:block;font-size:12.5px;}
-.role-pill .who span{color:var(--steel);font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;}
+.role-pill .av{width:32px;height:32px;border-radius:50%;background:var(--surface);color:var(--signal-ink);
+  display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:13px;font-weight:700;}
+.role-pill .who{font-size:14px;}
+.role-pill .who b{display:block;font-size:14px;}
+.role-pill .who span{color:var(--steel);font-size:12px;text-transform:uppercase;letter-spacing:.5px;}
 /* role-short is the compact badge used on mobile only (see the 980px block). */
 .role-pill .who .role-short{display:none;}
 
 /* The dashboard field. .app-shell gives this column a 1fr track, so the only
-   thing stopping it from filling a wide monitor is the max-width below. The cap
-   used to sit at 1320px with no auto margins, which pinned the content to the
-   left and stacked every leftover pixel into one dead zone on the right.
-   Centering the cap splits the remainder across both sides, so a 4K monitor
-   reads as balanced margins instead of a broken layout. 1600px is wide enough
-   that a 1920px panel is effectively full-bleed. */
+   thing stopping it from filling a wide monitor used to be the max-width
+   below. The cap sat at 1600px with no auto margins, which pinned the content
+   to the left and stacked every leftover pixel into one dead zone on the
+   right; centering it split the remainder across both sides, so a 4K monitor
+   read as balanced margins instead — but on a 2560px panel that was still
+   ~350px of dead air per side.
+
+   The cap is gone. The field now fills the whole 1fr track at any width, and
+   the side padding grows with the viewport via clamp() so a 4K panel gets a
+   wider gutter rather than the same 28px stretched across a much larger
+   frame: 20px at small desktops, 3vw in the middle, 56px hard at the top so
+   the padding never runs away on a projector or an ultrawide. The topbar
+   mirrors this so the header's edges line up.
+
+   The padding is scoped to >=981px on purpose. responsive.css sets a tighter
+   16px below that, but it imports before this file at equal specificity, so
+   an unscoped rule here would silently override it — a gap this min-width
+   guard closes by construction instead of by winning a cascade race.
+
+   The internal grids are repeat(N,1fr), so they stretch on their own once the
+   field does — no per-grid change needed. */
 .content{
-  padding:26px 28px 60px;
-  max-width:1600px;margin-inline:auto;width:100%;
+  width:100%;
   background:var(--paper);min-height:100vh;
+}
+.content.chat-page-content{
+  height:0;
+  min-height:0;
+}
+@media (min-width:981px){
+  .content{ padding:26px clamp(20px, 3vw, 56px) 60px; }
 }
 
 /* Tablet down: the topbar becomes one compact row — hamburger, the page title,

@@ -8,6 +8,7 @@ import MemberPayments from './MemberPayments.tsx';
 import MemberProfile from './MemberProfile.tsx';
 import MemberActivity from './MemberActivity.tsx';
 import NotificationsModal from './NotificationsModal.tsx';
+import Chat from './Chat.tsx';
 
 export { NotificationsModal };
 
@@ -16,6 +17,7 @@ export const MEMBER_NAV: NavSection[] = [
   {section:'Membership', items:[{id:'membership', label:'My Membership', ic:'▥'}]},
   {section:'Training', items:[{id:'coaching', label:'Coaching Sessions', ic:'●'}, {id:'activity', label:'Activity', ic:'≡'}]},
   {section:'Finance', items:[{id:'payments', label:'My Payments', ic:'₱'}]},
+  {section:'Communication', items:[{id:'chat', label:'Messages', ic:'✉'}]},
 ];
 
 export const MEMBER_VIEWS: Record<string, ComponentType<ViewProps>> = {
@@ -25,4 +27,5 @@ export const MEMBER_VIEWS: Record<string, ComponentType<ViewProps>> = {
   activity: MemberActivity as unknown as ComponentType<ViewProps>,
   payments: MemberPayments as unknown as ComponentType<ViewProps>,
   profile: MemberProfile as unknown as ComponentType<ViewProps>,
+  chat: Chat as unknown as ComponentType<ViewProps>,
 };

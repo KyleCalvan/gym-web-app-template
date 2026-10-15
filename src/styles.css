@@ -11,8 +11,8 @@
 @import './shared/shell/app-shell.css';
 @import './shared/shell/sidebar.css';
 @import './shared/shell/global-search.css';
-@import './shared/shell/mobile-tabbar.css';
 @import './shared/shell/profile-menu.css';
+@import './shared/chat/chat.css';
 @import './LoginPage.css';
 @import './landing/landing.css';
 @import './member/checkout.css';

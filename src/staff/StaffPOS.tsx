@@ -50,7 +50,7 @@ function StaffPOS({ transactions, setTransactions, members, plans, toast }) {
           </Select>
         </Field>
         <div className="receipt">
-          <div style={{textAlign:'center', fontFamily:'var(--font-display)', fontSize:15}}>🏋 VINATHLETICS GYM</div>
+          <div style={{textAlign:'center', fontFamily:'var(--font-display)', fontSize:15}}>VINATHLETICS GYM</div>
           <div style={{textAlign:'center', fontSize:10.5, color:'var(--steel)'}}>Official Receipt</div>
           <hr/>
           {cart.length === 0 ? (

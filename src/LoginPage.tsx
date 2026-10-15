@@ -111,6 +111,13 @@ export default function LoginPage({
     e.preventDefault();
     if (!/^\S+@\S+\.\S+$/.test(email)) { showToast('Please enter a valid email'); return; }
     if (password.length < 6) { showToast('Password must be at least 6 characters'); return; }
+
+    const creds = ROLE_CREDS[role];
+    if (email !== creds.email || password !== creds.password) {
+      showToast('Invalid email or password');
+      return;
+    }
+
     onLogin(role);
   };
 

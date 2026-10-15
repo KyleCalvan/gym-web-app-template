@@ -13,7 +13,7 @@ export function Table<T>({ columns, rows, renderRow }: TableProps<T>) {
         <thead><tr>{columns.map((c, i) => <th key={i}>{c}</th>)}</tr></thead>
         <tbody>
           {rows.length === 0 ? (
-            <tr><td colSpan={columns.length}><div className="empty-state"><div className="ic">🗂️</div>No records found.</div></td></tr>
+            <tr><td colSpan={columns.length}><div className="empty-state"><div className="ic"></div>No records found.</div></td></tr>
           ) : rows.map((r, i) => renderRow(r, i))}
         </tbody>
       </table>

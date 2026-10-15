@@ -18,6 +18,10 @@ function SuperAdminBackups({
   toast, addAudit,
 }) {
   const [confirmDownload, setConfirmDownload] = useState(false);
+  const [confirmRestore, setConfirmRestore] = useState(false);
+  const [restoreText, setRestoreText] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const [restoring, setRestoring] = useState(false);
 
   const stats = useMemo(() => ({
     members: members.length, trainers: trainers.length, staff: staff.length, admins: admins.length,
@@ -49,6 +53,54 @@ function SuperAdminBackups({
     toast('Backup downloaded');
   };
 
+  const doRestore = async () => {
+    if (restoreText !== 'RESTORE') return;
+    setRestoring(true);
+    try {
+      // Mock API Call
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      addAudit?.('warning', 'Database Restored', 'Restored from saved backup');
+      toast('Database restored successfully');
+    } catch (e) {
+      toast('Restore failed');
+    } finally {
+      setRestoring(false);
+      setConfirmRestore(false);
+      setRestoreText('');
+    }
+  };
+
+  const doUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const text = event.target?.result;
+        if (!text) throw new Error('Empty file');
+
+        // Client-side JSON validation
+        JSON.parse(text);
+
+        // Mock API Call
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+        addAudit?.('info', 'Backup Uploaded', `Uploaded ${file.name}`);
+        toast('Backup uploaded successfully');
+      } catch (err) {
+        toast('Invalid JSON backup file');
+      } finally {
+        setUploading(false);
+      }
+    };
+    reader.onerror = () => {
+      setUploading(false);
+      toast('Error reading file');
+    };
+    reader.readAsText(file);
+  };
+
   return (
     <>
       <div className="grid grid-4" style={{ marginBottom: 18 }}>
@@ -69,6 +121,27 @@ function SuperAdminBackups({
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', marginBottom: 14 }}>
           <button className="btn btn-signal" onClick={() => setConfirmDownload(true)}>Download Backup</button>
+          <button
+            className="btn btn-signal"
+            onClick={() => document.getElementById('backup-upload')?.click()}
+            disabled={uploading}
+          >
+            {uploading ? 'Uploading...' : 'Upload JSON Backup'}
+          </button>
+          <button
+            className="btn btn-danger"
+            onClick={() => setConfirmRestore(true)}
+            disabled={restoring}
+          >
+            {restoring ? 'Restoring...' : 'Restore from Saved Backup'}
+          </button>
+          <input
+            id="backup-upload"
+            type="file"
+            accept=".json"
+            style={{ display: 'none' }}
+            onChange={doUpload}
+          />
           <div style={{ fontSize: 12, color: 'var(--steel)' }}>
             Last backup:&nbsp;
             {lastBackup
@@ -100,6 +173,33 @@ function SuperAdminBackups({
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
             <button className="btn btn-outline" type="button" onClick={() => setConfirmDownload(false)}>Cancel</button>
             <button className="btn btn-signal" type="button" onClick={doDownload}>Download</button>
+          </div>
+        </Modal>
+      )}
+
+      {confirmRestore && (
+        <Modal title="Confirm Restoration" showCloseButton={false} onClose={() => setConfirmRestore(false)}>
+          <p style={{ fontSize: 13, color: 'var(--steel)', marginBottom: 14 }}>
+            Warning: Restoring a backup will overwrite the current database state. This action cannot be undone.
+            To proceed, please type <b className="mono">RESTORE</b> below.
+          </p>
+          <input
+            className="input-text"
+            style={{ width: '100%', marginBottom: 14, padding: 8, border: '1px solid var(--line)', borderRadius: 4 }}
+            value={restoreText}
+            onChange={(e) => setRestoreText(e.target.value)}
+            placeholder="Type RESTORE to confirm"
+          />
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+            <button className="btn btn-outline" type="button" onClick={() => setConfirmRestore(false)}>Cancel</button>
+            <button
+              className="btn btn-danger"
+              type="button"
+              disabled={restoreText !== 'RESTORE'}
+              onClick={doRestore}
+            >
+              Confirm Restore
+            </button>
           </div>
         </Modal>
       )}

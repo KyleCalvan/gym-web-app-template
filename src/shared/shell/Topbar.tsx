@@ -21,8 +21,9 @@ const VIEW_TITLES_BY_ROLE: Record<string, Record<string, string>> = {
   member: { dashboard: 'My Progress' },
 };
 
-export function Topbar({ role, view, onNav, toggleSidebar, onProfileMenu, pillRef, profileMenuOpen, bell, nav }: {
+export function Topbar({ role, user, view, onNav, toggleSidebar, onProfileMenu, pillRef, profileMenuOpen, bell, nav }: {
   role: Role;
+  user: any;
   view: string;
   onNav?: (id: string) => void;
   toggleSidebar?: () => void;
@@ -32,7 +33,6 @@ export function Topbar({ role, view, onNav, toggleSidebar, onProfileMenu, pillRe
   bell?: Bell | null;
   nav?: NavSection[];
 }) {
-  const user = CURRENT[role];
   const title = VIEW_TITLES_BY_ROLE[role]?.[view] || VIEW_TITLES[view] || view;
   const bellControls = useAnimationControls();
 
@@ -105,13 +105,13 @@ export function Topbar({ role, view, onNav, toggleSidebar, onProfileMenu, pillRe
           aria-expanded={onProfileMenu ? Boolean(profileMenuOpen) : undefined}
           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handlePillClick(); } }}
         >
-          <Avatar src={user.avatarUrl} name={user.name} size={28} />
+          <Avatar src={user?.avatarUrl} name={user?.name || 'User'} size={28} />
           {/* role-full is the verbose job title for desktop; role-short is the
              compact badge shown on mobile. CSS swaps them at the breakpoint. */}
           <span className="who">
-            <b>{user.name}</b>
-            <span className="role-full">{user.role}</span>
-            <span className="role-short">{ROLE_LABEL[role]}</span>
+            <b>{user?.name || 'User'}</b>
+            <span className="role-full">{user?.role || 'User'}</span>
+            <span className="role-short">{ROLE_LABEL[role] || 'User'}</span>
           </span>
         </div>
       </div>

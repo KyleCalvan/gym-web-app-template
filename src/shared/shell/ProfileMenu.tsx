@@ -106,7 +106,7 @@ export function ProfileMenu({ role, open, onClose, onProfile, onLogout, triggerR
                 className="profile-menu-item"
                 onClick={run(onProfile)}
               >
-                <span className="ic" aria-hidden="true">👤</span> My Profile
+                <span className="ic" aria-hidden="true"></span> My Profile
               </button>
 
               <button

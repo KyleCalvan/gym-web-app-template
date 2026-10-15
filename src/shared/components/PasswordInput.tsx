@@ -52,7 +52,7 @@ export function PasswordInput({ label, value, onChange, placeholder, required }:
             zIndex: 2
           }}
         >
-          {isVisible ? '👁️' : '🙈'}
+          {isVisible ? '' : ''}
         </button>
       </div>
     </div>

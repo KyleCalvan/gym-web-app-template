@@ -209,10 +209,34 @@ export interface NotifPrefs {
 // React setter helpers — keep props concise in app/views
 export type Setter<T> = React.Dispatch<React.SetStateAction<T>>;
 
+export interface Message {
+  id: string;
+  conversationId: string;
+  senderId: string;
+  senderName: string;
+  content: string;
+  isRead: boolean;
+  attachmentUrl?: string;
+  createdAt: string;
+}
+
+export interface Conversation {
+  id: string;
+  participantId: string;
+  participantName: string;
+  participantAvatar?: string;
+  participantRole: Role;
+  lastMessage: string;
+  updatedAt: string;
+  unreadCount: number;
+}
+
 // View props shared across every role's view component.
 // Each role's view receives this bag from <App/>.
 export interface ViewProps {
   onNav: (id: string) => void;
+  role: Role;
+  currentUser: { id?: string; name: string };
   members: Member[];
   setMembers: Setter<Member[]>;
   trainers: Trainer[];

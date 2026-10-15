@@ -1,11 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import type { ComponentType } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Landing from './landing';
 import LoginPage from './LoginPage.tsx';
 import Sidebar from './shared/shell/Sidebar.tsx';
 import { Topbar } from './shared/shell/Topbar.tsx';
-import { MobileTabBar } from './shared/shell/MobileTabBar.tsx';
 import { ProfileMenu } from './shared/shell/ProfileMenu.tsx';
 import { useToast } from './shared/hooks/useToast.tsx';
 import {
@@ -22,7 +21,10 @@ import {
   NOTIFICATIONS,
   SEED_AUDIT_LOG,
   SEED_SESSIONS,
+  CONVERSATIONS,
+  MESSAGES,
 } from './data.ts';
+
 import { ADMIN_NAV, ADMIN_VIEWS } from './admin';
 import { STAFF_NAV, STAFF_VIEWS } from './staff';
 import { TRAINER_NAV, TRAINER_VIEWS } from './trainer';
@@ -92,6 +94,18 @@ export default function App() {
   const [showProfileMenu, setShowProfileMenu] = useState<boolean>(false);
   const pillRef = useRef<HTMLDivElement>(null);
 
+  // Resolve the actual current user from the dynamic state
+  const currentUser = useMemo(() => {
+    if (role === 'member') return members.find(m => m.id === currentUserId) || CURRENT.member;
+    if (role === 'trainer') return trainers.find(t => t.id === currentUserId) || CURRENT.trainer;
+    if (role === 'staff') return staff.find(s => s.id === currentUserId) || CURRENT.staff;
+    if (role === 'admin') return admins.find(a => a.id === currentUserId) || CURRENT.admin;
+    if (role === 'superadmin') return superadmins.find(s => s.id === currentUserId) || CURRENT.superadmin;
+    return CURRENT[role];
+  }, [role, members, trainers, staff, admins, superadmins, currentUserId]);
+
+  const unread = notifications.filter((n) => n.unread).length;
+
   // Theme: dark is the default and the layout script has already applied a
   // stored light preference to <html> before React mounted, so read the
   // element back as the source of truth rather than re-reading storage.
@@ -99,6 +113,7 @@ export default function App() {
     if (typeof document === 'undefined') return 'dark';
     return document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
   });
+
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -236,10 +251,9 @@ export default function App() {
     (roleViews && (roleViews[view] as ComponentType<ViewProps>)) ||
     (() => <div className="empty-state">View not available.</div>);
 
-  const unread = notifications.filter((n) => n.unread).length;
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell${view === 'chat' ? ' chat-app-shell' : ''}`}>
       <Sidebar
         role={role}
         brand="VinAthletics"
@@ -249,9 +263,10 @@ export default function App() {
         isOpen={isSidebarOpen}
         setIsOpen={setIsSidebarOpen}
       />
-      <div style={{ flex: 1, minWidth: 0 }}>
+      <div className={`app-main${view === 'chat' ? ' chat-app-main' : ''}`} style={{ flex: 1, minWidth: 0 }}>
         <Topbar
           role={role}
+          user={currentUser}
           view={view}
           onNav={handleNav}
           toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -261,10 +276,11 @@ export default function App() {
           bell={{ count: unread, onClick: () => setShowNotifModal(true) }}
           nav={NAV_BY_ROLE[role]}
         />
-        <div className="content">
+        <div className={`content${view === 'chat' ? ' chat-page-content' : ''}`}>
           <AnimatePresence mode="wait">
             <motion.div
               key={`${role}-${view}`}
+              className={view === 'chat' ? 'chat-page-view' : undefined}
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -4 }}
@@ -272,6 +288,8 @@ export default function App() {
             >
               <ViewComp
                 onNav={handleNav}
+                role={role}
+                currentUser={currentUser}
                 members={members} setMembers={setMembers}
                 trainers={trainers} setTrainers={setTrainers}
                 plans={plans} setPlans={setPlans}
@@ -321,12 +339,6 @@ export default function App() {
         onProfile={() => handleProfileMenuNav('profile')}
         onLogout={() => { handleLogout(); setShowProfileMenu(false); }}
         triggerRef={pillRef}
-      />
-      <MobileTabBar
-        role={role}
-        nav={NAV_BY_ROLE[role]}
-        active={view}
-        onNav={handleProfileMenuNav}
       />
       {toastNode}
     </div>

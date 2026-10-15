@@ -3,10 +3,37 @@ import { useState } from 'react';
 import { Badge, BarChart, Table, TabbedCard, Modal, Field } from '../shared';
 import BookingCheckoutModal from './BookingCheckoutModal.tsx';
 
-function MemberDashboard({ members, sessions, bookings, currentUserId, plans, onNav, toast, checkInHistory }){
+function MemberDashboard({ members, sessions, setSessions, bookings, setBookings, setTransactions, trainers, currentUserId, plans, onNav, toast, checkInHistory, today, addAudit }){
   const me = members.find(m => m.id === currentUserId) || members[0];
   const upcoming = bookings.length > 0 ? bookings : sessions.filter(s => s.member === me?.name).slice(0, 3);
   const [showBook, setShowBook] = useState(false);
+
+  const persistBookings = ({ id, trainer, dates, time, amount, totalAmount, method }) => {
+    const newBookings = dates.map((date, index) => ({
+      id: index === 0 ? id : `${id}-${index + 1}`,
+      member: me?.name || '',
+      trainer,
+      date,
+      time,
+      type: 'Coaching',
+      status: 'Pending',
+      paid: true,
+      amount,
+    }));
+    setBookings(prev => [...prev, ...newBookings]);
+    setSessions(prev => [...prev, ...newBookings]);
+    setTransactions(prev => [{
+      id: 'TXN-' + (8821 + prev.length),
+      member: me?.name || '',
+      type: `PT Sessions (${trainer}) × ${dates.length}`,
+      amount: totalAmount,
+      method,
+      date: today,
+      status: 'Paid',
+    }, ...prev]);
+    toast(`${dates.length} session${dates.length === 1 ? '' : 's'} booked and paid`);
+    addAudit?.('info', 'Sessions booked', `${trainer} — ${dates.length} dates`);
+  };
 
   // ---- Metrics tracker (weight / height / BMI) ----
   const [metrics, setMetrics] = useState(() => ({
@@ -70,7 +97,7 @@ function MemberDashboard({ members, sessions, bookings, currentUserId, plans, on
   return (
     <>
       <TabbedCard label="Welcome" title="">
-        <h2 style={{fontSize:22, marginBottom:6}}>Welcome back{me?.name ? `, ${me.name.split(' ')[0]}` : ''} 💪</h2>
+        <h2 style={{fontSize:22, marginBottom:6}}>Welcome back{me?.name ? `, ${me.name.split(' ')[0]}` : ''}</h2>
         <p style={{color:'var(--steel)', margin:0}}>You're on the <b>{me?.plan || 'Premium'}</b> plan, renewing Sep 12, 2026.</p>
       </TabbedCard>
       <div style={{height:18}}></div>
@@ -96,7 +123,7 @@ function MemberDashboard({ members, sessions, bookings, currentUserId, plans, on
       <div className="grid grid-2">
         <TabbedCard
           label="Progress"
-          title="🏆 Your Progress"
+          title="Your Progress"
           right={<button className="btn btn-outline btn-sm" onClick={()=>{setDraft(metrics); setEditingMetrics(true);}}>Update Metrics</button>}
         >
           <div className="metrics-tracker">
@@ -153,7 +180,12 @@ function MemberDashboard({ members, sessions, bookings, currentUserId, plans, on
       )}
 
       {showBook && (
-        <BookingCheckoutModal onClose={()=>setShowBook(false)} onComplete={()=>{setShowBook(false);}} />
+        <BookingCheckoutModal
+          trainers={trainers}
+          onClose={()=>setShowBook(false)}
+          onComplete={()=>{setShowBook(false);}}
+          onPersistBookings={persistBookings}
+        />
       )}
     </>
   );

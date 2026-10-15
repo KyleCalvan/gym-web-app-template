@@ -158,7 +158,7 @@ function MemberActivity({
 
       <TabbedCard
         label="Activity"
-        title="📅 Check-in Calendar"
+        title="Check-in Calendar"
         right={
           <button
             className="btn btn-signal btn-sm"
