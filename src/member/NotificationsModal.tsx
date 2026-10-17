@@ -48,7 +48,7 @@ function NotificationsModal({
             <button className="btn btn-ghost btn-sm" onClick={markAllRead}>Mark all as read</button>
           </div>
           {notifications.length === 0 ? (
-            <div style={{fontSize:13, color:'var(--steel)', padding:'10px 0'}}>No notifications.</div>
+            <div style={{fontSize:14.3, color:'var(--steel)', padding:'10px 0'}}>No notifications.</div>
           ) : notifications.map((n,i)=>(
             <motion.div
               key={n.id}
@@ -69,15 +69,15 @@ function NotificationsModal({
                 {/* Title/body/time are pinned to --ink / --steel explicitly: the
                    modal sits on --surface, and these were inheriting, which
                    rendered dark-on-dark in some contexts. */}
-                <div style={{fontWeight: n.unread ? 700 : 600, fontSize:13, color:'var(--ink)'}}>{n.title}</div>
-                <div style={{fontSize:12, color:'var(--steel)', marginTop:2}}>{n.body}</div>
-                <div className="mono" style={{fontSize:10.5, color:'var(--steel)', marginTop:2}}>{n.time}</div>
+                <div style={{fontWeight: n.unread ? 700 : 600, fontSize:14.3, color:'var(--ink)'}}>{n.title}</div>
+                <div style={{fontSize:13.2, color:'var(--steel)', marginTop:2}}>{n.body}</div>
+                <div className="mono" style={{fontSize:11.6, color:'var(--steel)', marginTop:2}}>{n.time}</div>
               </div>
             </motion.div>
           ))}
         </div>
       ) : (
-        <div style={{fontSize:12.5}}>
+        <div style={{fontSize:13.8}}>
           {/* Theme picker. Dark is the platform default, so the switch reads as
              "dark mode on" and turning it off lifts the whole app to light —
              the choice persists and is re-applied by the layout script on the
@@ -86,7 +86,7 @@ function NotificationsModal({
             <span>Dark Mode</span>
             <Switch on={theme === 'dark'} onClick={switchTheme} ariaLabel="Toggle dark mode" />
           </div>
-          <div style={{fontFamily:'var(--font-mono)', fontSize:10.5, color:'var(--steel)', marginTop:-4, marginBottom:6, letterSpacing:'.4px'}}>
+          <div style={{fontFamily:'var(--font-mono)', fontSize:11.6, color:'var(--steel)', marginTop:-4, marginBottom:6, letterSpacing:'.4px'}}>
             {theme === 'dark' ? 'ON — DARK THEME' : 'OFF — LIGHT THEME'}
           </div>
           <div className="checkbox-row"><span>Email Notifications</span><Switch on={notifPrefs.email} onClick={()=>toggle('email')} /></div>

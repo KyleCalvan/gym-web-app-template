@@ -90,7 +90,7 @@ function AdminPromotions({ promotions, setPromotions, plans, toast, addAudit }){
         right={<div style={{display:'flex', gap:8}}><button className="btn btn-outline btn-sm" onClick={()=>setShowCreate(true)}>+ New Promotion</button></div>}
       >
         {promotions.length === 0 ? (
-          <div style={{fontSize:13, color:'var(--steel)', padding:'10px 0'}}>
+          <div style={{fontSize:14.3, color:'var(--steel)', padding:'10px 0'}}>
             No promotion resources yet. Click <b>+ New Promotion</b> to add the first one.
           </div>
         ) : (
@@ -105,7 +105,7 @@ function AdminPromotions({ promotions, setPromotions, plans, toast, addAudit }){
                 <div className="head">
                   <div>
                     <div className="ttl">{p.title}</div>
-                    <div className="mono" style={{fontSize:10.5, color:'var(--steel)', marginTop:2}}>{p.id} · {p.code}</div>
+                    <div className="mono" style={{fontSize:11.6, color:'var(--steel)', marginTop:2}}>{p.id} · {p.code}</div>
                   </div>
                   <Badge status={p.status}/>
                 </div>
@@ -151,7 +151,7 @@ function AdminPromotions({ promotions, setPromotions, plans, toast, addAudit }){
           <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14}}>
             <div>
               <div className="eyebrow">Promotion</div>
-              <div className="mono" style={{fontSize:13, marginTop:2}}>{detailPromo.id} · {detailPromo.code}</div>
+              <div className="mono" style={{fontSize:14.3, marginTop:2}}>{detailPromo.id} · {detailPromo.code}</div>
             </div>
             <Badge status={detailPromo.status}/>
           </div>

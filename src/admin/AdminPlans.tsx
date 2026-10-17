@@ -63,7 +63,7 @@ function AdminPlans({ plans, setPlans, toast }){
             <div className={"plan-card"+(isFeatured?' featured':'')} key={p.name} style={isInactive?{opacity:.55}:undefined}>
               {isFeatured && <span className="ribbon">Most Popular</span>}
               <div className="eyebrow" style={{color:isFeatured?'var(--ink-soft)':'var(--steel)'}}>{p.members} active members{p.status?` · ${p.status}`:''}</div>
-              <h3 style={{fontSize:20}}>{p.name}</h3>
+              <h3 style={{fontSize:22}}>{p.name}</h3>
               <div className="price">{peso(p.price)}<span>/{p.period}</span></div>
               <ul>{p.perks.map((perk,i)=><li key={i}>✓ {perk}</li>)}</ul>
               <div style={{display:'flex', gap:8}}>
@@ -82,7 +82,7 @@ function AdminPlans({ plans, setPlans, toast }){
         title="Plan Management"
         right={<button className="btn btn-signal btn-sm" onClick={openCreate}>+ Create Plan</button>}
       >
-        <div style={{fontSize:13, color:'var(--steel)', padding:'4px 0'}}>
+        <div style={{fontSize:14.3, color:'var(--steel)', padding:'4px 0'}}>
           Click <b>+ Create Plan</b> to add a new membership tier, or use the <b>Edit Plan</b> button on any card above to update an existing one.
         </div>
       </TabbedCard>

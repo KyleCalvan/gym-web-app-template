@@ -15,7 +15,7 @@
 }
 .landing-nav-links{display:flex;align-items:center;gap:26px;flex:1;justify-content:center;}
 .landing-nav-links a{
-  font-family:var(--font-mono);font-size:11.5px;letter-spacing:1.5px;text-transform:uppercase;
+  font-family:var(--font-mono);font-size:12.7px;letter-spacing:1.5px;text-transform:uppercase;
   color:var(--ink-soft);text-decoration:none;padding:4px 0;position:relative;
 }
 .landing-nav-links a::after{
@@ -56,7 +56,7 @@
 .mobile-menu-overlay{ display:none; }
 .mobile-menu-content{ display:flex; flex-direction:column; gap:14px; }
 
-.brand{display:flex; align-items:center; gap:10px; font-family:var(--font-display); font-size:22px; font-weight:700; letter-spacing:.3px; flex-shrink:0;}
+.brand{display:flex; align-items:center; gap:10px; font-family:var(--font-display); font-size:24.2px; font-weight:700; letter-spacing:.3px; flex-shrink:0;}
 .brand-mark-img{
   height:42px;width:auto;display:block;border-radius:0;
   object-fit:contain;
@@ -100,13 +100,13 @@
 }
 .landing-hero-inner{position:relative;z-index:2;max-width:1080px;margin:0 auto;width:100%;display:grid;grid-template-columns:1fr;gap:40px;align-items:center;text-align:left;}
 .landing-hero h1{
-  font-size:clamp(40px, 5.5vw, 68px);
+  font-size:clamp(44px, 6.1vw, 74.8px);
   font-weight:700;
   line-height:.98; letter-spacing:-.5px;
   text-transform:uppercase;color:var(--ink); margin:0;
 }
 .landing-hero .accent-word{color:var(--signal-ink); font-weight:700;}
-.landing-hero p.lede{font-size:18px;line-height:1.55;color:var(--ink-soft);max-width:540px;margin:22px 0 30px;}
+.landing-hero p.lede{font-size:19.8px;line-height:1.55;color:var(--ink-soft);max-width:540px;margin:22px 0 30px;}
 .landing-hero .eyebrow{color:rgba(255,255,255,.78); margin-bottom:14px;}
 .landing-hero .btn-group{display:flex;gap:12px;flex-wrap:wrap;}
 .landing-hero .btn-outline{color:var(--ink);border-color:var(--line-strong);background:transparent;}
@@ -127,7 +127,7 @@
 
 .hero-stats{
   display:flex;align-items:center;gap:18px;flex-wrap:wrap;
-  margin-top:28px;font-family:var(--font-mono);font-size:12px;
+  margin-top:28px;font-family:var(--font-mono);font-size:13.2px;
   color:rgba(255,255,255,.7);letter-spacing:.5px;text-transform:uppercase;
 }
 .hero-stats .stat{display:flex;align-items:center;gap:6px;}
@@ -166,7 +166,7 @@
 }
 .hero-cards-row-inner{max-width:1180px;margin:0 auto;text-align:center;}
 .hero-cards-row-inner h2{
-  font-size:clamp(24px, 4.2vw, 32px);font-weight:700;text-transform:uppercase;letter-spacing:1px;
+  font-size:clamp(26.4px, 4.6vw, 35.2px);font-weight:700;text-transform:uppercase;letter-spacing:1px;
   margin:0 0 8px; position:relative;padding-top:22px;
   color:var(--ink);
 }
@@ -175,7 +175,7 @@
   content:'';display:block;width:72px;height:3px;
   background:var(--signal);margin:0 auto 18px;
 }
-.hero-cards-row-inner .sub{font-size:14px;color:var(--steel);margin-bottom:36px;}
+.hero-cards-row-inner .sub{font-size:15.4px;color:var(--steel);margin-bottom:36px;}
 
 /* "More than a workout" block — class-based so media queries can reach it
    (inline styles win over stylesheets, which broke this at phone widths). */
@@ -183,18 +183,18 @@
 .why-bottom-inner{ display:flex; gap:48px; margin-bottom:64px; }
 .why-left{ flex:1; min-width:0; }
 .why-left .why-head{
-  font-size:clamp(20px, 3.4vw, 24px); font-weight:700;
+  font-size:clamp(22px, 3.7vw, 26.4px); font-weight:700;
   margin:0 0 8px; line-height:1.1;
 }
 .why-left .why-head.accent{ color:var(--signal-ink); margin-bottom:16px; }
-.why-left .why-lede{ color:var(--steel); font-size:15px; line-height:1.6; margin:0; }
+.why-left .why-lede{ color:var(--steel); font-size:16.5px; line-height:1.6; margin:0; }
 .why-right-grid{ flex:2; min-width:0; display:grid; grid-template-columns:repeat(5,1fr); gap:24px; }
 .why-item{ display:flex; flex-direction:column; min-width:0; }
-.why-item-label{ font-size:12px; font-weight:700; margin:0 0 8px; text-transform:uppercase; }
-.why-item-text{ font-size:13px; color:var(--steel); line-height:1.5; margin:0; }
+.why-item-label{ font-size:13.2px; font-weight:700; margin:0 0 8px; text-transform:uppercase; }
+.why-item-text{ font-size:14.3px; color:var(--steel); line-height:1.5; margin:0; }
 .why-trust-row{
   display:flex; justify-content:center; flex-wrap:wrap; gap:12px 48px;
-  font-size:12px; font-weight:700; color:var(--steel);
+  font-size:13.2px; font-weight:700; color:var(--steel);
   text-transform:uppercase; letter-spacing:1px;
 }
 .hero-cards-grid{
@@ -208,10 +208,10 @@
   width:42px;height:42px;border-radius:0;background:var(--surface);color:var(--signal-ink);
   display:flex;align-items:center;justify-content:center;
 }
-.hero-card h3{font-size:16px;text-transform:uppercase;margin:0; color:var(--ink);}
-.hero-card p{font-size:13px;color:var(--ink-soft);margin:0;line-height:1.5;}
+.hero-card h3{font-size:17.6px;text-transform:uppercase;margin:0; color:var(--ink);}
+.hero-card p{font-size:14.3px;color:var(--ink-soft);margin:0;line-height:1.5;}
 .hero-card .link{
-  margin-top:auto;font-family:var(--font-mono);font-size:11px;letter-spacing:1px;
+  margin-top:auto;font-family:var(--font-mono);font-size:12.1px;letter-spacing:1px;
   text-transform:uppercase;color:var(--signal-ink);text-decoration:none;font-weight:700;
   display:inline-flex;align-items:center;gap:5px;
 }
@@ -223,14 +223,14 @@
   background:var(--surface);border:1px dashed var(--line);
   border-radius:0;padding:32px;
   text-align:center;color:var(--steel);font-family:var(--font-mono);
-  font-size:12.5px;letter-spacing:1px;text-transform:uppercase;
+  font-size:13.8px;letter-spacing:1px;text-transform:uppercase;
 }
 
 /* ---- Promotions strip ---- */
 .promo-strip{background:var(--paper);padding:80px 40px;width:100%;}
 .promo-strip-inner{max-width:1180px;margin:0 auto;width:100%;}
-.promo-strip h2{color:var(--ink);text-align:center;font-size:clamp(23px, 3.6vw, 30px);font-weight:600;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;}
-.promo-strip .sub{text-align:center;color:var(--ink-soft);margin-bottom:40px;font-size:14px;}
+.promo-strip h2{color:var(--ink);text-align:center;font-size:clamp(25.3px, 4vw, 33px);font-weight:600;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;}
+.promo-strip .sub{text-align:center;color:var(--ink-soft);margin-bottom:40px;font-size:15.4px;}
 
 /* Carousel viewport */
 .promo-carousel{
@@ -273,10 +273,10 @@
   object-fit:cover;background-color:#262626;
 }
 .promo-card .body{ padding:16px 18px 18px; display:flex; flex-direction:column; gap:6px; flex:1; }
-.promo-card .tag{font-family:var(--font-mono);background:var(--signal);color:var(--on-signal);font-size:11px;padding:4px 10px;border-radius:0;letter-spacing:.5px;display:inline-block;align-self:flex-start;margin-bottom:4px;}
-.promo-card h3{margin:0;font-size:18px;color:var(--ink);font-weight:600;}
-.promo-card p{font-size:13px;color:var(--steel);margin:0;line-height:1.5;}
-.promo-card .valid{font-family:var(--font-mono);font-size:10.5px;color:var(--steel);margin-top:auto;display:block;border-top:1px solid var(--line);padding-top:10px;}
+.promo-card .tag{font-family:var(--font-mono);background:var(--signal);color:var(--on-signal);font-size:12.1px;padding:4px 10px;border-radius:0;letter-spacing:.5px;display:inline-block;align-self:flex-start;margin-bottom:4px;}
+.promo-card h3{margin:0;font-size:19.8px;color:var(--ink);font-weight:600;}
+.promo-card p{font-size:14.3px;color:var(--steel);margin:0;line-height:1.5;}
+.promo-card .valid{font-family:var(--font-mono);font-size:11.6px;color:var(--steel);margin-top:auto;display:block;border-top:1px solid var(--line);padding-top:10px;}
 
 /* Carousel controls (prev / dots / next) */
 .promo-carousel-controls{
@@ -321,8 +321,8 @@
 /* ---- Trainers strip ---- */
 .trainers-strip{background:var(--paper);padding:80px 40px;}
 .trainers-strip-inner{max-width:1180px;margin:0 auto;}
-.trainers-strip h2{font-size:clamp(20px, 3vw, 24px);font-weight:600;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;text-align:center;}
-.trainers-strip .sub{font-size:14px;color:var(--steel);margin-bottom:30px;text-align:center;}
+.trainers-strip h2{font-size:clamp(22px, 3.3vw, 26.4px);font-weight:600;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;text-align:center;}
+.trainers-strip .sub{font-size:15.4px;color:var(--steel);margin-bottom:30px;text-align:center;}
 .trainers-grid{
   display:grid;
   /* Four across at the 1180px design width, matching the contact cards below
@@ -339,11 +339,11 @@
   width:56px;height:56px;border-radius:50%;background:var(--surface-2);color:var(--signal-ink);
   border:1.5px solid var(--line-strong);
   display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);
-  font-size:18px;font-weight:700;margin-bottom:6px;
+  font-size:19.8px;font-weight:700;margin-bottom:6px;
 }
-.trainer-card h3{font-size:16px;text-transform:uppercase;margin:0;}
-.trainer-card .spec{font-size:12px;color:var(--signal-ink);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:1px;}
-.trainer-card .meta{font-size:12px;color:var(--steel);margin-top:6px;line-height:1.5;}
+.trainer-card h3{font-size:17.6px;text-transform:uppercase;margin:0;}
+.trainer-card .spec{font-size:13.2px;color:var(--signal-ink);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:1px;}
+.trainer-card .meta{font-size:13.2px;color:var(--steel);margin-top:6px;line-height:1.5;}
 .trainer-card .meta .row{display:flex;justify-content:space-between;gap:4px 12px;flex-wrap:wrap;padding:2px 0;}
 /* Rating row: star + number, same monospace weight as the certs above it. */
 .trainer-card .meta .row .rating{display:inline-flex;align-items:center;gap:4px;color:var(--signal-ink);}
@@ -355,13 +355,13 @@
 /* ---- Plans strip ---- */
 .plans-strip{background:var(--surface);padding:80px 40px;width:100%;}
 .plans-strip-inner{max-width:1180px;margin:0 auto;}
-.plans-strip h2{color:var(--ink);text-align:center;font-size:clamp(21px, 3.2vw, 26px);font-weight:600;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;}
-.plans-strip .sub{text-align:center;color:var(--ink-soft);margin-bottom:34px;font-size:14px;}
+.plans-strip h2{color:var(--ink);text-align:center;font-size:clamp(23.1px, 3.5vw, 28.6px);font-weight:600;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;}
+.plans-strip .sub{text-align:center;color:var(--ink-soft);margin-bottom:34px;font-size:15.4px;}
 .plans-strip .grid-3{display:grid;gap:18px; grid-template-columns:repeat(3,1fr);}
 /* The plan name sits at 18px on desktop; the ≤900px block below brings it down
    to 15px and wins by source order, so no !important is needed on either side
    (an inline style on the h3 used to force the issue — see git history). */
-.plan-card h3{font-size:18px;margin:0;}
+.plan-card h3{font-size:19.8px;margin:0;}
 /* Plans sit on the light band — invert the cards to the dark anchor so they
    still read as separate tiles. */
 .plans-strip .plan-card{background:var(--paper);}
@@ -377,15 +377,15 @@
 /* ---- Contact strip ---- */
 .contact-strip{background:var(--surface);padding:80px 40px;}
 .contact-strip-inner{max-width:1180px;margin:0 auto;}
-.contact-strip h2{font-size:clamp(20px, 3vw, 24px);font-weight:600;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;text-align:center;}
-.contact-strip .sub{font-size:14px;color:var(--steel);margin-bottom:30px;text-align:center;}
+.contact-strip h2{font-size:clamp(22px, 3.3vw, 26.4px);font-weight:600;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;text-align:center;}
+.contact-strip .sub{font-size:15.4px;color:var(--steel);margin-bottom:30px;text-align:center;}
 .contact-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;}
 .contact-card{
   background:var(--paper);border:2px solid var(--ink);border-radius:0;padding:20px;text-align:center;
   display:flex;flex-direction:column;align-items:center;gap:6px;
 }
-.contact-card .label{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--steel);}
-.contact-card .value{font-size:14px;font-weight:600;color:var(--ink);text-decoration:none;}
+.contact-card .label{font-family:var(--font-mono);font-size:12.1px;text-transform:uppercase;letter-spacing:1.5px;color:var(--steel);}
+.contact-card .value{font-size:15.4px;font-weight:600;color:var(--ink);text-decoration:none;}
 a.contact-card .value:hover{ color:var(--signal-ink); }
 
 /* ---- CTA band ---- */
@@ -397,7 +397,7 @@ a.contact-card .value:hover{ color:var(--signal-ink); }
 }
 .cta-band h2{
   font-family:var(--font-display);
-  font-size:clamp(28px, 4vw, 44px); font-weight:700;
+  font-size:clamp(30.8px, 4.4vw, 48.4px); font-weight:700;
   text-transform:uppercase;letter-spacing:1.5px;margin:0 0 28px;
   line-height:1.05;
 }
@@ -410,7 +410,7 @@ a.contact-card .value:hover{ color:var(--signal-ink); }
   padding:48px 40px 28px;
   color:var(--steel);
   font-family:var(--font-mono);
-  font-size:11.5px; letter-spacing:1px;
+  font-size:12.7px; letter-spacing:1px;
 }
 /* Three columns — brand left, Explore centered, Connect right. The outer
    1fr tracks are equal so the auto-width middle column lands on the true
@@ -423,24 +423,24 @@ a.contact-card .value:hover{ color:var(--signal-ink); }
 .site-footer-inner > .col{ justify-self:center; }
 .site-footer-inner > .col:last-child{ justify-self:end; text-align:right; }
 .site-footer .col h3{
-  font-family:var(--font-mono); font-size:11px; font-weight:700;
+  font-family:var(--font-mono); font-size:12.1px; font-weight:700;
   text-transform:uppercase; letter-spacing:1.5px;
   color:var(--ink); margin:0 0 12px;
 }
 .site-footer .col ul{ list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:8px; }
 .site-footer .col a{
-  color:var(--steel); text-decoration:none; font-size:11.5px;
+  color:var(--steel); text-decoration:none; font-size:12.7px;
   transition:color .15s ease;
 }
 .site-footer .col a:hover{ color:var(--signal-ink); }
 .site-footer .brand-block{ display:flex; flex-direction:column; gap:10px; }
-.site-footer .brand-block .brand{ font-size:20px; }
-.site-footer .brand-block p{ font-family:var(--font-body); font-size:13px; color:var(--steel); line-height:1.55; margin:0; letter-spacing:0; }
+.site-footer .brand-block .brand{ font-size:22px; }
+.site-footer .brand-block p{ font-family:var(--font-body); font-size:14.3px; color:var(--steel); line-height:1.55; margin:0; letter-spacing:0; }
 .site-footer .legal{
   max-width:1180px; margin:36px auto 0; padding-top:18px;
   border-top:1px solid var(--line);
   display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap;
-  font-size:10.5px; letter-spacing:1.2px; text-transform:uppercase;
+  font-size:11.6px; letter-spacing:1.2px; text-transform:uppercase;
 }
 .site-footer .legal a{ color:var(--steel); text-decoration:none; }
 .site-footer .legal a:hover{ color:var(--signal-ink); }
@@ -549,7 +549,7 @@ a.contact-card .value:hover{ color:var(--signal-ink); }
       display:flex; flex-direction:column; align-items:stretch; gap:0;
     }
     .landing-nav.mobile-open .mobile-menu-overlay .landing-nav-links a{
-      font-size:14px; letter-spacing:1px;
+      font-size:15.4px; letter-spacing:1px;
       padding:13px 0;
       border-bottom:1px solid var(--line);
       text-align:left;
@@ -650,38 +650,38 @@ a.contact-card .value:hover{ color:var(--signal-ink); }
        nothing shrinks past legibility. */
     .hero-card{ padding:14px; gap:8px; }
     .hero-card .ic{ width:36px; height:36px; }
-    .hero-card h3{ font-size:14px; }
-    .hero-card p{ font-size:12.5px; }
+    .hero-card h3{ font-size:15.4px; }
+    .hero-card p{ font-size:13.8px; }
 
-    .why-item-label{ font-size:11.5px; margin-bottom:6px; }
-    .why-item-text{ font-size:12px; line-height:1.45; }
+    .why-item-label{ font-size:12.7px; margin-bottom:6px; }
+    .why-item-text{ font-size:13.2px; line-height:1.45; }
 
     .contact-card{ padding:14px; gap:5px; }
-    .contact-card .value{ font-size:13px; }
+    .contact-card .value{ font-size:14.3px; }
 
     .plan-card{ padding:14px; }
-    .plan-card h3{ font-size:15px; }  /* beats the 18px base by source order */
-    .plan-card .price{ font-size:24px; margin:4px 0; }
-    .plan-card ul{ margin:8px 0; font-size:12px; }
+    .plan-card h3{ font-size:16.5px; }  /* beats the 18px base by source order */
+    .plan-card .price{ font-size:26.4px; margin:4px 0; }
+    .plan-card ul{ margin:8px 0; font-size:13.2px; }
     .plan-card ul li{ padding:3px 0; }
 
     .trainer-card{ padding:14px; gap:6px; }
-    .trainer-card .avatar{ width:44px; height:44px; font-size:15px; margin-bottom:2px; }
-    .trainer-card h3{ font-size:14px; }
-    .trainer-card .spec{ font-size:11.5px; }
-    .trainer-card .meta{ font-size:12px; margin-top:4px; }
+    .trainer-card .avatar{ width:44px; height:44px; font-size:16.5px; margin-bottom:2px; }
+    .trainer-card h3{ font-size:15.4px; }
+    .trainer-card .spec{ font-size:12.7px; }
+    .trainer-card .meta{ font-size:13.2px; margin-top:4px; }
 
     .promo-card .thumb{ height:120px; }
     .promo-card .body{ padding:12px 14px 14px; gap:5px; }
-    .promo-card .tag{ font-size:10.5px; padding:3px 8px; margin-bottom:2px; }
-    .promo-card h3{ font-size:15px; }
-    .promo-card p{ font-size:12px; }
-    .promo-card .valid{ font-size:10px; padding-top:8px; }
+    .promo-card .tag{ font-size:11.6px; padding:3px 8px; margin-bottom:2px; }
+    .promo-card h3{ font-size:16.5px; }
+    .promo-card p{ font-size:13.2px; }
+    .promo-card .valid{ font-size:11px; padding-top:8px; }
 
     /* Hero: the headline and lede come down a step so they wrap in the phone
        column without dominating it, and the stat row pairs up two across. */
-    .landing-hero h1{ font-size:clamp(30px, 9vw, 42px); }
-    .landing-hero p.lede{ font-size:15px; margin:16px 0 22px; }
+    .landing-hero h1{ font-size:clamp(33px, 9.9vw, 46.2px); }
+    .landing-hero p.lede{ font-size:16.5px; margin:16px 0 22px; }
     .hero-stats{
       display:grid;
       grid-template-columns:repeat(2, minmax(0,1fr));
@@ -692,7 +692,7 @@ a.contact-card .value:hover{ color:var(--signal-ink); }
     /* CTA band: single centered block, so it only needs its band padding
        brought down to phone scale. */
     .cta-band{ padding:56px 24px; }
-    .cta-band h2{ font-size:clamp(24px, 7vw, 34px); margin-bottom:22px; }
+    .cta-band h2{ font-size:clamp(26.4px, 7.7vw, 37.4px); margin-bottom:22px; }
 
     /* Footer: the brand block spans the full row, then Explore and Connect pair
        up beneath it. The desktop column alignment (centered / right-justified)
@@ -712,7 +712,7 @@ a.contact-card .value:hover{ color:var(--signal-ink); }
     .site-footer-inner > *{ min-width:0; }
     .site-footer .col a,
     .site-footer address{ overflow-wrap:break-word; }
-    .site-footer .legal{ margin-top:28px; font-size:10px; gap:8px 20px; }
+    .site-footer .legal{ margin-top:28px; font-size:11px; gap:8px 20px; }
   }
 
   /* The shared 44px touch-target minimums in responsive.css are meant for the

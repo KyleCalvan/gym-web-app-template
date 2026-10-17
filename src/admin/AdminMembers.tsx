@@ -122,8 +122,8 @@ function AdminMembers({ members, setMembers, plans, setTransactions, today, toas
         </div>
         <Table columns={['Member','Contact','Plan','Status','Joined','']} rows={filtered} renderRow={m=>(
           <tr key={m.id}>
-            <td><Avatar src={m.avatarUrl} name={m.name} />{m.name}<div className="mono" style={{fontSize:10.5, color:'var(--steel)'}}>{m.id}</div></td>
-            <td>{m.email}<div style={{fontSize:11.5, color:'var(--steel)'}}>{m.phone}</div></td>
+            <td><Avatar src={m.avatarUrl} name={m.name} />{m.name}<div className="mono" style={{fontSize:11.6, color:'var(--steel)'}}>{m.id}</div></td>
+            <td>{m.email}<div style={{fontSize:12.7, color:'var(--steel)'}}>{m.phone}</div></td>
             <td>{m.plan}</td>
             <td><Badge status={m.status} /></td>
             <td className="mono">{m.joined}</td>
@@ -152,9 +152,9 @@ function AdminMembers({ members, setMembers, plans, setTransactions, today, toas
         <Modal title="Member Profile" onClose={()=>setSelected(null)}>
           <div style={{display:'flex', alignItems:'center', gap:14, marginBottom:16}}>
             <Avatar src={selected.avatarUrl} name={selected.name} size={44} />
-            <div><h3 style={{fontSize:18}}>{selected.name}</h3><Badge status={selected.status}/></div>
+            <div><h3 style={{fontSize:19.8}}>{selected.name}</h3><Badge status={selected.status}/></div>
           </div>
-          <div className="grid grid-2" style={{fontSize:13, marginBottom:16}}>
+          <div className="grid grid-2" style={{fontSize:14.3, marginBottom:16}}>
             <div><div className="eyebrow">Member ID</div><div className="mono">{selected.id}</div></div>
             <div><div className="eyebrow">Plan</div>{selected.plan}</div>
             <div><div className="eyebrow">Email</div>{selected.email}</div>
@@ -193,7 +193,7 @@ function AdminMembers({ members, setMembers, plans, setTransactions, today, toas
       {selected && renewing && (
         <Modal title="Renew Plan" onClose={()=>setRenewing(false)}>
           <form onSubmit={submitRenew}>
-            <p style={{fontSize:13, color:'var(--steel)', marginBottom:14}}>
+            <p style={{fontSize:14.3, color:'var(--steel)', marginBottom:14}}>
               Renew <b>{selected.name}</b>'s membership. A paid transaction will be recorded.
             </p>
             <Field label="Plan">
@@ -213,7 +213,7 @@ function AdminMembers({ members, setMembers, plans, setTransactions, today, toas
 
       {pendingFreeze && (
         <Modal title="Freeze Account?" showCloseButton={false} onClose={()=>setPendingFreeze(null)}>
-          <p style={{fontSize:13, color:'var(--steel)', marginBottom:14}}>
+          <p style={{fontSize:14.3, color:'var(--steel)', marginBottom:14}}>
             You're about to freeze <b>{pendingFreeze.name}</b>. They won't be able to check in or renew until unfrozen.
           </p>
           <div style={{display:'flex', gap:8, justifyContent:'flex-end'}}>
@@ -225,7 +225,7 @@ function AdminMembers({ members, setMembers, plans, setTransactions, today, toas
 
       {pendingUnfreeze && (
         <Modal title="Unfreeze Account?" showCloseButton={false} onClose={()=>setPendingUnfreeze(null)}>
-          <p style={{fontSize:13, color:'var(--steel)', marginBottom:14}}>
+          <p style={{fontSize:14.3, color:'var(--steel)', marginBottom:14}}>
             You're about to unfreeze <b>{pendingUnfreeze.name}</b>. Their access will be restored.
           </p>
           <div style={{display:'flex', gap:8, justifyContent:'flex-end'}}>
@@ -237,7 +237,7 @@ function AdminMembers({ members, setMembers, plans, setTransactions, today, toas
 
       {pendingRemove && (
         <Modal title="Remove Member?" showCloseButton={false} onClose={()=>setPendingRemove(null)}>
-          <p style={{fontSize:13, color:'var(--steel)', marginBottom:14}}>
+          <p style={{fontSize:14.3, color:'var(--steel)', marginBottom:14}}>
             You're about to remove <b>{pendingRemove.name}</b>. They will be archived and
             hidden from the directory. A super admin can restore or delete them later.
           </p>

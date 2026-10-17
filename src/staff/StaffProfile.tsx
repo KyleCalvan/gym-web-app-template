@@ -55,7 +55,7 @@ function StaffProfile({ staff, setStaff, currentUserId, toast, addAudit }: ViewP
             />
           </div>
         </div>
-        <div style={{fontSize:12.5}}>
+        <div style={{fontSize:13.8}}>
           <div className="eyebrow">Staff ID</div><p className="mono">{me?.id || '—'}</p>
           <div className="eyebrow">Staff Since</div><p className="mono">{me?.hireDate || '—'}</p>
         </div>
@@ -76,7 +76,7 @@ function StaffProfile({ staff, setStaff, currentUserId, toast, addAudit }: ViewP
           </form>
         </TabbedCard>
       </div>
-      <SecurityFlow isOpen={showSecurityFlow} onClose={() => setShowSecurityFlow(false)} toast={toast} />
+      <SecurityFlow isOpen={showSecurityFlow} onClose={() => setShowSecurityFlow(false)} toast={toast} role="staff" accountEmail={me?.email || ''} />
     </div>
   );
 }

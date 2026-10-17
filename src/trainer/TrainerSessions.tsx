@@ -94,7 +94,7 @@ function TrainerSessions({ sessions, setSessions, toast, addAudit }) {
           onClose={() => setConfirm(null)}
         >
           <div style={{ padding: '0 24px 24px' }}>
-            <p style={{ margin: '0 0 18px', color: 'var(--steel)', fontSize: 13.5, lineHeight: 1.5 }}>
+            <p style={{ margin: '0 0 18px', color: 'var(--steel)', fontSize: 14.9, lineHeight: 1.5 }}>
               {confirm.action === 'complete'
                 ? 'This will mark the session as completed for the member.'
                 : 'This will cancel the session and free up the slot. The member will be notified.'}

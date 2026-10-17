@@ -171,16 +171,16 @@ function BookingCheckoutModal({ initialTrainer, trainers = [], onClose, onComple
               animate={{ scale: 1 }}
               transition={spring.pop}
             >✓</motion.div>
-            <h3 style={{textAlign:'center', fontSize:18, marginBottom:4}}>Booking Confirmed</h3>
-            <p style={{textAlign:'center', color:'var(--steel)', fontSize:12.5, marginBottom:16}}>A confirmation has been sent to your email.</p>
+            <h3 style={{textAlign:'center', fontSize:19.8, marginBottom:4}}>Booking Confirmed</h3>
+            <p style={{textAlign:'center', color:'var(--steel)', fontSize:13.8, marginBottom:16}}>A confirmation has been sent to your email.</p>
             <motion.div
               className="receipt"
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: dur.base, delay: 0.12, ease: ease.out }}
             >
-              <div style={{textAlign:'center', fontFamily:'var(--font-display)', fontSize:15}}>VINATHLETICS GYM</div>
-              <div style={{textAlign:'center', fontSize:10.5, color:'var(--steel)'}}>Session Receipt · {confirmedId}</div>
+              <div style={{textAlign:'center', fontFamily:'var(--font-display)', fontSize:16.5}}>VINATHLETICS GYM</div>
+              <div style={{textAlign:'center', fontSize:11.6, color:'var(--steel)'}}>Session Receipt · {confirmedId}</div>
               <hr/>
               <div className="row"><span>Trainer</span><span>{trainerName}</span></div>
               <div className="row"><span>Session dates</span><span>{dates.join(', ')}</span></div>

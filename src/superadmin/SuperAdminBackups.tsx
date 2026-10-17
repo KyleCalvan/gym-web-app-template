@@ -114,7 +114,7 @@ function SuperAdminBackups({
       </div>
 
       <TabbedCard label="Maintenance" title="Database Backup">
-        <p style={{ fontSize: 13, color: 'var(--steel)', margin: '0 0 14px' }}>
+        <p style={{ fontSize: 14.3, color: 'var(--steel)', margin: '0 0 14px' }}>
           Download a JSON snapshot of every in-memory slice. Useful before destructive changes or for offline analysis.
           The file contains all members, trainers, plans, transactions, sessions, promotions, staff, admins, notifications, bookings, check-ins, audit log, and active sessions.
         </p>
@@ -142,7 +142,7 @@ function SuperAdminBackups({
             style={{ display: 'none' }}
             onChange={doUpload}
           />
-          <div style={{ fontSize: 12, color: 'var(--steel)' }}>
+          <div style={{ fontSize: 13.2, color: 'var(--steel)' }}>
             Last backup:&nbsp;
             {lastBackup
               ? <span className="mono">{new Date(lastBackup).toLocaleString('en-US', { month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
@@ -157,7 +157,7 @@ function SuperAdminBackups({
             rows={Object.entries(stats)}
             renderRow={([k, v]) => (
               <tr key={k}>
-                <td className="mono" style={{ textTransform: 'uppercase', fontSize: 11 }}>{k}</td>
+                <td className="mono" style={{ textTransform: 'uppercase', fontSize: 12.1 }}>{k}</td>
                 <td>{v}</td>
               </tr>
             )}
@@ -167,7 +167,7 @@ function SuperAdminBackups({
 
       {confirmDownload && (
         <Modal title="Download Backup?" showCloseButton={false} onClose={() => setConfirmDownload(false)}>
-          <p style={{ fontSize: 13, color: 'var(--steel)', marginBottom: 14 }}>
+          <p style={{ fontSize: 14.3, color: 'var(--steel)', marginBottom: 14 }}>
             A <b>vinathletics-backup-{'{timestamp}'}.json</b> file will be generated and downloaded. The file reflects the current app state, including any unsaved changes in this session.
           </p>
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
@@ -179,7 +179,7 @@ function SuperAdminBackups({
 
       {confirmRestore && (
         <Modal title="Confirm Restoration" showCloseButton={false} onClose={() => setConfirmRestore(false)}>
-          <p style={{ fontSize: 13, color: 'var(--steel)', marginBottom: 14 }}>
+          <p style={{ fontSize: 14.3, color: 'var(--steel)', marginBottom: 14 }}>
             Warning: Restoring a backup will overwrite the current database state. This action cannot be undone.
             To proceed, please type <b className="mono">RESTORE</b> below.
           </p>

@@ -77,8 +77,8 @@
   padding:0;
 }
 .nav-toggle-btn:hover { background: var(--surface-2); border-radius: var(--radius); }
-.topbar .path{font-family:var(--font-mono);font-size:13px;color:var(--steel);text-transform:uppercase;letter-spacing:1px;}
-.topbar h1{font-size:28px;text-transform:uppercase;}
+.topbar .path{font-family:var(--font-mono);font-size:14.3px;color:var(--steel);text-transform:uppercase;letter-spacing:1px;}
+.topbar h1{font-size:30.8px;text-transform:uppercase;}
 
 /* Right-hand group: the notification bell sits beside the profile pill. */
 .topbar-right{display:flex;align-items:center;gap:10px;flex-shrink:0;}
@@ -86,7 +86,7 @@
 /* Bell button */
 .bell-btn{
   position:relative;border:2px solid var(--line);background:var(--surface);border-radius:50%;
-  width:38px;height:38px;display:flex;align-items:center;justify-content:center;font-size:15px;
+  width:38px;height:38px;display:flex;align-items:center;justify-content:center;font-size:16.5px;
   cursor:pointer;flex-shrink:0;
 }
 .bell-btn:hover{border-color:var(--line-strong);}
@@ -100,7 +100,7 @@
   }
   /* The role pill is a tap target on mobile — give it a real hit area. */
   .role-pill{ min-height:44px; }
-  .bell-btn{ width:44px; height:44px; font-size:17px; }
+  .bell-btn{ width:44px; height:44px; font-size:18.7px; }
 }
 
 .role-pill{
@@ -111,10 +111,10 @@
 .role-pill.clickable:hover{transform:translate(-1px,-1px);box-shadow:2px 2px 0 var(--line);}
 .role-pill.clickable:focus-visible{outline:2px solid var(--ink);outline-offset:2px;}
 .role-pill .av{width:32px;height:32px;border-radius:50%;background:var(--surface);color:var(--signal-ink);
-  display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:13px;font-weight:700;}
-.role-pill .who{font-size:14px;}
-.role-pill .who b{display:block;font-size:14px;}
-.role-pill .who span{color:var(--steel);font-size:12px;text-transform:uppercase;letter-spacing:.5px;}
+  display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:14.3px;font-weight:700;}
+.role-pill .who{font-size:15.4px;}
+.role-pill .who b{display:block;font-size:15.4px;}
+.role-pill .who span{color:var(--steel);font-size:13.2px;text-transform:uppercase;letter-spacing:.5px;}
 /* role-short is the compact badge used on mobile only (see the 980px block). */
 .role-pill .who .role-short{display:none;}
 
@@ -161,7 +161,7 @@
    which is only flattened here. */
 @media (max-width:980px){
   .topbar{flex-wrap:wrap;gap:12px;padding:12px 16px;}
-  .topbar h1{font-size:20px;line-height:1.1;overflow-wrap:anywhere;}
+  .topbar h1{font-size:22px;line-height:1.1;overflow-wrap:anywhere;}
   /* The breadcrumb just repeats the role badge and the title; dropping it keeps
      the mobile header to one title line. */
   .topbar .path{display:none;}
@@ -195,5 +195,5 @@
 /* Small phones: give long titles ("My Schedule & Availability") as much of the
    row as possible. */
 @media (max-width:480px){
-  .topbar h1{font-size:17px;}
+  .topbar h1{font-size:18.7px;}
 }

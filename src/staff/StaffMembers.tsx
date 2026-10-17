@@ -44,7 +44,7 @@ function StaffMembers({ members, setMembers, plans, setCheckIns, today, toast, a
         </div>
         <Table columns={['Member','Plan','Status','Joined','']} rows={filtered} renderRow={m=>(
           <tr key={m.id}>
-            <td><Avatar src={m.avatarUrl} name={m.name} />{m.name}<div className="mono" style={{fontSize:10.5, color:'var(--steel)'}}>{m.id}</div></td>
+            <td><Avatar src={m.avatarUrl} name={m.name} />{m.name}<div className="mono" style={{fontSize:11.6, color:'var(--steel)'}}>{m.id}</div></td>
             <td>{m.plan}</td><td><Badge status={m.status}/></td><td className="mono">{m.joined}</td>
             <td>
               <button

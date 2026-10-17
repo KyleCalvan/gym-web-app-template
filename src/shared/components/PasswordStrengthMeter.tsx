@@ -36,7 +36,7 @@ export function PasswordStrengthMeter({ password }: PasswordStrengthMeterProps) 
         display: 'flex',
         justifyContent: 'space-between',
         marginTop: '8px',
-        fontSize: '10px',
+        fontSize: '11px',
         fontFamily: 'var(--font-mono)',
         color: 'var(--steel)',
         pointerEvents: 'none'

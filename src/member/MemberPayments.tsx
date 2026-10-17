@@ -12,7 +12,7 @@ function MemberPayments({ transactions, members, currentUserId, toast }){
     <>
       <TabbedCard label="Finance" title="My Payment History">
         {mine.length === 0 ? (
-          <div style={{fontSize:13, color:'var(--steel)', padding:'10px 0'}}>No payments yet. Your membership renewals and bookings will appear here.</div>
+          <div style={{fontSize:14.3, color:'var(--steel)', padding:'10px 0'}}>No payments yet. Your membership renewals and bookings will appear here.</div>
         ) : (
           <Table columns={['ID','Type','Amount','Method','Date','Status','']} rows={mine} renderRow={t=>(
             <tr key={t.id}>
@@ -27,8 +27,8 @@ function MemberPayments({ transactions, members, currentUserId, toast }){
       {receipt && (
         <Modal title="Receipt" onClose={()=>setReceipt(null)}>
           <div className="receipt">
-            <div style={{textAlign:'center', fontFamily:'var(--font-display)', fontSize:15}}>VINATHLETICS GYM</div>
-            <div style={{textAlign:'center', fontSize:10.5, color:'var(--steel)'}}>Official Receipt · {receipt.id}</div>
+            <div style={{textAlign:'center', fontFamily:'var(--font-display)', fontSize:16.5}}>VINATHLETICS GYM</div>
+            <div style={{textAlign:'center', fontSize:11.6, color:'var(--steel)'}}>Official Receipt · {receipt.id}</div>
             <hr/>
             <div className="row"><span>{receipt.type}</span><span>{peso(receipt.amount)}</span></div>
             <div className="row"><span>Method</span><span>{receipt.method}</span></div>

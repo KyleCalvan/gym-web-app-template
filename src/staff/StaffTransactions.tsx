@@ -19,7 +19,7 @@ function StaffTransactions({ transactions }) {
       </div>
       <TabbedCard label="Finance" title={"My Transactions — Today, " + today}>
         {todays.length === 0 ? (
-          <div style={{fontSize:13, color:'var(--steel)', padding:'10px 0'}}>No transactions yet today. Use the Point of Sale to record one.</div>
+          <div style={{fontSize:14.3, color:'var(--steel)', padding:'10px 0'}}>No transactions yet today. Use the Point of Sale to record one.</div>
         ) : (
           <Table columns={['ID','Member','Type','Amount','Method','']} rows={todays} renderRow={t=>(
             <tr key={t.id}>
@@ -33,8 +33,8 @@ function StaffTransactions({ transactions }) {
       {viewTxn && (
         <Modal title="Receipt" onClose={()=>setViewTxn(null)}>
           <div className="receipt">
-            <div style={{textAlign:'center', fontFamily:'var(--font-display)', fontSize:15}}>🏋 VINATHLETICS GYM</div>
-            <div style={{textAlign:'center', fontSize:10.5, color:'var(--steel)'}}>Official Receipt · {viewTxn.id}</div>
+            <div style={{textAlign:'center', fontFamily:'var(--font-display)', fontSize:16.5}}>🏋 VINATHLETICS GYM</div>
+            <div style={{textAlign:'center', fontSize:11.6, color:'var(--steel)'}}>Official Receipt · {viewTxn.id}</div>
             <hr/>
             <div className="row"><span>{viewTxn.type}</span><span>{peso(viewTxn.amount)}</span></div>
             <div className="row"><span>Member</span><span>{viewTxn.member}</span></div>

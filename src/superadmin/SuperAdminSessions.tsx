@@ -39,7 +39,7 @@ function SuperAdminSessions({ activeSessions, setActiveSessions, currentSessionI
     <>
       <div className="grid grid-4" style={{ marginBottom: 18 }}>
         <div className="stat-tile"><div className="eyebrow">Total Sessions</div><div className="num">{activeSessions.length}</div></div>
-        <div className="stat-tile"><div className="eyebrow">Your Session</div><div className="num" style={{ fontSize: 16 }}>{me ? 'Active' : 'None'}</div></div>
+        <div className="stat-tile"><div className="eyebrow">Your Session</div><div className="num" style={{ fontSize: 17.6 }}>{me ? 'Active' : 'None'}</div></div>
         <div className="stat-tile"><div className="eyebrow">Other Sessions</div><div className="num">{others.length}</div></div>
         <div className="stat-tile">
           <button className="btn btn-outline btn-sm" disabled={others.length === 0} onClick={() => setConfirmAll(true)}>
@@ -50,7 +50,7 @@ function SuperAdminSessions({ activeSessions, setActiveSessions, currentSessionI
 
       <TabbedCard label="Maintenance" title="Active Sessions">
         {activeSessions.length === 0 ? (
-          <div style={{ fontSize: 13, color: 'var(--steel)', padding: '14px 0' }}>
+          <div style={{ fontSize: 14.3, color: 'var(--steel)', padding: '14px 0' }}>
             No active sessions right now.
           </div>
         ) : (
@@ -63,15 +63,15 @@ function SuperAdminSessions({ activeSessions, setActiveSessions, currentSessionI
                 <tr key={s.id}>
                   <td>
                     <b>{s.userName}</b>
-                    {isMe && <span className="mono" style={{ fontSize: 10.5, color:'var(--signal-ink)', marginLeft: 6 }}>(you)</span>}
-                    <div className="mono" style={{ fontSize: 10.5, color: 'var(--steel)' }}>{s.userId}</div>
+                    {isMe && <span className="mono" style={{ fontSize: 11.6, color:'var(--signal-ink)', marginLeft: 6 }}>(you)</span>}
+                    <div className="mono" style={{ fontSize: 11.6, color: 'var(--steel)' }}>{s.userId}</div>
                   </td>
-                  <td><Badge status={roleTone(s.role)} /> <span style={{ marginLeft: 6, textTransform: 'capitalize', fontSize: 12 }}>{s.role}</span></td>
+                  <td><Badge status={roleTone(s.role)} /> <span style={{ marginLeft: 6, textTransform: 'capitalize', fontSize: 13.2 }}>{s.role}</span></td>
                   <td className="mono">{fmt(s.loginAt)}</td>
                   <td className="mono">{fmt(s.lastActiveAt)}</td>
                   <td>
                     {isMe ? (
-                      <span style={{ fontSize: 11.5, color: 'var(--steel)' }}>Current session</span>
+                      <span style={{ fontSize: 12.7, color: 'var(--steel)' }}>Current session</span>
                     ) : (
                       <button className="btn btn-danger btn-sm" onClick={() => setPendingTerminate(s)}>Terminate</button>
                     )}
@@ -85,7 +85,7 @@ function SuperAdminSessions({ activeSessions, setActiveSessions, currentSessionI
 
       {pendingTerminate && (
         <Modal title="Terminate Session?" onClose={() => setPendingTerminate(null)}>
-          <p style={{ fontSize: 13, color: 'var(--steel)', marginBottom: 14 }}>
+          <p style={{ fontSize: 14.3, color: 'var(--steel)', marginBottom: 14 }}>
             You're about to terminate <b>{pendingTerminate.userName}</b>'s session ({pendingTerminate.role}). They will need to sign in again.
           </p>
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
@@ -97,7 +97,7 @@ function SuperAdminSessions({ activeSessions, setActiveSessions, currentSessionI
 
       {confirmAll && (
         <Modal title="Terminate All Other Sessions?" onClose={() => setConfirmAll(false)}>
-          <p style={{ fontSize: 13, color: 'var(--steel)', marginBottom: 14 }}>
+          <p style={{ fontSize: 14.3, color: 'var(--steel)', marginBottom: 14 }}>
             This will terminate <b>{others.length}</b> other active session{others.length === 1 ? '' : 's'}. Users will be forced to sign in again. Your session will be preserved.
           </p>
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>

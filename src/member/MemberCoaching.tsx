@@ -82,9 +82,9 @@ function MemberCoaching({ bookings, setBookings, sessions, setSessions, setTrans
             <div className="card" key={t.id}>
               <div style={{display:'flex', gap:10}}>
                 <Avatar src={t.avatarUrl} name={t.name} size={36} />
-                <div><b>{t.name}</b><div style={{fontSize:12, color:'var(--steel)'}}>{t.specialty}</div></div>
+                <div><b>{t.name}</b><div style={{fontSize:13.2, color:'var(--steel)'}}>{t.specialty}</div></div>
               </div>
-              <div className="mono" style={{fontSize:11.5, color:'var(--steel)', marginTop:10}}>Next opening: Tomorrow, 7:00 AM · {peso(t.sessionPrice)}/session</div>
+              <div className="mono" style={{fontSize:12.7, color:'var(--steel)', marginTop:10}}>Next opening: Tomorrow, 7:00 AM · {peso(t.sessionPrice)}/session</div>
               <button className="btn btn-outline btn-sm" style={{marginTop:10}} onClick={()=>openBookingFor(t.name)}>Book with {t.name.split(' ')[0]}</button>
             </div>
           ))}
@@ -93,7 +93,7 @@ function MemberCoaching({ bookings, setBookings, sessions, setSessions, setTrans
       <div style={{height:18}}></div>
       <TabbedCard label="Bookings" title="My Bookings">
         {bookings.length === 0 ? (
-          <div style={{fontSize:13, color:'var(--steel)', padding:'10px 0'}}>No bookings yet. Book your first session above.</div>
+          <div style={{fontSize:14.3, color:'var(--steel)', padding:'10px 0'}}>No bookings yet. Book your first session above.</div>
         ) : (
           <Table columns={['Date','Time','Trainer','Type','Status','']} rows={bookings} renderRow={s=>(
             <tr key={s.id}>
@@ -109,7 +109,7 @@ function MemberCoaching({ bookings, setBookings, sessions, setSessions, setTrans
                   <button className="btn btn-signal btn-sm" onClick={()=>{ setRateTarget(s); setStars(0); setComment(''); }}>Rate Session</button>
                 )}
                 {s.status === 'Completed' && s.rated && (
-                  <span className="badge ok" style={{fontSize:11}}>Rated ★{s.rating}</span>
+                  <span className="badge ok" style={{fontSize:12.1}}>Rated ★{s.rating}</span>
                 )}
               </td>
             </tr>
@@ -144,7 +144,7 @@ function MemberCoaching({ bookings, setBookings, sessions, setSessions, setTrans
                   key={n}
                   type="button"
                   onClick={()=>setStars(n)}
-                  style={{fontSize:34, background:'none', border:'none', cursor:'pointer', color: n<=stars ? 'var(--signal)' : 'var(--steel)', lineHeight:1, padding:0}}
+                  style={{fontSize:37.4, background:'none', border:'none', cursor:'pointer', color: n<=stars ? 'var(--signal)' : 'var(--steel)', lineHeight:1, padding:0}}
                 >★</button>
               ))}
             </div>

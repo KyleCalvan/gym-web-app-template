@@ -50,10 +50,10 @@ function TrainerProfile({ trainer, setTrainers, toast, addAudit }) {
               style={{display:'none'}}
               onChange={handleAvatarFile}
             />
-            <div style={{fontSize:11.5, color:'var(--steel)', marginTop:6}}>JPG or PNG, up to 1.5 MB.</div>
+            <div style={{fontSize:12.7, color:'var(--steel)', marginTop:6}}>JPG or PNG, up to 1.5 MB.</div>
           </div>
         </div>
-        <div style={{fontSize:12.5}}>
+        <div style={{fontSize:13.8}}>
           <div className="eyebrow">Trainer ID</div><p className="mono">{trainer?.id || '—'}</p>
           <div className="eyebrow">Status</div><p>{trainer?.status || '—'}</p>
           <div className="eyebrow">Rating</div><p className="mono">{trainer?.rating || '—'} ★</p>
@@ -77,7 +77,7 @@ function TrainerProfile({ trainer, setTrainers, toast, addAudit }) {
           </form>
         </TabbedCard>
       </div>
-      <SecurityFlow isOpen={showSecurityFlow} onClose={() => setShowSecurityFlow(false)} toast={toast} />
+      <SecurityFlow isOpen={showSecurityFlow} onClose={() => setShowSecurityFlow(false)} toast={toast} role="trainer" accountEmail={trainer?.email || ''} />
     </div>
   );
 }

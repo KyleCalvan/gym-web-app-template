@@ -63,7 +63,7 @@ function AdminReports({ members, transactions, today, toast }){
               </Select>
             </Field>
           </div>
-          {applied && <div style={{fontSize:11.5, color:'var(--steel)', marginBottom:10}}>Applied: <span className="mono">{applied.dateRange} · {applied.category} · {applied.branch}</span></div>}
+          {applied && <div style={{fontSize:12.7, color:'var(--steel)', marginBottom:10}}>Applied: <span className="mono">{applied.dateRange} · {applied.category} · {applied.branch}</span></div>}
           <button className="btn btn-signal btn-sm" onClick={apply}>Apply Filters</button>
         </TabbedCard>
         <TabbedCard label="Export" title="Export Reports">

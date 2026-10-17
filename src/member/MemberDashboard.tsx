@@ -97,14 +97,14 @@ function MemberDashboard({ members, sessions, setSessions, bookings, setBookings
   return (
     <>
       <TabbedCard label="Welcome" title="">
-        <h2 style={{fontSize:22, marginBottom:6}}>Welcome back{me?.name ? `, ${me.name.split(' ')[0]}` : ''}</h2>
+        <h2 style={{fontSize:24.2, marginBottom:6}}>Welcome back{me?.name ? `, ${me.name.split(' ')[0]}` : ''}</h2>
         <p style={{color:'var(--steel)', margin:0}}>You're on the <b>{me?.plan || 'Premium'}</b> plan, renewing Sep 12, 2026.</p>
       </TabbedCard>
       <div style={{height:18}}></div>
       <div className="grid grid-2-1">
         <TabbedCard label="Sessions" title="Upcoming Sessions">
           {upcoming.length === 0 ? (
-            <div style={{fontSize:13, color:'var(--steel)', padding:'10px 0'}}>No upcoming sessions. Book one to get started.</div>
+            <div style={{fontSize:14.3, color:'var(--steel)', padding:'10px 0'}}>No upcoming sessions. Book one to get started.</div>
           ) : (
             <Table columns={['Date','Time','Trainer','Type','Status']} rows={upcoming} renderRow={s=>(
               <tr key={s.id}><td className="mono">{s.date}</td><td className="mono">{s.time}</td><td>{s.trainer}</td><td>{s.type}</td><td><Badge status={s.status}/></td></tr>
@@ -129,12 +129,12 @@ function MemberDashboard({ members, sessions, setSessions, bookings, setBookings
           <div className="metrics-tracker">
             <div className="metric-tile">
               <div className="lbl">Weight</div>
-              <div className="val">{metrics.weightKg.toFixed(1)}<span style={{fontSize:12, color:'var(--steel)', marginLeft:4}}>kg</span></div>
+              <div className="val">{metrics.weightKg.toFixed(1)}<span style={{fontSize:13.2, color:'var(--steel)', marginLeft:4}}>kg</span></div>
               <div className="sub">Last entry: today</div>
             </div>
             <div className="metric-tile">
               <div className="lbl">Height</div>
-              <div className="val">{metrics.heightCm.toFixed(0)}<span style={{fontSize:12, color:'var(--steel)', marginLeft:4}}>cm</span></div>
+              <div className="val">{metrics.heightCm.toFixed(0)}<span style={{fontSize:13.2, color:'var(--steel)', marginLeft:4}}>cm</span></div>
               <div className="sub">{(metrics.heightCm/100).toFixed(2)} m</div>
             </div>
             <div className={"metric-tile "+bmiCategory.tone}>
@@ -145,11 +145,11 @@ function MemberDashboard({ members, sessions, setSessions, bookings, setBookings
           </div>
           <hr style={{border:'none', borderTop:'1px solid var(--line)', margin:'14px 0'}}/>
           <div style={{marginBottom:12}}>
-            <div style={{display:'flex', justifyContent:'space-between', fontSize:12, marginBottom:5}}><span>Monthly check-in goal</span><span className="mono">{monthCheckIns}/20 ({monthCheckPct}%)</span></div>
+            <div style={{display:'flex', justifyContent:'space-between', fontSize:13.2, marginBottom:5}}><span>Monthly check-in goal</span><span className="mono">{monthCheckIns}/20 ({monthCheckPct}%)</span></div>
             <div className="progress-bar"><div style={{width:`${monthCheckPct}%`}}></div></div>
           </div>
           <div>
-            <div style={{display:'flex', justifyContent:'space-between', fontSize:12, marginBottom:5}}><span>PT sessions used</span><span className="mono">{mySessionsCount}/{sessionGoal} ({sessionPct}%)</span></div>
+            <div style={{display:'flex', justifyContent:'space-between', fontSize:13.2, marginBottom:5}}><span>PT sessions used</span><span className="mono">{mySessionsCount}/{sessionGoal} ({sessionPct}%)</span></div>
             <div className="progress-bar"><div style={{width:`${sessionPct}%`}}></div></div>
           </div>
         </TabbedCard>
@@ -171,7 +171,7 @@ function MemberDashboard({ members, sessions, setSessions, bookings, setBookings
                   value={draft.heightCm} onChange={e=>setDraft(d=>({...d, heightCm:e.target.value}))} />
               </Field>
             </div>
-            <p style={{fontSize:11.5, color:'var(--steel)', marginTop:6, marginBottom:14}}>
+            <p style={{fontSize:12.7, color:'var(--steel)', marginTop:6, marginBottom:14}}>
               BMI is calculated automatically: weight ÷ (height in m)².
             </p>
             <button type="submit" className="btn btn-signal btn-block">Save Metrics</button>

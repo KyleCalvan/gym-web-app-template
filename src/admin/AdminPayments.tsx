@@ -51,7 +51,7 @@ function AdminPayments({ transactions, setTransactions, today, toast, addAudit }
 
       {showRefund && (
         <Modal title="Refund / Void Transaction" showCloseButton={false} onClose={()=>setShowRefund(null)}>
-          <p style={{fontSize:13, color:'var(--steel)', marginBottom:14}}>You are about to refund <b className="mono">{showRefund.id}</b> — {peso(showRefund.amount)} paid by {showRefund.member}.</p>
+          <p style={{fontSize:14.3, color:'var(--steel)', marginBottom:14}}>You are about to refund <b className="mono">{showRefund.id}</b> — {peso(showRefund.amount)} paid by {showRefund.member}.</p>
           <Field label="Reason"><textarea className="form-control" rows="3" placeholder="Reason for refund…" value={reason} onChange={e=>setReason(e.target.value)} /></Field>
           <div style={{display:'flex', gap:8}}>
             <button className="btn btn-danger" onClick={confirmRefund}>Confirm Refund</button>
@@ -62,9 +62,9 @@ function AdminPayments({ transactions, setTransactions, today, toast, addAudit }
 
       {showReceipts && (
         <Modal title="Generate Receipt" onClose={()=>setShowReceipts(false)}>
-          <p style={{fontSize:12.5, color:'var(--steel)', marginBottom:10}}>Pick a recent paid transaction to view/print a receipt.</p>
+          <p style={{fontSize:13.8, color:'var(--steel)', marginBottom:10}}>Pick a recent paid transaction to view/print a receipt.</p>
           {paid.length === 0 ? (
-            <div style={{fontSize:13, color:'var(--steel)'}}>No paid transactions available.</div>
+            <div style={{fontSize:14.3, color:'var(--steel)'}}>No paid transactions available.</div>
           ) : (
             <Table columns={['ID','Member','Amount','Method','']} rows={paid.slice(0,8)} renderRow={t=>(
               <tr key={t.id}>
@@ -82,8 +82,8 @@ function AdminPayments({ transactions, setTransactions, today, toast, addAudit }
       {viewTxn && (
         <Modal title="Receipt" onClose={()=>setViewTxn(null)}>
           <div className="receipt">
-            <div style={{textAlign:'center', fontFamily:'var(--font-display)', fontSize:15}}>VINATHLETICS GYM</div>
-            <div style={{textAlign:'center', fontSize:10.5, color:'var(--steel)'}}>Official Receipt · {viewTxn.id}</div>
+            <div style={{textAlign:'center', fontFamily:'var(--font-display)', fontSize:16.5}}>VINATHLETICS GYM</div>
+            <div style={{textAlign:'center', fontSize:11.6, color:'var(--steel)'}}>Official Receipt · {viewTxn.id}</div>
             <hr/>
             <div className="row"><span>{viewTxn.type}</span><span>{peso(viewTxn.amount)}</span></div>
             <div className="row"><span>Member</span><span>{viewTxn.member}</span></div>

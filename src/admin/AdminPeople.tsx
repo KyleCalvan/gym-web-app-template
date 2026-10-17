@@ -123,12 +123,12 @@ function AdminPeople({ trainers, setTrainers, staff, setStaff, members, sessions
                   <Avatar src={t.avatarUrl} name={t.name} size={38} />
                   <div>
                     <b>{t.name}</b>
-                    <div style={{fontSize:12, color:'var(--steel)'}}>{t.specialty}</div>
+                    <div style={{fontSize:13.2, color:'var(--steel)'}}>{t.specialty}</div>
                   </div>
                 </div>
                 <Badge status={t.status}/>
               </div>
-              <div className="grid grid-3" style={{marginTop:14, fontSize:12}}>
+              <div className="grid grid-3" style={{marginTop:14, fontSize:13.2}}>
                 <div><div className="eyebrow">Certs</div>{t.certs}</div>
                 <div><div className="eyebrow">Rating</div><span className="mono">★ {t.rating}</span></div>
                 <div><div className="eyebrow">Sessions/wk</div><span className="mono">{t.sessionsWeek}</span></div>
@@ -168,7 +168,7 @@ function AdminPeople({ trainers, setTrainers, staff, setStaff, members, sessions
       {/* ===== Staff Roster ===== */}
       <TabbedCard label="Ops" title="Staff Roster" right={<button className="btn btn-signal btn-sm" onClick={()=>setStaffAdding(true)}>+ Add Staff</button>}>
         {staff.filter(s => !s.deletedAt).length === 0 ? (
-          <div style={{fontSize:13, color:'var(--steel)', padding:'10px 0'}}>
+          <div style={{fontSize:14.3, color:'var(--steel)', padding:'10px 0'}}>
             No staff yet. Click <b>+ Add Staff</b> to add the first one.
           </div>
         ) : (
@@ -180,13 +180,13 @@ function AdminPeople({ trainers, setTrainers, staff, setStaff, members, sessions
                     <Avatar src={s.avatarUrl} name={s.name} size={38} />
                     <div>
                       <b>{s.name}</b>
-                      <div style={{fontSize:12, color:'var(--steel)'}}>{s.role} · {s.shift} shift</div>
+                      <div style={{fontSize:13.2, color:'var(--steel)'}}>{s.role} · {s.shift} shift</div>
                     </div>
                   </div>
                   <Badge status={s.status}/>
                 </div>
-                <div className="grid grid-2" style={{marginTop:14, fontSize:12}}>
-                  <div><div className="eyebrow">Email</div><span className="mono" style={{fontSize:11.5}}>{s.email}</span></div>
+                <div className="grid grid-2" style={{marginTop:14, fontSize:13.2}}>
+                  <div><div className="eyebrow">Email</div><span className="mono" style={{fontSize:12.7}}>{s.email}</span></div>
                   <div><div className="eyebrow">Phone</div><span className="mono">{s.phone}</span></div>
                 </div>
                 <div style={{display:'flex', gap:8, marginTop:14}}>
@@ -236,9 +236,9 @@ function AdminPeople({ trainers, setTrainers, staff, setStaff, members, sessions
 
       {viewing && (
         <Modal title={viewing.name + ' — Schedule'} onClose={()=>setViewing(null)}>
-          <p style={{fontSize:12.5, color:'var(--steel)', marginBottom:10}}>Sessions assigned to this trainer:</p>
+          <p style={{fontSize:13.8, color:'var(--steel)', marginBottom:10}}>Sessions assigned to this trainer:</p>
           {sessions.filter(s=>s.trainer===viewing.name).length === 0 ? (
-            <div style={{fontSize:13, color:'var(--steel)'}}>No sessions assigned yet.</div>
+            <div style={{fontSize:14.3, color:'var(--steel)'}}>No sessions assigned yet.</div>
           ) : (
             <Table columns={['ID','Member','Date','Time','Status']} rows={sessions.filter(s=>s.trainer===viewing.name)} renderRow={s=>(
               <tr key={s.id}>
@@ -313,7 +313,7 @@ function AdminPeople({ trainers, setTrainers, staff, setStaff, members, sessions
       {/* ===== Remove confirmations ===== */}
       {pendingTrainerRemove && (
         <Modal title="Remove Trainer?" showCloseButton={false} onClose={()=>setPendingTrainerRemove(null)}>
-          <p style={{fontSize:13, color:'var(--steel)', marginBottom:14}}>
+          <p style={{fontSize:14.3, color:'var(--steel)', marginBottom:14}}>
             You're about to remove <b>{pendingTrainerRemove.name}</b>. They will be archived
             and hidden from the trainer roster. A super admin can restore or delete them later.
           </p>
@@ -326,7 +326,7 @@ function AdminPeople({ trainers, setTrainers, staff, setStaff, members, sessions
 
       {pendingStaffRemove && (
         <Modal title="Remove Staff?" showCloseButton={false} onClose={()=>setPendingStaffRemove(null)}>
-          <p style={{fontSize:13, color:'var(--steel)', marginBottom:14}}>
+          <p style={{fontSize:14.3, color:'var(--steel)', marginBottom:14}}>
             You're about to remove <b>{pendingStaffRemove.name}</b>. They will be archived
             and hidden from the staff roster. A super admin can restore or delete them later.
           </p>

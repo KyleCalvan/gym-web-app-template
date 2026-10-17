@@ -204,15 +204,15 @@ function SuperAdminUsers({
               <td>
                 <Avatar src={null} name={u.name} />
                 {u.name}
-                <div className="mono" style={{ fontSize: 10.5, color: 'var(--steel)' }}>{u.id}</div>
+                <div className="mono" style={{ fontSize: 11.6, color: 'var(--steel)' }}>{u.id}</div>
               </td>
               <td>
-                <div style={{ fontSize: 12.5 }}>{u.email}</div>
-                {u.phone && <div className="mono" style={{ fontSize: 11, color: 'var(--steel)' }}>{u.phone}</div>}
+                <div style={{ fontSize: 13.8 }}>{u.email}</div>
+                {u.phone && <div className="mono" style={{ fontSize: 12.1, color: 'var(--steel)' }}>{u.phone}</div>}
               </td>
               <td>
                 <span style={{ textTransform: 'capitalize' }}>{u.kind}</span>
-                <div style={{ fontSize: 11.5, color: 'var(--steel)' }}>{u.label}</div>
+                <div style={{ fontSize: 12.7, color: 'var(--steel)' }}>{u.label}</div>
               </td>
               <td><Badge status={u.status} /></td>
               <td>
@@ -324,7 +324,7 @@ function SuperAdminUsers({
       {confirmAdd && (
         <Modal title="" showCloseButton={false} onClose={() => { setConfirmAdd(false); setPendingAddForm(null); }}>
           <div style={{ padding: '0 24px 24px', textAlign: 'center' }}>
-            <p style={{ fontSize: 15, margin: '0 0 24px', lineHeight: 1.6 }}>
+            <p style={{ fontSize: 16.5, margin: '0 0 24px', lineHeight: 1.6 }}>
               Are you sure you want to add this user as an {addKind === 'admin' ? 'admin' : addKind === 'member' ? 'member' : addKind === 'trainer' ? 'trainer' : 'staff'}?
             </p>
             <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
@@ -441,7 +441,7 @@ function SuperAdminUsers({
                 </Field>
               </>
             )}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, marginBottom: 16, fontSize: 13, color: 'var(--steel)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, marginBottom: 16, fontSize: 14.3, color: 'var(--steel)' }}>
               <input
                 type="checkbox"
                 style={{ cursor: 'pointer' }}
@@ -464,7 +464,7 @@ function SuperAdminUsers({
           showCloseButton={false}
           onClose={() => setPendingRestore(false)}
         >
-          <p style={{ fontSize: 13, color: 'var(--steel)', marginBottom: 14 }}>
+          <p style={{ fontSize: 14.3, color: 'var(--steel)', marginBottom: 14 }}>
             Are you sure you want to restore <b style={{ color: 'var(--text)' }}>{selectedIds.size}</b> selected users?
             This will move them from the archive back to the active system users list.
           </p>

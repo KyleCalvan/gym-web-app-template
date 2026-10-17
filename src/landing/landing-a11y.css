@@ -8,7 +8,7 @@
   background:var(--surface); color:var(--ink);
   border:1.5px solid var(--signal);
   padding:10px 14px; border-radius:0;
-  font-family:var(--font-mono); font-size:12px; letter-spacing:1px;
+  font-family:var(--font-mono); font-size:13.2px; letter-spacing:1px;
   text-transform:uppercase; text-decoration:none;
   transform:translateY(-180%);
   transition:transform .15s ease;

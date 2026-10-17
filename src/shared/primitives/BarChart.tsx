@@ -19,7 +19,7 @@ export function BarChart<T extends Record<string, unknown>>({
         const targetPx = (v / max * 110) + 'px';
         return (
           <div className="col" key={i}>
-            <div className="mono" style={{ fontSize: 10, color: 'var(--steel)' }}>
+            <div className="mono" style={{ fontSize: 11, color: 'var(--steel)' }}>
               {prefix || ''}{(v / 1000).toFixed(0)}k
             </div>
             <motion.div

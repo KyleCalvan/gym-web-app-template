@@ -126,7 +126,7 @@ export function ProfileMenu({ role, open, onClose, onProfile, onLogout, triggerR
     {confirmLogout && (
       <Modal title="Confirm Log Out" showCloseButton={false} onClose={() => setConfirmLogout(false)}>
         <div style={{ padding: '0 24px 24px' }}>
-          <p style={{ margin: '0 0 18px', color: 'var(--steel)', fontSize: 14, lineHeight: 1.5 }}>
+          <p style={{ margin: '0 0 18px', color: 'var(--steel)', fontSize: 15.4, lineHeight: 1.5 }}>
             Are you sure you want to log out? You'll need to sign in again to access your account.
           </p>
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>

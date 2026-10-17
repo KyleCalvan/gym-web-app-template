@@ -17,7 +17,7 @@ export function PasswordInput({ label, value, onChange, placeholder, required }:
       <label style={{
         display: 'block',
         fontFamily: 'var(--font-mono)',
-        fontSize: '11px',
+        fontSize: '12.1px',
         textTransform: 'uppercase',
         letterSpacing: '1px',
         color: 'var(--steel)',
@@ -47,7 +47,7 @@ export function PasswordInput({ label, value, onChange, placeholder, required }:
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
-            fontSize: '16px',
+            fontSize: '17.6px',
             padding: 0,
             zIndex: 2
           }}

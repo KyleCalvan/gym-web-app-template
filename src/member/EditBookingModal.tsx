@@ -27,7 +27,7 @@ function EditBookingModal({ booking, onClose, onSave, onCancelBooking }){
             exit={{ opacity: 0, x: -8 }}
             transition={{ duration: dur.fast, ease: ease.out }}
           >
-            <p style={{fontSize:12.5, color:'var(--steel)', marginBottom:12}}>
+            <p style={{fontSize:13.8, color:'var(--steel)', marginBottom:12}}>
               Currently scheduled with <b>{booking.trainer}</b> on <span className="mono">{booking.date}, {booking.time}</span>.
             </p>
             <div className="grid grid-2">
@@ -53,7 +53,7 @@ function EditBookingModal({ booking, onClose, onSave, onCancelBooking }){
             exit={{ opacity: 0, x: -8 }}
             transition={{ duration: dur.fast, ease: ease.out }}
           >
-            <p style={{fontSize:12.5, color:'var(--steel)', marginBottom:14}}>
+            <p style={{fontSize:13.8, color:'var(--steel)', marginBottom:14}}>
               This will cancel your session with <b>{booking.trainer}</b> on <span className="mono">{booking.date}, {booking.time}</span>.
               {booking.paid ? ' Paid sessions are refunded to your original payment method.' : ''}
             </p>

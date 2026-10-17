@@ -1,28 +1,28 @@
 /* ===== Checkout / POS / dashboard promo widget (used by views) ===== */
 
 .pay-method-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;}
-.pay-method{border:1.5px solid var(--line);border-radius:0;padding:12px 8px;text-align:center;background:var(--surface);font-size:12px;}
+.pay-method{border:1.5px solid var(--line);border-radius:0;padding:12px 8px;text-align:center;background:var(--surface);font-size:13.2px;}
 .pay-method.active{border-color:var(--ink);background:var(--surface-2);font-weight:700;}
 
-.checkout-summary{background:var(--surface);border:1px dashed var(--ink);border-radius:0;padding:14px;margin-bottom:14px;font-size:12.5px;}
+.checkout-summary{background:var(--surface);border:1px dashed var(--ink);border-radius:0;padding:14px;margin-bottom:14px;font-size:13.8px;}
 .checkout-summary .row{display:flex;justify-content:space-between;padding:3px 0;}
 
 .booking-date-picker{display:flex;gap:8px;align-items:center;}
 .booking-date-picker .form-control{min-width:0;flex:1;}
 .booking-selected-dates{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
-.booking-selected-date{display:flex;align-items:center;gap:6px;padding:4px 8px;background:var(--surface-2);border:1px solid var(--line);font-size:12px;}
-.booking-selected-date button{border:0;padding:0 2px;background:transparent;color:var(--steel);font-size:16px;line-height:1;cursor:pointer;}
-.booking-date-hint{color:var(--steel);font-size:12px;}
-.booking-total-preview{margin:0 0 12px;text-align:right;font-size:14px;font-weight:700;}
+.booking-selected-date{display:flex;align-items:center;gap:6px;padding:4px 8px;background:var(--surface-2);border:1px solid var(--line);font-size:13.2px;}
+.booking-selected-date button{border:0;padding:0 2px;background:transparent;color:var(--steel);font-size:17.6px;line-height:1;cursor:pointer;}
+.booking-date-hint{color:var(--steel);font-size:13.2px;}
+.booking-total-preview{margin:0 0 12px;text-align:right;font-size:15.4px;font-weight:700;}
 .booking-date-summary{max-width:65%;overflow-wrap:anywhere;text-align:right;}
 
-.success-check{width:56px;height:56px;border-radius:50%;background:var(--court-soft);color:var(--court);display:flex;align-items:center;justify-content:center;font-size:26px;margin:6px auto 14px;}
+.success-check{width:56px;height:56px;border-radius:50%;background:var(--court-soft);color:var(--court);display:flex;align-items:center;justify-content:center;font-size:28.6px;margin:6px auto 14px;}
 
 .modal-tabs{display:flex;gap:0;border:1.5px solid var(--ink);border-radius:0;overflow:hidden;margin-bottom:16px;}
-.modal-tabs button{flex:1;padding:8px;border:none;background:var(--surface);color:var(--ink);font-family:var(--font-mono);font-size:11px;letter-spacing:1px;text-transform:uppercase;}
+.modal-tabs button{flex:1;padding:8px;border:none;background:var(--surface);color:var(--ink);font-family:var(--font-mono);font-size:12.1px;letter-spacing:1px;text-transform:uppercase;}
 .modal-tabs button.active{background:var(--signal);color:var(--on-signal);}
 
-.promo-widget-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--line);font-size:12.5px;}
+.promo-widget-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--line);font-size:13.8px;}
 .promo-widget-row:last-child{border-bottom:none;}
 
 @media (max-width:600px){

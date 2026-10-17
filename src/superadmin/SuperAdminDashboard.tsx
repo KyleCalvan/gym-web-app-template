@@ -23,7 +23,7 @@ function SuperAdminDashboard({
       </div>
 
       <TabbedCard label="System" title="Super Admin Overview">
-        <p style={{ fontSize: 13, color: 'var(--steel)', margin: '0 0 14px' }}>
+        <p style={{ fontSize: 14.3, color: 'var(--steel)', margin: '0 0 14px' }}>
           Today is <b>{today}</b>. You have <b>{liveSessions}</b> active session{liveSessions === 1 ? '' : 's'} and <b>{auditLog.length}</b> log entries on file.
         </p>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -39,7 +39,7 @@ function SuperAdminDashboard({
 
       <TabbedCard label="System" title="Recent Activity">
         {recent.length === 0 ? (
-          <div style={{ fontSize: 13, color: 'var(--steel)' }}>No log entries yet.</div>
+          <div style={{ fontSize: 14.3, color: 'var(--steel)' }}>No log entries yet.</div>
         ) : (
           <Table
             columns={['Level', 'Actor', 'Action', 'Details', 'When']}
@@ -50,7 +50,7 @@ function SuperAdminDashboard({
                   <span
                     className="mono"
                     style={{
-                      fontSize: 10.5,
+                      fontSize: 11.6,
                       textTransform: 'uppercase',
                       color:
                         l.level === 'error'
@@ -65,7 +65,7 @@ function SuperAdminDashboard({
                   </span>
                 </td>
                 <td>
-                  {l.actor} <span className="mono" style={{ fontSize: 10.5, color: 'var(--steel)' }}>· {l.actorRole}</span>
+                  {l.actor} <span className="mono" style={{ fontSize: 11.6, color: 'var(--steel)' }}>· {l.actorRole}</span>
                 </td>
                 <td>{l.action}</td>
                 <td style={{ color: 'var(--steel)' }}>{l.details || '—'}</td>

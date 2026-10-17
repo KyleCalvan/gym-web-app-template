@@ -55,7 +55,7 @@ function AdminProfile({ admins, setAdmins, currentUserId, toast, addAudit }: Vie
             />
           </div>
         </div>
-        <div style={{fontSize:12.5}}>
+        <div style={{fontSize:13.8}}>
           <div className="eyebrow">Admin ID</div><p className="mono">{me?.id || '—'}</p>
           <div className="eyebrow">Admin Since</div><p className="mono">{me?.createdAt || '—'}</p>
         </div>
@@ -76,7 +76,7 @@ function AdminProfile({ admins, setAdmins, currentUserId, toast, addAudit }: Vie
           </form>
         </TabbedCard>
       </div>
-      <SecurityFlow isOpen={showSecurityFlow} onClose={() => setShowSecurityFlow(false)} toast={toast} />
+      <SecurityFlow isOpen={showSecurityFlow} onClose={() => setShowSecurityFlow(false)} toast={toast} role="admin" accountEmail={me?.email || ''} />
     </div>
   );
 }

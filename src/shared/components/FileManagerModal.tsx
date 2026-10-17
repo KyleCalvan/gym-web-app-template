@@ -28,22 +28,22 @@ export function FileManagerModal({ onClose, onSelect }: FileManagerModalProps) {
     <Modal title="File Manager" onClose={onClose} wide>
       <div style={{ padding: '0 24px 24px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-          <p style={{ fontSize: 14, color: 'var(--steel)', margin: 0 }}>Manage and access your gym documents.</p>
+          <p style={{ fontSize: 15.4, color: 'var(--steel)', margin: 0 }}>Manage and access your gym documents.</p>
           <button className="btn btn-signal btn-sm" onClick={handleUpload}>Upload File</button>
         </div>
         <div style={{ border: '1px solid var(--steel)', borderRadius: 0, overflow: 'hidden' }}>
-          <div style={{ display: 'flex', padding: '10px 14px', background: 'var(--paper)', borderBottom: '1px solid var(--steel)', fontSize: 12, fontWeight: 'bold', color: 'var(--steel)', textTransform: 'uppercase' }}>
+          <div style={{ display: 'flex', padding: '10px 14px', background: 'var(--paper)', borderBottom: '1px solid var(--steel)', fontSize: 13.2, fontWeight: 'bold', color: 'var(--steel)', textTransform: 'uppercase' }}>
             <div style={{ flex: 2 }}>File Name</div>
             <div style={{ flex: 1 }}>Size</div>
             <div style={{ textAlign: 'right' }}>Action</div>
           </div>
           <div style={{ maxHeight: 300, overflowY: 'auto' }}>
             {files.map((file, i) => (
-              <div key={i} style={{ display: 'flex', padding: '10px 14px', borderBottom: i === files.length - 1 ? 'none' : '1px solid var(--steel)', fontSize: 13, alignItems: 'center', justifyContent: 'space-between' }}>
+              <div key={i} style={{ display: 'flex', padding: '10px 14px', borderBottom: i === files.length - 1 ? 'none' : '1px solid var(--steel)', fontSize: 14.3, alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ flex: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file.name}</div>
                 <div style={{ flex: 1, color: 'var(--steel)' }}>{file.size}</div>
                 <div style={{ textAlign: 'right' }}>
-                  <a href={file.url} className="btn btn-outline btn-sm" style={{ padding: '4px 8px', fontSize: 11 }}>Download</a>
+                  <a href={file.url} className="btn btn-outline btn-sm" style={{ padding: '4px 8px', fontSize: 12.1 }}>Download</a>
                 </div>
               </div>
             ))}

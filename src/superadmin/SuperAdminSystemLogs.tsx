@@ -74,7 +74,7 @@ function SuperAdminSystemLogs({ auditLog, setAuditLog, addAudit, toast }) {
         </div>
 
         {filtered.length === 0 ? (
-          <div style={{ fontSize: 13, color: 'var(--steel)', padding: '14px 0' }}>
+          <div style={{ fontSize: 14.3, color: 'var(--steel)', padding: '14px 0' }}>
             No log entries match these filters.
           </div>
         ) : (
@@ -87,7 +87,7 @@ function SuperAdminSystemLogs({ auditLog, setAuditLog, addAudit, toast }) {
                   <span
                     className="mono"
                     style={{
-                      fontSize: 10.5,
+                      fontSize: 11.6,
                       textTransform: 'uppercase',
                       color:
                         l.level === 'error'
@@ -102,7 +102,7 @@ function SuperAdminSystemLogs({ auditLog, setAuditLog, addAudit, toast }) {
                   </span>
                 </td>
                 <td>
-                  {l.actor} <span className="mono" style={{ fontSize: 10.5, color: 'var(--steel)' }}>· {l.actorRole}</span>
+                  {l.actor} <span className="mono" style={{ fontSize: 11.6, color: 'var(--steel)' }}>· {l.actorRole}</span>
                 </td>
                 <td>{l.action}</td>
                 <td style={{ color: 'var(--steel)' }}>{l.details || '—'}</td>
@@ -115,7 +115,7 @@ function SuperAdminSystemLogs({ auditLog, setAuditLog, addAudit, toast }) {
 
       {confirmClear && (
         <Modal title="Clear All Logs?" showCloseButton={false} onClose={() => setConfirmClear(false)}>
-          <p style={{ fontSize: 13, color: 'var(--steel)', marginBottom: 14 }}>
+          <p style={{ fontSize: 14.3, color: 'var(--steel)', marginBottom: 14 }}>
             You're about to clear all <b>{auditLog.length}</b> log entries. This cannot be undone.
           </p>
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>

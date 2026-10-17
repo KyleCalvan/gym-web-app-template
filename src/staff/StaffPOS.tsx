@@ -27,12 +27,12 @@ function StaffPOS({ transactions, setTransactions, members, plans, toast }) {
   };
 
   return (
-    <div className="grid grid-2-1">
+    <div className="grid grid-2-1 staff-pos">
       <TabbedCard label="POS" title="New Sale">
         <div className="grid grid-3">
           {items.map((it,i)=>(
-            <button key={i} className="card" style={{textAlign:'left', border:'1.5px solid var(--line)'}} onClick={()=>setCart([...cart, it])}>
-              <div style={{fontSize:13, fontWeight:600}}>{it.name}</div>
+            <button key={i} className="card pos-item" style={{textAlign:'left', border:'1.5px solid var(--line)'}} onClick={()=>setCart([...cart, it])}>
+              <div style={{fontSize:14.3, fontWeight:600}}>{it.name}</div>
               <div className="mono" style={{color:'var(--signal-ink)', marginTop:6}}>{peso(it.price)}</div>
             </button>
           ))}
@@ -50,15 +50,15 @@ function StaffPOS({ transactions, setTransactions, members, plans, toast }) {
           </Select>
         </Field>
         <div className="receipt">
-          <div style={{textAlign:'center', fontFamily:'var(--font-display)', fontSize:15}}>VINATHLETICS GYM</div>
-          <div style={{textAlign:'center', fontSize:10.5, color:'var(--steel)'}}>Official Receipt</div>
+          <div style={{textAlign:'center', fontFamily:'var(--font-display)', fontSize:16.5}}>VINATHLETICS GYM</div>
+          <div style={{textAlign:'center', fontSize:11.6, color:'var(--steel)'}}>Official Receipt</div>
           <hr/>
           {cart.length === 0 ? (
-            <div style={{fontSize:12, color:'var(--steel)', textAlign:'center', padding:'8px 0'}}>Cart is empty. Tap an item to add.</div>
+            <div style={{fontSize:13.2, color:'var(--steel)', textAlign:'center', padding:'8px 0'}}>Cart is empty. Tap an item to add.</div>
           ) : cart.map((c,i)=>(<div className="row" key={i}><span>{c.name}</span><span>{peso(c.price)}</span></div>))}
           <hr/>
           <div className="row" style={{fontWeight:700}}><span>TOTAL</span><span>{peso(total)}</span></div>
-          {cart.length > 0 && <div style={{marginTop:8, fontSize:11.5, color:'var(--steel)'}}>Method: <b>{method}</b> · Member: <b>{member ? member.name : 'Walk-in'}</b></div>}
+          {cart.length > 0 && <div style={{marginTop:8, fontSize:12.7, color:'var(--steel)'}}>Method: <b>{method}</b> · Member: <b>{member ? member.name : 'Walk-in'}</b></div>}
         </div>
         <div style={{display:'flex', gap:8, marginTop:14}}>
           <button className="btn btn-signal btn-block" onClick={charge}>Charge {peso(total)}</button>

@@ -96,6 +96,14 @@ export default function Landing({ plans, promotions, trainers, onNavigate }: Lan
   const trainersSource  = (trainers && trainers.length > 0) ? trainers : LANDING_TRAINERS;
   const activePlans     = plansSource.filter((p) => p.status !== 'Inactive');
   const activeTrainers  = trainersSource.filter((t) => t.status !== 'On Leave');
+  const landingTrainers = [
+    ...activeTrainers,
+    ...LANDING_TRAINERS
+      .filter((trainer) => !activeTrainers.some(
+        (activeTrainer) => activeTrainer.id === trainer.id || activeTrainer.name === trainer.name
+      ))
+      .slice(0, Math.max(0, 4 - activeTrainers.length)),
+  ];
 
   return (
     <>
@@ -106,7 +114,7 @@ export default function Landing({ plans, promotions, trainers, onNavigate }: Lan
         <WhyCardsRow />
         <PromoStrip promotionsRef={refs.promotions} activePromos={activePromos} />
         <PlansStrip plansRef={refs.plans} activePlans={activePlans} onNavigate={onNavigate} />
-        <TrainersStrip trainersRef={refs.trainers} activeTrainers={activeTrainers} onNavigate={onNavigate} />
+        <TrainersStrip trainersRef={refs.trainers} activeTrainers={landingTrainers} onNavigate={onNavigate} />
         <ContactStrip contactRef={refs.contact} />
         <CtaBand onNavigate={onNavigate} />
         <SiteFooter />

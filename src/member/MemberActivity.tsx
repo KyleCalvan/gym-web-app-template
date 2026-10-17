@@ -148,7 +148,7 @@ function MemberActivity({
         <TabbedCard label="Notice" title="">
           <div style={{display:'flex', alignItems:'center', gap:12}}>
             <Badge status="Frozen" />
-            <div style={{fontSize:13, color:'var(--steel)'}}>
+            <div style={{fontSize:14.3, color:'var(--steel)'}}>
               Your account is currently frozen. Check-in is paused. Contact admin to unfreeze.
             </div>
           </div>
@@ -224,7 +224,7 @@ function MemberActivity({
         </TabbedCard>
         <TabbedCard label="Coaching" title="Coaching Session Log">
           {mySessions.length === 0 ? (
-            <div style={{fontSize:13, color:'var(--steel)', padding:'10px 0'}}>
+            <div style={{fontSize:14.3, color:'var(--steel)', padding:'10px 0'}}>
               No coaching sessions yet. Book one from the Sessions tab.
             </div>
           ) : (

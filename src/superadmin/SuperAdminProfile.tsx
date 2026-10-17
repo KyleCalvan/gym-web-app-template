@@ -55,7 +55,7 @@ function SuperAdminProfile({ superadmins, setSuperadmins, currentUserId, toast, 
             />
           </div>
         </div>
-        <div style={{fontSize:12.5}}>
+        <div style={{fontSize:13.8}}>
           <div className="eyebrow">Super Admin ID</div><p className="mono">{me?.id || '—'}</p>
           <div className="eyebrow">Super Admin Since</div><p className="mono">{me?.createdAt || '—'}</p>
         </div>
@@ -76,7 +76,7 @@ function SuperAdminProfile({ superadmins, setSuperadmins, currentUserId, toast, 
           </form>
         </TabbedCard>
       </div>
-      <SecurityFlow isOpen={showSecurityFlow} onClose={() => setShowSecurityFlow(false)} toast={toast} />
+      <SecurityFlow isOpen={showSecurityFlow} onClose={() => setShowSecurityFlow(false)} toast={toast} role="superadmin" accountEmail={me?.email || ''} />
     </div>
   );
 }

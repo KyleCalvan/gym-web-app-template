@@ -65,11 +65,11 @@ function MemberProfile({ members, setMembers, currentUserId, toast, addAudit, on
           </div>
         </div>
         {isFrozen && (
-          <div style={{padding:'8px 10px', background:'var(--paper)', border:'1.5px solid var(--amber)', borderRadius:'var(--radius)', fontSize:12, color:'var(--steel)', marginBottom:10}}>
+          <div style={{padding:'8px 10px', background:'var(--paper)', border:'1.5px solid var(--amber)', borderRadius:'var(--radius)', fontSize:13.2, color:'var(--steel)', marginBottom:10}}>
             <Badge status="Frozen" /> &nbsp;Account frozen — admin must unfreeze to resume activity.
           </div>
         )}
-        <div style={{fontSize:12.5}}>
+        <div style={{fontSize:13.8}}>
           <div className="eyebrow">Member ID</div><p className="mono">{me?.id || '—'}</p>
           <div className="eyebrow">Plan</div><p>{me?.plan || '—'}</p>
           <div className="eyebrow">Member Since</div><p className="mono">{me?.joined || '—'}</p>
@@ -92,7 +92,7 @@ function MemberProfile({ members, setMembers, currentUserId, toast, addAudit, on
         </TabbedCard>
 
         <TabbedCard label="Danger Zone" title="Delete Account">
-          <p style={{ margin: '0 0 14px', fontSize: 12.5, color: 'var(--steel)', lineHeight: 1.5 }}>
+          <p style={{ margin: '0 0 14px', fontSize: 13.8, color: 'var(--steel)', lineHeight: 1.5 }}>
             Permanently remove your membership record. This clears your profile, plan and history
             from the gym ledger and cannot be undone — you'd need to register again to come back.
           </p>
@@ -106,12 +106,12 @@ function MemberProfile({ members, setMembers, currentUserId, toast, addAudit, on
           </button>
         </TabbedCard>
       </div>
-      <SecurityFlow isOpen={showSecurityFlow} onClose={() => setShowSecurityFlow(false)} toast={toast} />
+      <SecurityFlow isOpen={showSecurityFlow} onClose={() => setShowSecurityFlow(false)} toast={toast} role="member" accountEmail={me?.email || ''} />
 
       {confirmDelete && (
         <Modal title="Delete Account" showCloseButton={false} onClose={() => setConfirmDelete(false)}>
           <div style={{ padding: '0 24px 24px' }}>
-            <p style={{ margin: '0 0 18px', color: 'var(--steel)', fontSize: 14, lineHeight: 1.5 }}>
+            <p style={{ margin: '0 0 18px', color: 'var(--steel)', fontSize: 15.4, lineHeight: 1.5 }}>
               Are you sure you want to delete your account? Your membership, plan and activity
               history will be permanently removed, and you'll be signed out.
             </p>

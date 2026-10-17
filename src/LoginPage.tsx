@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Field, TextInput, Modal } from './shared';
+import { TwoFactorChallenge } from './shared/components/TwoFactorChallenge';
+import { getTwoFactorEmail, isTwoFactorEnabled } from './shared/components/twoFactor';
 import { dur, ease } from './motion.tsx';
 import type { Member, Plan, Role, Setter } from './types.ts';
 
@@ -42,6 +44,8 @@ export default function LoginPage({
 }: LoginPageProps) {
   const [role, setRole] = useState<Role>(defaultRole);
   const [memberTab, setMemberTab] = useState<'login' | 'register'>(defaultTab);
+  const [showTwoFactorChallenge, setShowTwoFactorChallenge] = useState(false);
+  const [challengeEmail, setChallengeEmail] = useState('');
 
   // Sign-in fields (prefilled per role)
   const [email, setEmail] = useState<string>(ROLE_CREDS[defaultRole].email);
@@ -118,6 +122,17 @@ export default function LoginPage({
       return;
     }
 
+    try {
+      if (isTwoFactorEnabled(role)) {
+        setChallengeEmail(getTwoFactorEmail(role) || email);
+        setShowTwoFactorChallenge(true);
+        return;
+      }
+    } catch {
+      showToast('Could not check two-step verification settings. Please try again.');
+      return;
+    }
+
     onLogin(role);
   };
 
@@ -160,16 +175,19 @@ export default function LoginPage({
 
       <div className="auth-page-body">
         <motion.div className="auth-page-aside" {...item(0)}>
-          <div className="eyebrow">Sign in</div>
-          <h2>Welcome back to the floor.</h2>
-          <p>Pick your role and sign in to access its dashboard.</p>
-          <ul>
-            <li><b>Member</b> — track progress, sessions, payments.</li>
-            <li><b>Staff</b> — front desk, point of sale, day-to-day ops.</li>
-            <li><b>Trainer</b> — assigned sessions and availability.</li>
-            <li><b>Admin</b> — full access to members, plans, reports, promotions.</li>
-            <li><b>Super Admin</b> — user management, audit logs, backups, sessions.</li>
-          </ul>
+          <div className="eyebrow">
+            {role === 'member' && memberTab === 'register' ? 'Create account' : 'Sign in'}
+          </div>
+          <h2>
+            {role === 'member' && memberTab === 'register'
+              ? 'Your journey starts here.'
+              : 'Welcome back to the floor.'}
+          </h2>
+          <p>
+            {role === 'member' && memberTab === 'register'
+              ? 'Start your fitness journey with everything you need in one place. Create your account to manage your training sessions, follow your progress, connect with your trainers, and stay on top of your fitness goals. Whether you’re just getting started or ready to take your training to the next level, this is where your journey begins.'
+              : 'Stay on track with everything you need in one place. Sign in to manage your training sessions, track your progress, connect with your trainers, and keep your fitness goals within reach. Whether you’re continuing your journey or ready for your next challenge, this is where you pick up where you left off.'}
+          </p>
         </motion.div>
 
         <motion.div
@@ -190,10 +208,10 @@ export default function LoginPage({
             ))}
           </div>
 
-          <h2 style={{ fontSize: 20, textTransform: 'uppercase', marginBottom: 4 }}>
+          <h2 style={{ fontSize: 22, textTransform: 'uppercase', marginBottom: 4 }}>
             {role === 'member' && memberTab === 'register' ? 'Create Account' : `${creds.label} Sign In`}
           </h2>
-          <p style={{ color: 'var(--steel)', fontSize: 13, margin: '4px 0 14px' }}>
+          <p style={{ color: 'var(--steel)', fontSize: 14.3, margin: '4px 0 14px' }}>
             {role === 'member'
               ? (memberTab === 'login' ? 'Access your member dashboard' : 'Join VinAthletics Gym today')
               : `Sign in to the ${creds.label} dashboard.`}
@@ -277,7 +295,7 @@ export default function LoginPage({
                 <button
                   type="button"
                   className="btn-link-sm"
-                  style={{ fontSize: 11, fontWeight: 'bold', color:'var(--signal-ink)', textTransform: 'uppercase', cursor: 'pointer', border: 'none', background: 'none', padding: 0 }}
+                  style={{ fontSize: 12.1, fontWeight: 'bold', color:'var(--signal-ink)', textTransform: 'uppercase', cursor: 'pointer', border: 'none', background: 'none', padding: 0 }}
                   onClick={() => setForgotPasswordOpen(true)}
                 >
                   Forgot Password
@@ -286,11 +304,20 @@ export default function LoginPage({
               <button type="submit" className="btn btn-signal btn-block">
                 Sign In to {creds.label} Dashboard
               </button>
-              {creds.hint && <p style={{ fontSize: 11.5, color: 'var(--steel)', marginTop: 12, textAlign: 'center' }}>{creds.hint}</p>}
+              {creds.hint && <p style={{ fontSize: 12.7, color: 'var(--steel)', marginTop: 12, textAlign: 'center' }}>{creds.hint}</p>}
             </form>
           )}
         </motion.div>
       </div>
+
+      {showTwoFactorChallenge && (
+        <TwoFactorChallenge
+          mode="challenge"
+          email={challengeEmail}
+          onCancel={() => setShowTwoFactorChallenge(false)}
+          onVerified={() => onLogin(role)}
+        />
+      )}
 
       {toast && (
         <motion.div
@@ -306,7 +333,7 @@ export default function LoginPage({
       {forgotPasswordOpen && (
         <Modal title="Reset your password" className="modal-dark" onClose={closeResetFlow}>
           <form onSubmit={handleResetPassword} style={{ padding: '0 24px 24px' }}>
-            <p style={{ margin: '0 0 18px', color: 'var(--steel)', fontSize: 13, lineHeight: 1.6 }}>
+            <p style={{ margin: '0 0 18px', color: 'var(--steel)', fontSize: 14.3, lineHeight: 1.6 }}>
               Enter your email address below and we'll send you a password reset link so you can get back to your account.
             </p>
             <Field label="EMAIL">
@@ -319,7 +346,7 @@ export default function LoginPage({
             <button type="submit" className="btn btn-signal btn-block" style={{ marginTop: 12 }}>
               RESET PASSWORD
             </button>
-            <div style={{ textAlign: 'center', marginTop: 20, fontSize: 13, color: 'var(--steel)' }}>
+            <div style={{ textAlign: 'center', marginTop: 20, fontSize: 14.3, color: 'var(--steel)' }}>
               Remember password?{' '}
               <span
                 style={{ color:'var(--signal-ink)', cursor: 'pointer', fontWeight: 'bold' }}
@@ -335,11 +362,11 @@ export default function LoginPage({
       {resetSuccessOpen && (
         <Modal title="Check your email" className="modal-dark" onClose={closeResetFlow}>
           <div style={{ padding: '0 24px 24px', textAlign: 'center' }}>
-            <p style={{ margin: '0 0 12px', fontSize: 15, lineHeight: 1.6 }}>
+            <p style={{ margin: '0 0 12px', fontSize: 16.5, lineHeight: 1.6 }}>
               We've sent a password reset link to <br />
               <strong style={{ color:'var(--signal-ink)' }}>{resetEmail}</strong>
             </p>
-            <p style={{ margin: '0 0 24px', color: 'var(--steel)', fontSize: 13, lineHeight: 1.6 }}>
+            <p style={{ margin: '0 0 24px', color: 'var(--steel)', fontSize: 14.3, lineHeight: 1.6 }}>
               Please check your inbox and follow the instructions to reset your password
             </p>
             <button
@@ -369,57 +396,64 @@ export default function LoginPage({
               aria-label="Membership agreement"
               tabIndex={0}
             >
-              <p className="terms-updated">Last updated: 26 August 2026</p>
+              <p className="terms-updated">Last updated: 17 October 2026</p>
 
-              <p><strong>Who can use NorthGems</strong></p>
+              <p><strong>Who can use VinAthletics</strong></p>
               <p>
-                Vend Finder and GrowScan are for members of the NorthGems Discord server. You sign
-                in with Discord, and we check that you are in our server. We re-check every few
-                seconds, so if you leave the server you lose access straight away — you do not have
-                to sign out first. Online Count is open to everyone.
+                VinAthletics provides tools for gym members to manage their membership, training
+                sessions, bookings, and progress, and for authorized staff and trainers to support
+                those services. When you create an account, provide accurate information and keep
+                your sign-in details private. You are responsible for activity under your account;
+                contact us if you believe someone else has accessed it.
               </p>
 
-              <p><strong>What the data is — and what it is not</strong></p>
+              <p><strong>Using gym and fitness information</strong></p>
               <p>
-                Our bots visit Growtopia worlds and record what vending machines are offering. Every
-                price you see is a snapshot from the moment a bot was there, not a live feed. A
-                world may have been re-priced, emptied, or locked since then. Always check in-game
-                before you trade.
+                Plans, prices, trainer availability, schedules, and account information shown on the
+                site are provided to help you manage your gym experience. Details and availability
+                can change, and information may not always be current. Confirm important details
+                with the gym before relying on them.
               </p>
               <p>
-                We do not guarantee that the data is complete or correct, and we are not responsible
-                for trades you make based on it.
+                The site is not medical advice and does not replace advice from a qualified health
+                professional. Consider your health and fitness level before exercising, use
+                equipment safely, and follow applicable instructions from gym staff and trainers.
+                Stop exercising and seek appropriate help if you feel unwell or injured.
+              </p>
+
+              <p><strong>Memberships, bookings &amp; payments</strong></p>
+              <p>
+                Review the plan, session, and price shown before confirming a purchase or booking.
+                Prices and availability may change. For questions about charges, changing or
+                cancelling a booking or membership, or refund eligibility, contact the gym directly;
+                any applicable terms provided at the time of purchase also apply.
               </p>
 
               <p><strong>Fair use</strong></p>
               <p>
-                Each account has a daily search quota. Please do not script the site, scrape it,
-                share your account, or try to work around the quota. Accounts that do can be
-                suspended without warning.
-              </p>
-
-              <p><strong>Fixed prices &amp; haggling</strong></p>
-              <p>
-                Prices of listed packages are fixed and shown before you order. Asking staff for a
-                lower price on a listed package (custom orders excepted) is not allowed. Each case
-                gets a warning: the first 3 are warnings only; from the 4th, every warning adds +1%
-                to your future orders. Repeated cases can lead to a ban from ordering.
+                Use the site only for its intended gym and account-management purposes. Do not
+                misuse the service, interfere with its operation, attempt unauthorized access, or
+                access or change another person’s information. We may restrict or suspend access
+                where necessary to protect members, the gym, or the service.
               </p>
 
               <p><strong>Availability</strong></p>
               <p>
-                NorthGems is a free tool run by a small team. There is no uptime guarantee —
-                features can break, go down for maintenance, or change.
+                We work to keep VinAthletics available, but cannot guarantee uninterrupted or
+                error-free access. Features may be unavailable during maintenance or due to
+                technical issues, and the site may change over time.
               </p>
 
               <p><strong>Changes</strong></p>
               <p>
-                These terms can change. The date at the top tells you when they last did. Continuing
-                to use the site means you accept the current version.
+                We may update these terms as the service changes. The date above shows when they
+                were last updated. By continuing to use VinAthletics after an update, you accept
+                the revised terms.
               </p>
 
               <p style={{ marginBottom: 0 }}>
-                Questions go to discord.gg/northgems.
+                Questions? Contact us at <a href="mailto:hello@vinathletics.gym">hello@vinathletics.gym</a> or
+                <a href="tel:+639175550142"> +63 917 555 0142</a>.
               </p>
             </div>
 

@@ -14,7 +14,7 @@
   border:1.5px solid var(--line);
   background:var(--surface);
   color:var(--ink);
-  font-size:13px;
+  font-size:14.3px;
   font-family:var(--font-body);
 }
 .global-search input::placeholder{ color:var(--steel); }
@@ -26,7 +26,7 @@
   top:50%;
   transform:translateY(-50%);
   color:var(--steel);
-  font-size:13px;
+  font-size:14.3px;
   pointer-events:none;
 }
 
@@ -56,15 +56,15 @@
   background:transparent;
   color:var(--ink-soft);
   border-radius:var(--radius);
-  font-size:13px;
+  font-size:14.3px;
   font-family:var(--font-body);
   cursor:pointer;
 }
-.global-search .gs-item .ic{ width:18px; text-align:center; font-size:14px; }
+.global-search .gs-item .ic{ width:18px; text-align:center; font-size:15.4px; }
 .global-search .gs-item .gs-label{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .global-search .gs-item .gs-sec{
   font-family:var(--font-mono);
-  font-size:9.5px;
+  font-size:10.5px;
   letter-spacing:.5px;
   text-transform:uppercase;
   color:var(--steel);
@@ -79,5 +79,5 @@
      search takes the next full row (order:5 — see app-shell.css). Basis 100%
      forces the wrap instead of squeezing into the end of the first row. */
   .global-search{ flex:1 1 100%; max-width:none; order:5; }
-  .global-search input{ min-height:44px; font-size:14px; }
+  .global-search input{ min-height:44px; font-size:15.4px; }
 }

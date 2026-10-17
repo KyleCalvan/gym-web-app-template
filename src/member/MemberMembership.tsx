@@ -86,7 +86,7 @@ function MemberMembership({ members, setMembers, plans, setTransactions, current
       <div className="plan-card featured" style={{marginBottom:22}}>
         <div className="eyebrow" style={{color:'var(--steel)'}}>Current Plan</div>
         <div className="price">{me?.plan || 'Premium'}</div>
-        <div style={{fontSize:13, color:'var(--steel)'}}>Renews Sep 12, 2026 · {peso((plans.find(p=>p.name===me?.plan)||{}).price || 2499)}/mo</div>
+        <div style={{fontSize:14.3, color:'var(--steel)'}}>Renews Sep 12, 2026 · {peso((plans.find(p=>p.name===me?.plan)||{}).price || 2499)}/mo</div>
         <div style={{display:'flex', gap:8, alignItems:'center', marginBottom:12}}>
           <Badge status={me?.status || 'Active'} />
           {verificationStatus !== 'None' && (
@@ -96,7 +96,7 @@ function MemberMembership({ members, setMembers, plans, setTransactions, current
           )}
         </div>
         {isFrozen && (
-          <div style={{marginTop:12, padding:'10px 12px', background:'var(--surface-2)', borderRadius:'var(--radius)', fontSize:12.5, color:'var(--ink)'}}>
+          <div style={{marginTop:12, padding:'10px 12px', background:'var(--surface-2)', borderRadius:'var(--radius)', fontSize:13.8, color:'var(--ink)'}}>
             Your membership is currently <b>frozen</b>. Renewal and plan switching are paused until an admin unfreezes your account.
           </div>
         )}
@@ -113,8 +113,8 @@ function MemberMembership({ members, setMembers, plans, setTransactions, current
             return (
               <div className={"plan-card"+(p.featured?' featured':'')} key={p.name}>
                 {p.featured && <span className="ribbon">Most Popular</span>}
-                <h3 style={{fontSize:18}}>{p.name}</h3>
-                {isStudent && <div style={{fontSize:11, color:'var(--signal)', fontWeight:600, marginBottom:4}}>STUDENT DISCOUNT</div>}
+                <h3 style={{fontSize:19.8}}>{p.name}</h3>
+                {isStudent && <div style={{fontSize:12.1, color:'var(--signal)', fontWeight:600, marginBottom:4}}>STUDENT DISCOUNT</div>}
                 <div className="price">{peso(p.price)}<span>/{p.period}</span></div>
                 <ul>{p.perks.map((perk,i)=><li key={i}>✓ {perk}</li>)}</ul>
                 <button className={"btn btn-sm btn-block "+(isCurrent?'btn-outline':'btn-signal')} disabled={isCurrent} onClick={()=>{setPicked(p.name); setShowSwitch(true);}}>
@@ -128,7 +128,7 @@ function MemberMembership({ members, setMembers, plans, setTransactions, current
 
       {showRenew && (
         <Modal title="Renew Membership" onClose={()=>setShowRenew(false)}>
-          <p style={{fontSize:13, color:'var(--steel)', marginBottom:14}}>Renew your <b>{me?.plan}</b> plan. A paid transaction will be recorded.</p>
+          <p style={{fontSize:14.3, color:'var(--steel)', marginBottom:14}}>Renew your <b>{me?.plan}</b> plan. A paid transaction will be recorded.</p>
           <Field label="Payment Method">
             <Select value={method} onChange={setMethod}>
               <option>GCash</option><option>Card</option><option>Cash</option>
@@ -178,14 +178,14 @@ function MemberMembership({ members, setMembers, plans, setTransactions, current
 
             {verifyStep === 1 && (
               <motion.div initial={{opacity:0}} animate={{opacity:1}}>
-                <p style={{fontSize:14, color:'var(--steel)', marginBottom:16, lineHeight:1.5}}>Please upload a clear photo of your <b style={{color:'var(--ink)'}}>Student ID</b>.</p>
+                <p style={{fontSize:15.4, color:'var(--steel)', marginBottom:16, lineHeight:1.5}}>Please upload a clear photo of your <b style={{color:'var(--ink)'}}>Student ID</b>.</p>
                 <Field label="Student ID Image">
                   <input
                     type="file"
                     accept="image/*"
                     onChange={e => handleFileUpload(e, 'id')}
                     style={{
-                      fontSize: 16,
+                      fontSize: 17.6,
                       padding: '8px',
                       cursor: 'pointer',
                       width: '100%'
@@ -193,44 +193,44 @@ function MemberMembership({ members, setMembers, plans, setTransactions, current
                   />
                 </Field>
                 {idPreview && <img src={idPreview} style={{width:'100%', maxHeight:200, objectFit:'contain', borderRadius:8, marginTop:12, border:'1px solid var(--line)'}} />}
-                <button className="btn btn-signal btn-block" style={{marginTop:24, height: 48, fontSize: 16}} onClick={()=>setVerifyStep(2)} disabled={!idPreview}>Next Step</button>
+                <button className="btn btn-signal btn-block" style={{marginTop:24, height: 48, fontSize: 17.6}} onClick={()=>setVerifyStep(2)} disabled={!idPreview}>Next Step</button>
               </motion.div>
             )}
 
             {verifyStep === 2 && (
               <motion.div initial={{opacity:0}} animate={{opacity:1}}>
-                <p style={{fontSize:14, color:'var(--steel)', marginBottom:16, lineHeight:1.5}}>Upload your <b style={{color:'var(--ink)'}}>Registration Form</b> or Certificate of Enrollment (PDF/Image).</p>
+                <p style={{fontSize:15.4, color:'var(--steel)', marginBottom:16, lineHeight:1.5}}>Upload your <b style={{color:'var(--ink)'}}>Registration Form</b> or Certificate of Enrollment (PDF/Image).</p>
                 <Field label="Registration Document">
                   <input
                     type="file"
                     accept="image/*,application/pdf"
                     onChange={e => handleFileUpload(e, 'form')}
                     style={{
-                      fontSize: 16,
+                      fontSize: 17.6,
                       padding: '8px',
                       cursor: 'pointer',
                       width: '100%'
                     }}
                   />
                 </Field>
-                {formPreview && <div style={{marginTop:12, padding:8, background:'var(--surface-2)', borderRadius:8, fontSize:13, textAlign:'center', border:'1px solid var(--line)'}}>
+                {formPreview && <div style={{marginTop:12, padding:8, background:'var(--surface-2)', borderRadius:8, fontSize:14.3, textAlign:'center', border:'1px solid var(--line)'}}>
                   {formPreview.startsWith('data:application/pdf') ? 'PDF Document Uploaded' : <img src={formPreview} style={{width:'100%', maxHeight:200, objectFit:'contain'}} />}
                 </div>}
                 <div style={{display:'flex', gap:12, marginTop:24}}>
-                  <button className="btn btn-outline btn-block" style={{height: 48, fontSize: 16}} onClick={()=>setVerifyStep(1)}>Back</button>
-                  <button className="btn btn-signal btn-block" style={{height: 48, fontSize: 16}} onClick={()=>setVerifyStep(3)} disabled={!formPreview}>Next Step</button>
+                  <button className="btn btn-outline btn-block" style={{height: 48, fontSize: 17.6}} onClick={()=>setVerifyStep(1)}>Back</button>
+                  <button className="btn btn-signal btn-block" style={{height: 48, fontSize: 17.6}} onClick={()=>setVerifyStep(3)} disabled={!formPreview}>Next Step</button>
                 </div>
               </motion.div>
             )}
 
             {verifyStep === 3 && (
               <motion.div initial={{opacity:0}} animate={{opacity:1}} style={{textAlign:'center'}}>
-                <div style={{fontSize:48, marginBottom:16}}>📝</div>
-                <h3 style={{marginBottom:12, fontSize: 20}}>Review Your Documents</h3>
-                <p style={{fontSize:14, color:'var(--steel)', marginBottom:24, lineHeight:1.5}}>Our team will review your student credentials. You will be notified once verified.</p>
+                <div style={{fontSize:52.8, marginBottom:16}}>📝</div>
+                <h3 style={{marginBottom:12, fontSize: 22}}>Review Your Documents</h3>
+                <p style={{fontSize:15.4, color:'var(--steel)', marginBottom:24, lineHeight:1.5}}>Our team will review your student credentials. You will be notified once verified.</p>
                 <div style={{display:'flex', gap:12, justifyContent:'center'}}>
-                  <button className="btn btn-outline" style={{height: 48, fontSize: 16, padding: '0 24px'}} onClick={()=>setVerifyStep(2)}>Back</button>
-                  <button className="btn btn-signal" style={{height: 48, fontSize: 16, padding: '0 24px'}} onClick={submitVerification}>Submit for Review</button>
+                  <button className="btn btn-outline" style={{height: 48, fontSize: 17.6, padding: '0 24px'}} onClick={()=>setVerifyStep(2)}>Back</button>
+                  <button className="btn btn-signal" style={{height: 48, fontSize: 17.6, padding: '0 24px'}} onClick={submitVerification}>Submit for Review</button>
                 </div>
               </motion.div>
             )}

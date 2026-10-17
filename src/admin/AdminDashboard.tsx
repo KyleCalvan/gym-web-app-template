@@ -80,15 +80,15 @@ function AdminDashboard({ onNav, members, trainers, transactions, sessions, prom
         right={<button className="btn btn-signal btn-sm" onClick={()=>onNav && onNav('promotions')}>+ Create Promotion</button>}
       >
         {published.length === 0 ? (
-          <div style={{fontSize:12.5, color:'var(--steel)', padding:'8px 0'}}>No active promotions. Create or publish one to see it here.</div>
+          <div style={{fontSize:13.8, color:'var(--steel)', padding:'8px 0'}}>No active promotions. Create or publish one to see it here.</div>
         ) : published.map(p=>(
           <div className="promo-widget-row" key={p.id}>
             <div>
               <b>{p.title}</b>
-              <div className="mono" style={{fontSize:11, color:'var(--steel)'}}>{p.code} · {p.discount} · valid thru {p.validUntil}</div>
+              <div className="mono" style={{fontSize:12.1, color:'var(--steel)'}}>{p.code} · {p.discount} · valid thru {p.validUntil}</div>
             </div>
             <div style={{display:'flex', alignItems:'center', gap:10}}>
-              <span className="mono" style={{fontSize:12, color:'var(--steel)'}}>{p.redemptions}/{p.maxRedemptions} redeemed</span>
+              <span className="mono" style={{fontSize:13.2, color:'var(--steel)'}}>{p.redemptions}/{p.maxRedemptions} redeemed</span>
               <Badge status={p.status}/>
             </div>
           </div>

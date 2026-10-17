@@ -109,7 +109,7 @@ export function ChatView({
           className="sidebar-header"
           style={{ padding: '24px', borderBottom: '1px solid var(--line)' }}
         >
-          <h2 style={{ fontSize: '24px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1.5px', margin: 0, color: 'var(--ink)' }}>
+          <h2 style={{ fontSize: '26.4px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1.5px', margin: 0, color: 'var(--ink)' }}>
             Messages
           </h2>
           <div style={{ marginTop: '16px', position: 'relative' }}>
@@ -125,7 +125,7 @@ export function ChatView({
                 border: '1px solid var(--line)',
                 borderRadius: '12px',
                 padding: '12px 16px',
-                fontSize: '16px',
+                fontSize: '17.6px',
                 color: 'var(--ink)',
                 outline: 'none',
                 transition: 'border-color 0.2s'
@@ -201,10 +201,10 @@ export function ChatView({
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                 <ConversationAvatar src={activeConv.participantAvatar} name={activeConv.participantName} />
                 <div>
-                  <h3 style={{ fontWeight: 'bold', fontSize: '19px', margin: 0, color: 'var(--ink)' }}>{activeConv.participantName}</h3>
+                  <h3 style={{ fontWeight: 'bold', fontSize: '20.9px', margin: 0, color: 'var(--ink)' }}>{activeConv.participantName}</h3>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <span style={{ width: '8px', height: '8px', backgroundColor: 'var(--signal)', borderRadius: '50%', display: 'inline-block' }} />
-                    <span style={{ fontSize: '14px', color: 'var(--steel)' }}>Active now</span>
+                    <span style={{ fontSize: '15.4px', color: 'var(--steel)' }}>Active now</span>
                   </div>
                 </div>
               </div>
@@ -252,11 +252,11 @@ export function ChatView({
                             <img src={msg.attachmentUrl} alt="attachment" style={{ maxWidth: '100%', maxHeight: '300px', borderRadius: '12px', border: '1px solid var(--line)' }} />
                           </div>
                         )}
-                        <p style={{ fontSize: '16px', lineHeight: '1.6', margin: 0 }}>{msg.content}</p>
+                        <p style={{ fontSize: '17.6px', lineHeight: '1.6', margin: 0 }}>{msg.content}</p>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px', marginTop: '6px' }}>
-                          <span style={{ fontSize: '12px', opacity: 0.7 }}>{msg.createdAt.split('T')[1].substring(0, 5)}</span>
+                          <span style={{ fontSize: '13.2px', opacity: 0.7 }}>{msg.createdAt.split('T')[1].substring(0, 5)}</span>
                           {isOwn && (
-                            <span style={{ fontSize: '11px', fontWeight: 'bold' }}>
+                            <span style={{ fontSize: '12.1px', fontWeight: 'bold' }}>
                               {msg.isRead ? '✓✓' : '✓'}
                             </span>
                           )}
@@ -309,7 +309,7 @@ export function ChatView({
                     border: '1px solid var(--line)',
                     borderRadius: '24px',
                     padding: '14px 24px',
-                    fontSize: '16px',
+                    fontSize: '17.6px',
                     color: 'var(--ink)',
                     outline: 'none',
                     boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.1)'
@@ -324,7 +324,7 @@ export function ChatView({
                     fontWeight: 'bold',
                     padding: '12px 28px',
                     borderRadius: '24px',
-                    fontSize: '16px',
+                    fontSize: '17.6px',
                     border: 'none',
                     cursor: 'pointer',
                     opacity: input.trim() ? 1 : 0.5,
@@ -342,8 +342,8 @@ export function ChatView({
             <div style={{ width: '100px', height: '100px', backgroundColor: 'var(--surface)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px', boxShadow: '0 8px 24px rgba(0,0,0,0.2)' }}>
               <svg xmlns="http://www.w3.org/2000/svg" width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
             </div>
-            <h3 style={{ fontSize: '26px', fontWeight: '600', color: 'var(--ink)', margin: '0 0 12px 0' }}>Your Messages</h3>
-            <p style={{ fontSize: '16px', maxWidth: '450px', margin: 0, lineHeight: '1.6', opacity: 0.8 }}>Select a conversation from the left to start chatting with your coach or member.</p>
+            <h3 style={{ fontSize: '28.6px', fontWeight: '600', color: 'var(--ink)', margin: '0 0 12px 0' }}>Your Messages</h3>
+            <p style={{ fontSize: '17.6px', maxWidth: '450px', margin: 0, lineHeight: '1.6', opacity: 0.8 }}>Select a conversation from the left to start chatting with your coach or member.</p>
           </div>
         )}
       </div>

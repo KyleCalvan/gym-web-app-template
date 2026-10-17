@@ -36,7 +36,7 @@ export function Modal({ title, onClose, children, wide, className, showCloseButt
         transition={{ duration: 0.22, ease: ease.out }}
       >
         <div className="modal-head">
-          <h2 style={{ fontSize: 18, textTransform: 'uppercase' }}>{title}</h2>
+          <h2 style={{ fontSize: 19.8, textTransform: 'uppercase' }}>{title}</h2>
           {showCloseButton && <button className="modal-close" onClick={onClose}>✕</button>}
         </div>
         {children}

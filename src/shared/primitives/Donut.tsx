@@ -40,7 +40,7 @@ export function Donut({ data, size = 140 }: DonutProps) {
           })}
         </g>
         <Ticker to={total} asText />
-        <text x="50%" y="60%" textAnchor="middle" fontFamily="IBM Plex Mono" fontSize="9" fill="var(--steel)">TOTAL</text>
+        <text x="50%" y="60%" textAnchor="middle" fontFamily="IBM Plex Mono" fontSize="9.9" fill="var(--steel)">TOTAL</text>
       </svg>
       <div>
         {data.map((d, i) => (

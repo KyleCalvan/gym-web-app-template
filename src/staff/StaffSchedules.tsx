@@ -11,8 +11,8 @@ function StaffSchedules({ trainers }) {
           <tbody>
             {trainers.map(t=>(
               <tr key={t.id}>
-                <td>{t.name}<div className="mono" style={{fontSize:10.5, color:'var(--steel)'}}>{t.specialty}</div></td>
-                {days.map((d,i)=><td key={i} className="mono" style={{fontSize:11.5}}>{(i+t.id.length)%3===0 ? '—' : '6-9AM, 4-8PM'}</td>)}
+                <td>{t.name}<div className="mono" style={{fontSize:11.6, color:'var(--steel)'}}>{t.specialty}</div></td>
+                {days.map((d,i)=><td key={i} className="mono" style={{fontSize:12.7}}>{(i+t.id.length)%3===0 ? '—' : '6-9AM, 4-8PM'}</td>)}
               </tr>
             ))}
           </tbody>
