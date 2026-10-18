@@ -11,6 +11,7 @@ import {
 const originalSecret = process.env.DEMO_SESSION_SECRET;
 const originalNextAuthSecret = process.env.NEXTAUTH_SECRET;
 const originalNodeEnv = process.env.NODE_ENV;
+const originalVercelEnv = process.env.VERCEL_ENV;
 const originalEnabled = process.env.DEMO_ACCOUNTS_ENABLED;
 
 afterEach(() => restoreEnvironment());
@@ -22,6 +23,8 @@ function restoreEnvironment() {
   else process.env.NEXTAUTH_SECRET = originalNextAuthSecret;
   if (originalNodeEnv === undefined) delete process.env.NODE_ENV;
   else process.env.NODE_ENV = originalNodeEnv;
+  if (originalVercelEnv === undefined) delete process.env.VERCEL_ENV;
+  else process.env.VERCEL_ENV = originalVercelEnv;
   if (originalEnabled === undefined) delete process.env.DEMO_ACCOUNTS_ENABLED;
   else process.env.DEMO_ACCOUNTS_ENABLED = originalEnabled;
 }
@@ -58,6 +61,7 @@ test('signs, verifies, rejects tampered, and expires demo sessions', () => {
 
 test('demo login is blocked in production and can be disabled elsewhere', () => {
   process.env.NODE_ENV = 'production';
+  delete process.env.VERCEL_ENV;
   delete process.env.DEMO_ACCOUNTS_ENABLED;
   assert.equal(isDemoLoginEnabled(), false);
   process.env.NODE_ENV = 'development';
@@ -65,4 +69,15 @@ test('demo login is blocked in production and can be disabled elsewhere', () => 
   assert.equal(isDemoLoginEnabled(), false);
   process.env.DEMO_ACCOUNTS_ENABLED = 'true';
   assert.equal(isDemoLoginEnabled(), true);
+});
+
+test('demo login can be explicitly enabled in Vercel Preview but never in Production', () => {
+  process.env.NODE_ENV = 'production';
+  process.env.VERCEL_ENV = 'preview';
+  delete process.env.DEMO_ACCOUNTS_ENABLED;
+  assert.equal(isDemoLoginEnabled(), false);
+  process.env.DEMO_ACCOUNTS_ENABLED = 'true';
+  assert.equal(isDemoLoginEnabled(), true);
+  process.env.VERCEL_ENV = 'production';
+  assert.equal(isDemoLoginEnabled(), false);
 });

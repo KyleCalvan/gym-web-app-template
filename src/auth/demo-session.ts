@@ -31,6 +31,8 @@ function sign(value: string): Buffer {
 }
 
 export function isDemoLoginEnabled(): boolean {
+  if (process.env.VERCEL_ENV === 'production') return false;
+  if (process.env.VERCEL_ENV === 'preview') return process.env.DEMO_ACCOUNTS_ENABLED === 'true';
   return process.env.NODE_ENV !== 'production' && process.env.DEMO_ACCOUNTS_ENABLED !== 'false';
 }
 
