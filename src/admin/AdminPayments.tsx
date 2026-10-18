@@ -1,13 +1,14 @@
 // @ts-nocheck
 import { useState } from 'react';
-import { StatTile, Badge, Table, Modal, Field, TabbedCard } from '../shared';
+import { StatTile, Badge, Table, Modal, Field, TabbedCard, ReceiptDocument } from '../shared';
 import { peso } from '../data.ts';
 
-function AdminPayments({ transactions, setTransactions, today, toast, addAudit }){
+function AdminPayments({ transactions, setTransactions, members = [], today, toast, addAudit }){
   const [showRefund, setShowRefund] = useState(null);
   const [reason, setReason] = useState('');
   const [showReceipts, setShowReceipts] = useState(false);
   const [viewTxn, setViewTxn] = useState(null);
+  const [documentType, setDocumentType] = useState('Receipt');
 
   const confirmRefund = () => {
     if (!showRefund) return;
@@ -31,22 +32,25 @@ function AdminPayments({ transactions, setTransactions, today, toast, addAudit }
         <StatTile label="Pending" value={pendingCount} tone="amber"/>
         <StatTile label="Refunded (MTD)" value={peso(refundedMtd)} tone="steel"/>
       </div>
-      <TabbedCard label="Finance" title="All Transactions" right={<button className="btn btn-outline btn-sm" onClick={()=>setShowReceipts(true)}>Generate Receipt</button>}>
-        <Table columns={['ID','Member','Type','Amount','Method','Date','Status','']} rows={transactions} renderRow={t=>(
+      <TabbedCard label="Finance" title="All Transactions" right={<button className="btn btn-outline btn-sm" onClick={()=>setShowReceipts(true)}>View Receipts</button>}>
+        {transactions.length === 0 ? <div className="payment-history-state">No transactions have been recorded yet.</div> : <Table columns={['Transaction reference','Receipt reference','Member','Type','Amount','Fees','Method','Date','Status','']} rows={transactions} renderRow={t=>(
           <tr key={t.id}>
-            <td className="mono">{t.id}</td>
+            <td className="mono">{t.transactionReference || t.id}</td>
+            <td className="mono">{t.receiptNumber || t.id}</td>
             <td>{t.member}</td>
-            <td>{t.type}</td>
+            <td>{t.type}{t.isSimulated && <small className="payment-simulated-tag">Simulated test payment</small>}</td>
             <td className="mono">{peso(t.amount)}</td>
+            <td className="mono">{peso(t.fees || 0)}</td>
             <td>{t.method}</td>
             <td className="mono">{t.date}</td>
             <td><Badge status={t.status}/></td>
             <td style={{display:'flex', gap:6}}>
-              <button className="btn btn-ghost btn-sm" onClick={()=>setViewTxn(t)}>View</button>
+              <button className="btn btn-outline btn-sm" onClick={()=>{setDocumentType('Invoice');setViewTxn(t);}}>View Invoice</button>
+              <button className="btn btn-ghost btn-sm" onClick={()=>{setDocumentType('Receipt');setViewTxn(t);}}>View Receipt</button>
               {t.status==='Paid' && <button className="btn btn-ghost btn-sm" onClick={()=>{setShowRefund(t); setReason('');}}>Refund</button>}
             </td>
           </tr>
-        )} />
+        )} />}
       </TabbedCard>
 
       {showRefund && (
@@ -72,7 +76,7 @@ function AdminPayments({ transactions, setTransactions, today, toast, addAudit }
                 <td>{t.member}</td>
                 <td className="mono">{peso(t.amount)}</td>
                 <td>{t.method}</td>
-                <td><button className="btn btn-ghost btn-sm" onClick={()=>{setViewTxn(t); setShowReceipts(false);}}>Open →</button></td>
+                <td><button className="btn btn-outline btn-sm" onClick={()=>{setDocumentType('Receipt');setViewTxn(t); setShowReceipts(false);}}>View Receipt</button></td>
               </tr>
             )} />
           )}
@@ -80,19 +84,14 @@ function AdminPayments({ transactions, setTransactions, today, toast, addAudit }
       )}
 
       {viewTxn && (
-        <Modal title="Receipt" onClose={()=>setViewTxn(null)}>
-          <div className="receipt">
-            <div style={{textAlign:'center', fontFamily:'var(--font-display)', fontSize:16.5}}>VINATHLETICS GYM</div>
-            <div style={{textAlign:'center', fontSize:11.6, color:'var(--steel)'}}>Official Receipt · {viewTxn.id}</div>
-            <hr/>
-            <div className="row"><span>{viewTxn.type}</span><span>{peso(viewTxn.amount)}</span></div>
-            <div className="row"><span>Member</span><span>{viewTxn.member}</span></div>
-            <div className="row"><span>Method</span><span>{viewTxn.method}</span></div>
-            <div className="row"><span>Date</span><span>{viewTxn.date}</span></div>
-            <hr/>
-            <div className="row" style={{fontWeight:700}}><span>TOTAL</span><span>{peso(viewTxn.amount)}</span></div>
+        <Modal title={documentType} className="receipt-print-modal" showCloseButton={false} onClose={()=>setViewTxn(null)}>
+          <div className="receipt-print-root">
+            <ReceiptDocument transaction={viewTxn} member={members.find((member) => member.name === viewTxn.member)} documentType={documentType} />
+            <div className="receipt-export-controls">
+              <button className="btn btn-outline" onClick={()=>setViewTxn(null)}>Close</button>
+              <button className="btn btn-signal" onClick={()=>{window.print(); toast('Print dialog opened');}}>Download PDF</button>
+            </div>
           </div>
-          <button className="btn btn-outline btn-sm btn-block" style={{marginTop:14}} onClick={()=>{window.print(); toast('Print dialog opened');}}>Download PDF</button>
         </Modal>
       )}
     </>

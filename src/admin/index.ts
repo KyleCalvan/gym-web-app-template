@@ -11,13 +11,15 @@ import AdminPromotions from './AdminPromotions.tsx';
 import AdminActivity from './AdminActivity.tsx';
 import AdminCoaching from './AdminCoaching.tsx';
 import AdminProfile from './AdminProfile.tsx';
+import AdminQrDestinations from './AdminQrDestinations.tsx';
 
 export const ADMIN_NAV: NavSection[] = [
   {section:'Main', items:[{id:'dashboard', label:'Dashboard', ic:'▤'}]},
   {section:'Members', items:[{id:'members', label:'Members', ic:'☰'}, {id:'plans', label:'Membership Plans', ic:'▥'}]},
   {section:'Finance', items:[{id:'payments', label:'Payments', ic:'₱'}, {id:'reports', label:'Revenue & Reports', ic:'▲'}]},
-  {section:'Operations', items:[{id:'trainers', label:'Trainers & Staff', ic:'★'}, {id:'promotions', label:'Promotions', ic:'◆'}]},
-  {section:'Reports', items:[{id:'activity', label:'Activity Logs', ic:'≡'}, {id:'coaching', label:'Coaching Sessions', ic:'●'}]},
+  {section:'Operations', items:[{id:'trainers', label:'Trainers & Staff', ic:'★'}, {id:'coaching', label:'Trainer Availability', ic:'◷'}, {id:'promotions', label:'Promotions', ic:'◆'}]},
+  {section:'Communication', items:[{id:'qr-links', label:'Gym QR Links', ic:'▦'}]},
+  {section:'Reports', items:[{id:'activity', label:'Activity Logs', ic:'≡'}]},
 ];
 
 export const ADMIN_VIEWS: Record<string, ComponentType<ViewProps>> = {
@@ -31,4 +33,5 @@ export const ADMIN_VIEWS: Record<string, ComponentType<ViewProps>> = {
   activity: AdminActivity as unknown as ComponentType<ViewProps>,
   coaching: AdminCoaching as unknown as ComponentType<ViewProps>,
   profile: AdminProfile as unknown as ComponentType<ViewProps>,
+  'qr-links': AdminQrDestinations as unknown as ComponentType<ViewProps>,
 };

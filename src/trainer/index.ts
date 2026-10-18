@@ -14,7 +14,7 @@ export const TRAINER_NAV: NavSection[] = [
       { id: 'dashboard', label: 'Dashboard', ic: '▤' },
       { id: 'sessions',  label: 'Assigned Sessions', ic: '◉' },
       { id: 'schedule',  label: 'Schedule & Availability', ic: '◷' },
-      { id: 'chat',      label: 'Messages', ic: '✉' },
+      { id: 'chat',      label: 'Gym Links & QR', ic: '▦' },
     ],
   },
 ];

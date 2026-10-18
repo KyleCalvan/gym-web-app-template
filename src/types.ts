@@ -7,7 +7,8 @@ export type MemberStatus = 'Active' | 'Expiring' | 'Frozen' | 'Expired';
 export type TrainerStatus = 'Active' | 'On Leave' | 'Inactive';
 export type PlanStatus = 'Active' | 'Inactive';
 export type SessionStatus = 'Confirmed' | 'Pending' | 'Cancelled' | 'Completed';
-export type TxnStatus = 'Paid' | 'Pending' | 'Refunded';
+export type TxnStatus = 'Paid' | 'Pending' | 'Refunded' | 'Failed';
+export type PaymentState = 'Pending' | 'Processing' | 'Successful' | 'Failed';
 export type PromoStatus = 'Published' | 'Draft';
 export type DiscountType = 'Percentage' | 'Bundle' | 'Fixed';
 
@@ -20,6 +21,9 @@ export interface Member {
   status: MemberStatus;
   joined: string;
   avatarUrl?: string;
+  membershipValidUntil?: string | null;
+  weightKg?: number;
+  heightCm?: number;
   deletedAt?: string | null;
 }
 
@@ -65,16 +69,34 @@ export interface Plan {
   featured: boolean;
   status: PlanStatus;
   category: string;
+  description: string;
+  restrictions: string[];
+  sessionLimit: number | 'unlimited';
+  facilities: string[];
+  includedBenefits: string[];
+  excludedBenefits: string[];
+  terms?: string;
 }
 
 export interface Transaction {
   id: string;
+  receiptNumber?: string;
+  transactionReference?: string;
   member: string;
   type: string;
   amount: number;
+  fees?: number;
+  paymentState?: PaymentState;
+  isSimulated?: boolean;
   method: string;
   date: string;
   status: TxnStatus;
+}
+
+export interface QrDestination {
+  id: string;
+  label: string;
+  url: string;
 }
 
 export interface Session {
@@ -91,6 +113,15 @@ export interface Session {
   rating?: number;
 }
 
+export interface TrainerAvailability {
+  id: string;
+  trainerId: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  status: 'available' | 'unavailable';
+}
+
 export interface Promotion {
   id: string;
   title: string;
@@ -105,6 +136,7 @@ export interface Promotion {
   minSpend: number;
   status: PromoStatus;
   imageUrl?: string;
+  description?: string;
 }
 
 export type StaffRole = 'Front Desk' | 'Sales' | 'Manager';
@@ -131,6 +163,8 @@ export interface Notification {
   body: string;
   time: string;
   unread: boolean;
+  actionView?: string;
+  actionLabel?: string;
 }
 
 export interface CurrentUser {
@@ -166,6 +200,14 @@ export interface LabeledDatum { l: string; v: number; color: string }
 
 // App state
 
+export interface PromotionRedemption {
+  id: string;
+  memberId: string;
+  promotionId: string;
+  code: string;
+  redeemedAt: string;
+}
+
 export interface CheckIns {
   count: number;
   today: string;
@@ -188,6 +230,13 @@ export interface AuditLogEntry {
   actorRole: Role;
   action: string;
   details?: string;
+  resource?: string;
+  result?: string;
+  ipAddress?: string;
+  category?: string;
+  metadata?: Record<string, unknown>;
+  before?: unknown;
+  after?: unknown;
 }
 
 export interface ActiveSession {
@@ -247,6 +296,8 @@ export interface ViewProps {
   setTransactions: Setter<Transaction[]>;
   sessions: Session[];
   setSessions: Setter<Session[]>;
+  trainerAvailability: TrainerAvailability[];
+  setTrainerAvailability: Setter<TrainerAvailability[]>;
   promotions: Promotion[];
   setPromotions: Setter<Promotion[]>;
   staff: Staff[];
@@ -273,7 +324,15 @@ export interface ViewProps {
   currentSessionId: string | null;
   toast: (msg: string) => void;
   today: string;
-  addAudit: (level: AuditLevel, action: string, details?: string) => void;
+  addAudit: (level: AuditLevel, action: string, details?: string, actorRole?: Role) => void;
+  // Promotion codes a member has redeemed; used by the Promotions page and
+  // pricing surfaces to apply discounts.
+  promotionRedemptions?: PromotionRedemption[];
+  setPromotionRedemptions?: Setter<PromotionRedemption[]>;
+  preferredPaymentMethod?: string;
+  setPreferredPaymentMethod?: Setter<string>;
+  qrDestinations?: QrDestination[];
+  setQrDestinations?: Setter<QrDestination[]>;
   // Lets a member permanently remove their own account. App-level because the
   // session can't outlive the record it's signed in as.
   onDeleteAccount?: (userId: string) => void;

@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { Avatar, Badge, TabbedCard, Field, TextInput } from '../shared';
+import { Avatar, TabbedCard, Field, TextInput } from '../shared';
 import { onPickImage } from '../shared/imageUpload.ts';
 import { SecurityFlow } from '../shared/components/SecurityFlow';
+import ProfileSettingsPanel from '../shared/ProfileSettingsPanel';
 import type { ViewProps } from '../types.ts';
 
-function SuperAdminProfile({ superadmins, setSuperadmins, currentUserId, toast, addAudit }: ViewProps) {
+function SuperAdminProfile({ superadmins, setSuperadmins, currentUserId, toast, addAudit, notifPrefs, setNotifPrefs }: ViewProps) {
   const me = superadmins.find(s => s.id === currentUserId) || superadmins[0];
   const [info, setInfo] = useState({
     name: me?.name || '',
@@ -55,13 +56,17 @@ function SuperAdminProfile({ superadmins, setSuperadmins, currentUserId, toast, 
             />
           </div>
         </div>
-        <div style={{fontSize:13.8}}>
-          <div className="eyebrow">Super Admin ID</div><p className="mono">{me?.id || '—'}</p>
-          <div className="eyebrow">Super Admin Since</div><p className="mono">{me?.createdAt || '—'}</p>
-        </div>
       </TabbedCard>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-        <TabbedCard label="Info" title="Account Information">
+      <div>
+        <ProfileSettingsPanel
+          account={
+            <div className="profile-settings-account-grid">
+              <div className="profile-settings-account-item"><div className="eyebrow">Super Admin ID</div><p className="mono">{me?.id || '—'}</p></div>
+              <div className="profile-settings-account-item"><div className="eyebrow">Role</div><p>Super Administrator</p></div>
+              <div className="profile-settings-account-item"><div className="eyebrow">Super Admin Since</div><p className="mono">{me?.createdAt || '—'}</p></div>
+            </div>
+          }
+          profile={
           <form onSubmit={submitInfo}>
             <div className="grid grid-2">
               <Field label="Full Name"><TextInput required value={info.name} onChange={v=>setInfo(i=>({...i, name:v}))} /></Field>
@@ -71,10 +76,13 @@ function SuperAdminProfile({ superadmins, setSuperadmins, currentUserId, toast, 
             </div>
             <div style={{display:'flex', gap:12, marginTop:12}}>
               <button className="btn btn-signal btn-sm" type="submit" style={{width: 'auto'}}>Save Changes</button>
-              <button className="btn btn-outline btn-sm" type="button" style={{width: 'auto'}} onClick={() => setShowSecurityFlow(true)}>Security Settings</button>
             </div>
           </form>
-        </TabbedCard>
+          }
+          onOpenSecurity={() => setShowSecurityFlow(true)}
+          notifPrefs={notifPrefs}
+          setNotifPrefs={setNotifPrefs}
+        />
       </div>
       <SecurityFlow isOpen={showSecurityFlow} onClose={() => setShowSecurityFlow(false)} toast={toast} role="superadmin" accountEmail={me?.email || ''} />
     </div>

@@ -97,7 +97,7 @@ export default function Sidebar({
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px 18px', borderBottom: '1px solid var(--line)', marginBottom: 14 }}>
           <div className="brand" style={{ padding: 0, border: 'none', margin: 0, color: 'var(--ink)' }}>
-            <img src="/logo.jpg" alt="VinAthletics" className="brand-mark-img" /> {brand}
+            <img src="/logo.jpg" alt="VinAthletics" className="brand-mark-img" /><span>{brand}</span>
           </div>
           <button className="nav-close-btn" onClick={() => setIsOpen(false)} style={{ display: 'none' }}>✕</button>
         </div>

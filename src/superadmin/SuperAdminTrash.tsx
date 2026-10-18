@@ -26,8 +26,8 @@ function SuperAdminTrash({
 
   const [pendingRestore, setPendingRestore] = useState(null);
   const [pendingPurge, setPendingPurge] = useState(null);
-  const [confirmRestoreAll, setConfirmRestoreAll] = useState(false);
-  const [confirmPurgeAll, setConfirmPurgeAll] = useState(false);
+  const [bulkRestoreOpen, setBulkRestoreOpen] = useState(false);
+  const [selectedRestoreIds, setSelectedRestoreIds] = useState(new Set());
 
   const trashed = useMemo(() => {
     const out = [];
@@ -84,14 +84,46 @@ function SuperAdminTrash({
     setPendingRestore(null);
   };
 
-  const restoreAll = () => {
-    setAdmins(prev => prev.map(a => a.deletedAt ? { ...a, deletedAt: null } : a));
-    setMembers(prev => prev.map(m => m.deletedAt ? { ...m, deletedAt: null } : m));
-    setTrainers(prev => prev.map(t => t.deletedAt ? { ...t, deletedAt: null } : t));
-    setStaff(prev => prev.map(s => s.deletedAt ? { ...s, deletedAt: null } : s));
-    addAudit?.('info', 'Bulk restored archive', 'All archived users restored');
-    toast('All users restored from archive');
-    setConfirmRestoreAll(false);
+  const restoreKey = (user) => `${user.kind}:${user.id}`;
+
+  const toggleRestoreSelection = (user) => {
+    const key = restoreKey(user);
+    setSelectedRestoreIds((previous) => {
+      const next = new Set(previous);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const toggleSelectFilteredRestoreUsers = () => {
+    const visibleKeys = filtered.map(restoreKey);
+    const allVisibleSelected = visibleKeys.length > 0 && visibleKeys.every((key) => selectedRestoreIds.has(key));
+    setSelectedRestoreIds((previous) => {
+      const next = new Set(previous);
+      for (const key of visibleKeys) {
+        if (allVisibleSelected) next.delete(key);
+        else next.add(key);
+      }
+      return next;
+    });
+  };
+
+  const restoreSelected = () => {
+    const selected = trashed.filter((user) => selectedRestoreIds.has(restoreKey(user)));
+    if (selected.length === 0) return;
+    const selectedByKind = (kind) => new Set(selected.filter((user) => user.kind === kind).map((user) => user.id));
+    const restore = (ids) => (previous) => previous.map((user) =>
+      ids.has(user.id) ? { ...user, deletedAt: null } : user,
+    );
+    setAdmins(restore(selectedByKind('admin')));
+    setMembers(restore(selectedByKind('member')));
+    setTrainers(restore(selectedByKind('trainer')));
+    setStaff(restore(selectedByKind('staff')));
+    addAudit?.('info', 'Bulk restored archive', `Restored ${selected.length} selected users`);
+    toast(`Restored ${selected.length} selected user${selected.length === 1 ? '' : 's'}`);
+    setSelectedRestoreIds(new Set());
+    setBulkRestoreOpen(false);
   };
 
   const applyPurge = () => {
@@ -105,16 +137,6 @@ function SuperAdminTrash({
     addAudit?.('error', 'Deleted', `${u.name} (${u.id})`);
     toast(`Deleted — ${u.name}`);
     setPendingPurge(null);
-  };
-
-  const purgeAll = () => {
-    setAdmins(prev => prev.filter(a => !a.deletedAt));
-    setMembers(prev => prev.filter(m => !m.deletedAt));
-    setTrainers(prev => prev.filter(t => !t.deletedAt));
-    setStaff(prev => prev.filter(s => !s.deletedAt));
-    addAudit?.('error', 'Bulk deleted archive', 'All archived users deleted');
-    toast('Archive cleared');
-    setConfirmPurgeAll(false);
   };
 
   return (
@@ -131,8 +153,16 @@ function SuperAdminTrash({
         title="Archive"
         right={
           <div style={{ display: 'flex', gap: 8 }}>
-            <button className="btn btn-outline btn-sm" onClick={() => setConfirmRestoreAll(true)}>BULK RESTORE</button>
-            <button className="btn btn-danger btn-sm" onClick={() => setConfirmPurgeAll(true)}>BULK REMOVE</button>
+            <button
+              className="btn btn-outline btn-sm"
+              disabled={trashed.length === 0}
+              onClick={() => {
+                setSelectedRestoreIds(new Set());
+                setBulkRestoreOpen(true);
+              }}
+            >
+              BULK RESTORE
+            </button>
           </div>
         }
       >
@@ -184,6 +214,47 @@ function SuperAdminTrash({
         )}
       </TabbedCard>
 
+      {bulkRestoreOpen && (
+        <Modal title="Select Users to Restore" showCloseButton onClose={() => setBulkRestoreOpen(false)} wide>
+          <div className="bulk-restore-selection">
+            <div className="bulk-restore-toolbar">
+              <label>
+                <input
+                  type="checkbox"
+                  checked={filtered.length > 0 && filtered.every((user) => selectedRestoreIds.has(restoreKey(user)))}
+                  onChange={toggleSelectFilteredRestoreUsers}
+                />
+                Select all shown
+              </label>
+              <span>{selectedRestoreIds.size} selected</span>
+            </div>
+            <div className="bulk-restore-list">
+              {filtered.length === 0 ? (
+                <p>No archived users match the current search or role filter.</p>
+              ) : filtered.map((user) => (
+                <label className="bulk-restore-user" key={restoreKey(user)}>
+                  <input
+                    type="checkbox"
+                    checked={selectedRestoreIds.has(restoreKey(user))}
+                    onChange={() => toggleRestoreSelection(user)}
+                  />
+                  <span className="bulk-restore-user-copy">
+                    <strong>{user.name}</strong>
+                    <span>{user.email} · {user.kind} · {user.label}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+            <div className="bulk-restore-actions">
+              <button className="btn btn-outline" type="button" onClick={() => setBulkRestoreOpen(false)}>Cancel</button>
+              <button className="btn btn-signal" type="button" disabled={selectedRestoreIds.size === 0} onClick={restoreSelected}>
+                Restore Selected ({selectedRestoreIds.size})
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
       {pendingRestore && (
         <Modal title="Restore User?" showCloseButton={false} onClose={() => setPendingRestore(null)}>
           <p style={{ fontSize: 14.3, color: 'var(--steel)', marginBottom: 14 }}>
@@ -223,42 +294,6 @@ function SuperAdminTrash({
         </Modal>
       )}
 
-      {confirmRestoreAll && (
-        <Modal title="Restore All Users?" showCloseButton={false} onClose={() => setConfirmRestoreAll(false)}>
-          <p style={{ fontSize: 14.3, color: 'var(--steel)', marginBottom: 14 }}>
-            Are you sure you want to restore all archived users? They will be moved back to their respective active lists.
-          </p>
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-            <button className="btn btn-outline" type="button" onClick={() => setConfirmRestoreAll(false)}>
-              Cancel
-            </button>
-            <button
-              className="btn btn-signal"
-              type="button"
-              onClick={restoreAll}
-              style={{ background: 'var(--court)', borderColor: 'var(--court)' }}
-            >
-              Restore All
-            </button>
-          </div>
-        </Modal>
-      )}
-
-      {confirmPurgeAll && (
-        <Modal title="Delete All Users?" showCloseButton={false} onClose={() => setConfirmPurgeAll(false)}>
-          <p style={{ fontSize: 14.3, color: 'var(--steel)', marginBottom: 14 }}>
-            Are you sure you want to delete all archived users? This action cannot be undone.
-          </p>
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-            <button className="btn btn-outline" type="button" onClick={() => setConfirmPurgeAll(false)}>
-              Cancel
-            </button>
-            <button className="btn btn-danger" type="button" onClick={purgeAll}>
-              Delete
-            </button>
-          </div>
-        </Modal>
-      )}
     </>
   );
 }

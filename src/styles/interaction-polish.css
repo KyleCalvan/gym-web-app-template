@@ -1,0 +1,50 @@
+/* Consistent, low-motion affordances for controls and interactive content. */
+.nav-item,.notification-item-main,.notification-action,.global-search-trigger,
+.bell-btn,.profile-menu-item,.vddx-option,.trainer-calendar-day-select,
+.trainer-calendar-event,.member-promo-option,.plan-comparison-card,
+.admin-promo-card-actions .btn,.profile-settings-tab,.profile-settings-back,
+.switch,[role="switch"]{
+  transition:color .14s ease,background-color .14s ease,border-color .14s ease,
+    box-shadow .14s ease,transform .14s ease,opacity .14s ease;
+}
+button:not(:disabled):active,.btn:not(:disabled):active{transform:translateY(1px) scale(.99);}
+button:disabled{cursor:not-allowed;}
+button:not(.btn):focus-visible,a:focus-visible,[role="switch"]:focus-visible,
+[role="tab"]:focus-visible,[role="option"]:focus-visible{
+  outline:2px solid var(--signal);
+  outline-offset:2px;
+  box-shadow:0 0 0 4px var(--accent-glow);
+}
+.btn:focus-visible,.bell-btn:focus-visible,.global-search-trigger:focus-visible,
+.trainer-calendar-day-select:focus-visible,.trainer-calendar-event:focus-visible{
+  outline:2px solid var(--signal);
+  outline-offset:2px;
+  box-shadow:0 0 0 4px var(--accent-glow);
+}
+.switch{cursor:pointer;}
+.switch:focus-visible{border-color:var(--signal);}
+.nav-item:not(.active):hover{transform:translateX(2px);}
+.trainer-calendar-day-select:hover{background:color-mix(in srgb,var(--signal) 5%,transparent);}
+.trainer-calendar-event:hover,.notification-item-main:hover,.member-promo-option:hover{
+  box-shadow:0 3px 12px rgba(0,0,0,.10);
+}
+.card:has(> .card-head button,> a,> button,> form button){
+  transition:border-color .16s ease,box-shadow .16s ease,transform .16s ease;
+}
+@media(hover:hover){
+  .card:has(> .card-head button,> a,> button,> form button):hover{
+    border-color:var(--line-strong);
+    box-shadow:0 14px 34px rgba(0,0,0,.18);
+    transform:translateY(-1px);
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  .nav-item,.notification-item-main,.notification-action,.global-search-trigger,
+  .bell-btn,.profile-menu-item,.vddx-option,.trainer-calendar-day-select,
+  .trainer-calendar-event,.member-promo-option,.admin-promo-card-actions .btn,
+  .profile-settings-tab,.profile-settings-back,.switch,[role="switch"],button,.btn,a,.card{
+    transition:none!important;
+    animation:none!important;
+    transform:none!important;
+  }
+}

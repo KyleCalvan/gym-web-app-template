@@ -1,18 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
+import { getProviders, signIn } from 'next-auth/react';
 import { Field, TextInput, Modal } from './shared';
-import { TwoFactorChallenge } from './shared/components/TwoFactorChallenge';
-import { getTwoFactorEmail, isTwoFactorEnabled } from './shared/components/twoFactor';
 import { dur, ease } from './motion.tsx';
 import type { Member, Plan, Role, Setter } from './types.ts';
+import { ROLE_LABEL } from './data.ts';
 
-// Dedicated authentication route. Role-based: pick a role and sign in.
-// Each role has its own prefilled demo credentials so reviewers can
-// jump straight into the right dashboard.
-//   • Member   → member@vinathletics.gym / member123
-//   • Staff    → staff@vinathletics.gym  / staff123
-//   • Trainer  → trainer@vinathletics.gym / trainer123
-//   • Admin    → admin@vinathletics.gym  / admin123
+// Development demo credentials are fetched from a non-production server route.
 
 interface RoleCred {
   email: string;
@@ -21,16 +15,19 @@ interface RoleCred {
   hint: string;
 }
 
-const ROLE_CREDS: Record<Role, RoleCred> = {
-  member:     { email: 'member@vinathletics.gym', password: 'member123', label: 'Member', hint: 'Demo: member@vinathletics.gym / member123' },
-  staff:      { email: 'staff@vinathletics.gym', password: 'staff123', label: 'Staff', hint: 'Demo: staff@vinathletics.gym / staff123' },
-  trainer:    { email: 'trainer@vinathletics.gym', password: 'trainer123', label: 'Trainer', hint: 'Demo: trainer@vinathletics.gym / trainer123' },
-  admin:      { email: 'admin@vinathletics.gym', password: 'admin123', label: 'Admin', hint: 'Demo: admin@vinathletics.gym / admin123' },
-  superadmin: { email: 'superadmin@vinathletics.gym', password: 'superadmin123', label: 'Super Admin', hint: 'Demo: superadmin@vinathletics.gym / superadmin123' },
+const EMAIL_PATTERN = /^\S+@\S+\.\S+$/;
+const OAUTH_ERRORS: Record<string, string> = {
+  OAuthAccountNotLinked: 'This Google account is not linked to that user. Sign in with the existing method first, then use Google from your account.',
+  AccessDenied: 'Google sign-in was cancelled or the Google account could not be verified.',
+  OAuthSignin: 'Google sign-in could not be started. Please try again.',
+  OAuthCallback: 'Google could not complete sign-in. Please try again.',
+  Configuration: 'Google sign-in is not configured. Contact the site administrator.',
+  Default: 'Google sign-in failed. Please try again or use email and password.',
 };
 
 export interface LoginPageProps {
-  onLogin: (role: Role, userId?: string) => void;
+  onLogin: (role: Role, userId?: string, member?: Member) => void;
+  onDemoLogin: (session: { email: string; name: string; role: Role; roles: Role[]; expiresAt: number }) => void;
   members: Member[];
   setMembers: Setter<Member[]>;
   plans: Plan[];
@@ -40,16 +37,22 @@ export interface LoginPageProps {
 }
 
 export default function LoginPage({
-  onLogin, members, setMembers, plans, defaultRole = 'member', defaultTab = 'login', onBack,
+  onLogin, onDemoLogin, members, setMembers, plans, defaultRole = 'member', defaultTab = 'login', onBack,
 }: LoginPageProps) {
   const [role, setRole] = useState<Role>(defaultRole);
   const [memberTab, setMemberTab] = useState<'login' | 'register'>(defaultTab);
-  const [showTwoFactorChallenge, setShowTwoFactorChallenge] = useState(false);
-  const [challengeEmail, setChallengeEmail] = useState('');
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [googleError, setGoogleError] = useState<string | null>(null);
+  const [googleConfigured, setGoogleConfigured] = useState(false);
+  const [googleProviderChecked, setGoogleProviderChecked] = useState(false);
+  const [demoAccountsEnabled, setDemoAccountsEnabled] = useState(false);
+  const [demoCredentials, setDemoCredentials] = useState<Partial<Record<Role, RoleCred>>>({});
+  const [demoPending, setDemoPending] = useState(false);
+  const [googlePending, setGooglePending] = useState(false);
 
   // Sign-in fields (prefilled per role)
-  const [email, setEmail] = useState<string>(ROLE_CREDS[defaultRole].email);
-  const [password, setPassword] = useState<string>(ROLE_CREDS[defaultRole].password);
+  const [email, setEmail] = useState<string>('');
+  const [password, setPassword] = useState<string>('');
 
   // Register fields (member-only)
   const [regName, setRegName] = useState<string>('');
@@ -64,18 +67,104 @@ export default function LoginPage({
   const [termsRead, setTermsRead] = useState<boolean>(false);
   const termsBodyRef = useRef<HTMLDivElement | null>(null);
 
+  useEffect(() => {
+    const code = new URLSearchParams(window.location.search).get('error');
+    if (code) setGoogleError(OAUTH_ERRORS[code] ?? OAUTH_ERRORS.Default);
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    getProviders()
+      .then((providers) => { if (active) setGoogleConfigured(Boolean(providers?.google)); })
+      .catch(() => { if (active) setGoogleError('Could not load Google sign-in settings. Please try again later.'); })
+      .finally(() => { if (active) setGoogleProviderChecked(true); });
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    fetch('/api/demo-session')
+      .then(async (response) => {
+        if (!response.ok) return;
+        const result: unknown = await response.json();
+        if (active && result && typeof result === 'object' && 'enabled' in result) {
+          setDemoAccountsEnabled(result.enabled === true);
+          if ('accounts' in result && Array.isArray(result.accounts)) {
+            const accounts = result.accounts.filter((account): account is {
+              email: string; password: string; role: Role; name: string;
+            } => account && typeof account.email === 'string'
+              && typeof account.password === 'string'
+              && typeof account.name === 'string'
+              && ['member', 'staff', 'trainer', 'admin', 'superadmin'].includes(account.role));
+            const credentials = Object.fromEntries(accounts.map((account) => [account.role, {
+              email: account.email,
+              password: account.password,
+              label: ROLE_LABEL[account.role],
+              hint: `Demo: ${account.email} / ${account.password}`,
+            }])) as Partial<Record<Role, RoleCred>>;
+            setDemoCredentials(credentials);
+            const selected = credentials[defaultRole];
+            if (selected) {
+              setEmail(selected.email);
+              setPassword(selected.password);
+            }
+          }
+        }
+      })
+      .catch(() => {
+        if (active) setDemoAccountsEnabled(false);
+      });
+    return () => { active = false; };
+  }, []);
+
+  const clearFieldError = (field: string) => {
+    setFormErrors((previous) => {
+      if (!previous[field]) return previous;
+      const next = { ...previous };
+      delete next[field];
+      return next;
+    });
+  };
+
+  const handleGoogleSignIn = async () => {
+    setGoogleError(null);
+    if (!googleConfigured) {
+      setGoogleError('Google sign-in is not configured yet. Use email sign-in or ask the administrator to finish OAuth setup.');
+      return;
+    }
+    setGooglePending(true);
+    try {
+      const result = await signIn('google', { callbackUrl: window.location.origin, redirect: false });
+      if (result?.error || !result?.url) {
+        setGoogleError(OAUTH_ERRORS[result?.error ?? ''] ?? OAUTH_ERRORS.Default);
+        setGooglePending(false);
+        return;
+      }
+      window.location.assign(result.url);
+    } catch {
+      setGoogleError('Could not connect to Google sign-in. Check your connection and try again.');
+      setGooglePending(false);
+    }
+  };
+
   // "Fully read" is reached when the agreement is scrolled to the bottom.
   const handleTermsScroll = () => {
     const el = termsBodyRef.current;
     if (!el) return;
-    if (el.scrollHeight - el.scrollTop - el.clientHeight < 4) setTermsRead(true);
+    if (el.scrollHeight - el.scrollTop - el.clientHeight < 4) {
+      setTermsRead(true);
+      clearFieldError('terms');
+    }
   };
 
   useEffect(() => {
     if (!termsOpen) return;
     // An agreement short enough to fit without scrolling counts as read on open.
     const el = termsBodyRef.current;
-    if (el && el.scrollHeight - el.clientHeight < 4) setTermsRead(true);
+    if (el && el.scrollHeight - el.clientHeight < 4) {
+      setTermsRead(true);
+      clearFieldError('terms');
+    }
   }, [termsOpen]);
 
   const [toast, setToast] = useState<string | null>(null);
@@ -91,10 +180,11 @@ export default function LoginPage({
 
   const handleResetPassword = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!/^\S+@\S+\.\S+$/.test(resetEmail)) {
-      showToast('Please enter a valid email');
+    if (!EMAIL_PATTERN.test(resetEmail.trim())) {
+      setFormErrors((prev) => ({ ...prev, 'reset-email': 'Enter a valid email address.' }));
       return;
     }
+    clearFieldError('reset-email');
     setForgotPasswordOpen(false);
     setResetSuccessOpen(true);
   };
@@ -103,58 +193,86 @@ export default function LoginPage({
     setForgotPasswordOpen(false);
     setResetSuccessOpen(false);
     setResetEmail('');
+    clearFieldError('reset-email');
   };
 
-  const pickRole = (r: Role) => {
-    setRole(r);
-    setEmail(ROLE_CREDS[r].email);
-    setPassword(ROLE_CREDS[r].password);
+  const pickRole = (nextRole: Role) => {
+    setRole(nextRole);
+    setEmail(demoCredentials[nextRole]?.email || '');
+    setPassword(demoCredentials[nextRole]?.password || '');
+    setFormErrors({});
   };
 
   const handleSignIn = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!/^\S+@\S+\.\S+$/.test(email)) { showToast('Please enter a valid email'); return; }
-    if (password.length < 6) { showToast('Password must be at least 6 characters'); return; }
+    const errors: Record<string, string> = {};
+    if (!EMAIL_PATTERN.test(email.trim())) errors['login-email'] = 'Enter a valid email address.';
+    if (password.length < 6) errors['login-password'] = 'Password must be at least 6 characters.';
+    if (Object.keys(errors).length) { setFormErrors(errors); return; }
 
-    const creds = ROLE_CREDS[role];
-    if (email !== creds.email || password !== creds.password) {
-      showToast('Invalid email or password');
-      return;
-    }
-
-    try {
-      if (isTwoFactorEnabled(role)) {
-        setChallengeEmail(getTwoFactorEmail(role) || email);
-        setShowTwoFactorChallenge(true);
+    setFormErrors({});
+    setDemoPending(true);
+    void fetch('/api/demo-session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email.trim(), password }),
+    }).then(async (response) => {
+      const result: unknown = await response.json();
+      if (!response.ok) {
+        const message = result && typeof result === 'object' && 'error' in result && typeof result.error === 'string'
+          ? result.error
+          : 'Demo sign in failed.';
+        setFormErrors({ auth: message });
         return;
       }
-    } catch {
-      showToast('Could not check two-step verification settings. Please try again.');
-      return;
-    }
-
-    onLogin(role);
+      if (!result || typeof result !== 'object' || !('demoSession' in result)) {
+        setFormErrors({ auth: 'The demo sign-in service returned an invalid response.' });
+        return;
+      }
+      const session = result.demoSession;
+      if (!session || typeof session !== 'object'
+        || !('email' in session) || typeof session.email !== 'string'
+        || !('name' in session) || typeof session.name !== 'string'
+        || !('role' in session) || typeof session.role !== 'string'
+        || !('roles' in session) || !Array.isArray(session.roles)
+        || !('expiresAt' in session) || typeof session.expiresAt !== 'number') {
+        setFormErrors({ auth: 'The demo sign-in service returned incomplete session details.' });
+        return;
+      }
+      onDemoLogin(session as { email: string; name: string; role: Role; roles: Role[]; expiresAt: number });
+    }).catch(() => {
+      setFormErrors({ auth: 'Could not connect to demo sign in. Please try again.' });
+    }).finally(() => setDemoPending(false));
   };
 
   const handleMemberRegister = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!regName.trim()) { showToast('Name is required'); return; }
-    if (!/^\S+@\S+\.\S+$/.test(regEmail)) { showToast('Please enter a valid email'); return; }
-    if (regPassword.length < 8) { showToast('Password must be at least 8 characters'); return; }
-    if (!termsRead) { showToast('Please read the Terms of Use first'); return; }
-    if (!agreedToTerms) { showToast('You must agree to the Terms of Use'); return; }
+    const errors: Record<string, string> = {};
+    if (!regName.trim()) errors['register-name'] = 'Enter your full name.';
+    if (!EMAIL_PATTERN.test(regEmail.trim())) errors['register-email'] = 'Enter a valid email address.';
+    if (!regPhone.trim()) errors['register-phone'] = 'Enter a phone number.';
+    if (regPassword.length < 8) errors['register-password'] = 'Use at least 8 characters.';
+    if (members.some((member) => member.email.trim().toLowerCase() === regEmail.trim().toLowerCase())) {
+      errors['register-email'] = 'An account already exists for this email.';
+    }
+    if (!termsRead) errors.terms = 'Open and read the Terms of Use before continuing.';
+    else if (!agreedToTerms) errors.terms = 'Accept the Terms of Use to create an account.';
+    if (Object.keys(errors).length) { setFormErrors(errors); return; }
+
+    setFormErrors({});
     const id = 'M-' + (1042 + members.length);
-    setMembers((prev) => [...prev, {
+    const newMember: Member = {
       id,
       name: regName.trim(),
-      email: regEmail.trim(),
+      email: regEmail.trim().toLowerCase(),
       phone: regPhone.trim(),
       plan: 'Premium',
       status: 'Active',
       joined: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
-    }]);
+    };
+    setMembers((prev) => [...prev, newMember]);
     showToast('Welcome, ' + regName.trim() + '! Your member ID is ' + id);
-    onLogin('member', id);
+    onLogin('member', id, newMember);
   };
 
 
@@ -164,13 +282,25 @@ export default function LoginPage({
     transition: { delay: 0.08 + i * 0.06, duration: dur.base, ease: ease.out },
   });
 
-  const creds = ROLE_CREDS[role];
+  const creds: RoleCred = demoCredentials[role] || {
+    email: '',
+    password: '',
+    label: ROLE_LABEL[role],
+    hint: '',
+  };
 
   return (
     <div className="auth-page">
       <nav className="auth-page-nav">
-        <div className="brand"><img src="/logo.jpg" alt="VinAthletics" className="brand-mark-img" /> VinAthletics</div>
-        <a onClick={onBack} style={{ cursor: 'pointer' }}>← Back to home</a>
+        <a
+          className="brand auth-brand-link"
+          href="/"
+          aria-label="VinAthletics home"
+          onClick={(e) => { e.preventDefault(); onBack(); }}
+        >
+          <img src="/logo.jpg" alt="" className="brand-mark-img" />
+          <span>VinAthletics</span>
+        </a>
       </nav>
 
       <div className="auth-page-body">
@@ -196,18 +326,11 @@ export default function LoginPage({
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: dur.slow, ease: ease.out }}
         >
-          {/* Role selector — 5 roles (Member / Staff / Trainer / Admin / Super Admin) */}
-          <div className="role-grid" style={{ marginBottom: 18 }}>
-            {(['member','staff','trainer','admin','superadmin'] as const).map((r) => (
-              <div
-                key={r}
-                className={"role-pick" + (role === r ? ' active' : '')}
-                onClick={() => pickRole(r)}
-                style={{ cursor: 'pointer' }}
-              >{ROLE_CREDS[r].label}</div>
-            ))}
-          </div>
-
+          <a
+            className="auth-back-link"
+            href="/"
+            onClick={(e) => { e.preventDefault(); onBack(); }}
+          >← Back to Home</a>
           <h2 style={{ fontSize: 22, textTransform: 'uppercase', marginBottom: 4 }}>
             {role === 'member' && memberTab === 'register' ? 'Create Account' : `${creds.label} Sign In`}
           </h2>
@@ -217,30 +340,66 @@ export default function LoginPage({
               : `Sign in to the ${creds.label} dashboard.`}
           </p>
 
+          {demoAccountsEnabled && !(role === 'member' && memberTab === 'register') && (
+            <>
+              <div className="role-grid" style={{ marginBottom: 10 }} role="group" aria-label="Choose demo role">
+                {(['member', 'staff', 'trainer', 'admin', 'superadmin'] as const).map((availableRole) => (
+                  <button
+                    key={availableRole}
+                    type="button"
+                    className={`role-pick${role === availableRole ? ' active' : ''}`}
+                    onClick={() => pickRole(availableRole)}
+                    aria-pressed={role === availableRole}
+                  >
+                    {ROLE_LABEL[availableRole]}
+                  </button>
+                ))}
+              </div>
+              <p className="demo-account-notice">Development demo accounts only. Do not use these credentials in production.</p>
+            </>
+          )}
+
           {role === 'member' && (
             <div className="auth-tabs" style={{ marginTop: 0 }}>
-              <button type="button" className={memberTab === 'login' ? 'active' : ''} onClick={() => setMemberTab('login')}>Login</button>
-              <button type="button" className={memberTab === 'register' ? 'active' : ''} onClick={() => setMemberTab('register')}>Register</button>
+              <button type="button" className={memberTab === 'login' ? 'active' : ''} onClick={() => { setMemberTab('login'); setFormErrors({}); }}>Login</button>
+              <button type="button" className={memberTab === 'register' ? 'active' : ''} onClick={() => { setMemberTab('register'); setFormErrors({}); }}>Register</button>
             </div>
           )}
 
           {role === 'member' && memberTab === 'register' ? (
-            <form onSubmit={handleMemberRegister}>
-              <Field label="Full Name">
-                <input className="form-control" required placeholder="Your full name"
-                  value={regName} onChange={(e) => setRegName(e.target.value)} />
+            <>
+            <form onSubmit={handleMemberRegister} noValidate>
+              <Field label="Full Name" htmlFor="register-name">
+                <input id="register-name" className="form-control" required placeholder="Your full name"
+                  aria-invalid={Boolean(formErrors['register-name'])}
+                  aria-describedby={formErrors['register-name'] ? 'register-name-error' : undefined}
+                  value={regName} onChange={(e) => { setRegName(e.target.value); clearFieldError('register-name'); }}
+                  onBlur={() => { if (!regName.trim()) setFormErrors((prev) => ({ ...prev, 'register-name': 'Enter your full name.' })); }} />
+                {formErrors['register-name'] && <p className="field-error" id="register-name-error" role="alert">{formErrors['register-name']}</p>}
               </Field>
-              <Field label="Email">
-                <input className="form-control" type="email" required placeholder="you@example.com"
-                  value={regEmail} onChange={(e) => setRegEmail(e.target.value)} />
+              <Field label="Email" htmlFor="register-email">
+                <input id="register-email" className="form-control" type="email" required placeholder="you@example.com"
+                  aria-invalid={Boolean(formErrors['register-email'])}
+                  aria-describedby={formErrors['register-email'] ? 'register-email-error' : undefined}
+                  value={regEmail} onChange={(e) => { setRegEmail(e.target.value); clearFieldError('register-email'); }}
+                  onBlur={() => { if (!EMAIL_PATTERN.test(regEmail.trim())) setFormErrors((prev) => ({ ...prev, 'register-email': 'Enter a valid email address.' })); }} />
+                {formErrors['register-email'] && <p className="field-error" id="register-email-error" role="alert">{formErrors['register-email']}</p>}
               </Field>
-              <Field label="Phone">
-                <input className="form-control" required placeholder="+63 9XX XXX XXXX"
-                  value={regPhone} onChange={(e) => setRegPhone(e.target.value)} />
+              <Field label="Phone" htmlFor="register-phone">
+                <input id="register-phone" className="form-control" type="tel" required placeholder="+63 9XX XXX XXXX"
+                  aria-invalid={Boolean(formErrors['register-phone'])}
+                  aria-describedby={formErrors['register-phone'] ? 'register-phone-error' : undefined}
+                  value={regPhone} onChange={(e) => { setRegPhone(e.target.value); clearFieldError('register-phone'); }}
+                  onBlur={() => { if (!regPhone.trim()) setFormErrors((prev) => ({ ...prev, 'register-phone': 'Enter a phone number.' })); }} />
+                {formErrors['register-phone'] && <p className="field-error" id="register-phone-error" role="alert">{formErrors['register-phone']}</p>}
               </Field>
-              <Field label="Password">
-                <input className="form-control" type="password" required placeholder="At least 8 characters"
-                  value={regPassword} onChange={(e) => setRegPassword(e.target.value)} />
+              <Field label="Password" htmlFor="register-password">
+                <input id="register-password" className="form-control" type="password" required placeholder="At least 8 characters"
+                  aria-invalid={Boolean(formErrors['register-password'])}
+                  aria-describedby={formErrors['register-password'] ? 'register-password-error' : undefined}
+                  value={regPassword} onChange={(e) => { setRegPassword(e.target.value); clearFieldError('register-password'); }}
+                  onBlur={() => { if (regPassword.length < 8) setFormErrors((prev) => ({ ...prev, 'register-password': 'Use at least 8 characters.' })); }} />
+                {formErrors['register-password'] && <p className="field-error" id="register-password-error" role="alert">{formErrors['register-password']}</p>}
               </Field>
 
               <div className="terms-row">
@@ -248,17 +407,20 @@ export default function LoginPage({
                   type="checkbox"
                   id="agree-terms"
                   checked={agreedToTerms}
-                  onChange={(e) => setAgreedToTerms(e.target.checked)}
+                  aria-invalid={Boolean(formErrors.terms)}
+                  aria-describedby={formErrors.terms ? 'terms-error' : undefined}
+                  onChange={(e) => { setAgreedToTerms(e.target.checked); if (e.target.checked) clearFieldError('terms'); }}
                 />
-                <label htmlFor="agree-terms" className="terms-text">I have read and agree to the</label>
-                <button
-                  type="button"
-                  className="terms-link"
-                  onClick={() => setTermsOpen(true)}
-                >
-                  Terms of Use
-                </button>
+                <div className="terms-copy">
+                  <label htmlFor="agree-terms" className="terms-text">I have read and agree to the</label>
+                  <button
+                    type="button"
+                    className="terms-link"
+                    onClick={() => setTermsOpen(true)}
+                  >Terms of Use</button>
+                </div>
               </div>
+              {formErrors.terms && <p className="field-error terms-error" id="terms-error" role="alert">{formErrors.terms}</p>}
 
               <button
                 type="submit"
@@ -275,21 +437,50 @@ export default function LoginPage({
                 <p className="terms-hint">Tick the agreement box above to continue.</p>
               ) : null}
             </form>
+            <div className="auth-google-block">
+              <div className="auth-divider"><span>or continue with</span></div>
+              <button
+                type="button"
+                className="auth-google-button"
+                onClick={handleGoogleSignIn}
+                disabled={!googleProviderChecked || !googleConfigured || googlePending}
+                aria-describedby={!googleProviderChecked || !googleConfigured ? 'google-provider-note' : undefined}
+              >
+                <span className="google-mark" aria-hidden="true">G</span>
+                {googlePending ? 'Connecting to Google…' : 'Continue with Google'}
+              </button>
+              {(!googleProviderChecked || !googleConfigured) && (
+                <p className="auth-provider-note" id="google-provider-note">
+                  {!googleProviderChecked ? 'Checking Google sign-in availability…' : 'Google sign-in will be available when the administrator configures OAuth.'}
+                </p>
+              )}
+              {googleError && <p className="field-error auth-provider-error" role="alert">{googleError}</p>}
+            </div>
+            </>
           ) : (
-            <form onSubmit={handleSignIn}>
-              <Field label="Email">
+            <>
+              <form onSubmit={handleSignIn} noValidate>
+              <Field label="Email" htmlFor="login-email">
                 <input
-                  className="form-control" type="email" required
+                  id="login-email" className="form-control" type="email" required
                   placeholder="you@example.com"
-                  value={email} onChange={(e) => setEmail(e.target.value)}
+                  aria-invalid={Boolean(formErrors['login-email'])}
+                  aria-describedby={formErrors['login-email'] ? 'login-email-error' : undefined}
+                  value={email} onChange={(e) => { setEmail(e.target.value); clearFieldError('login-email'); }}
+                  onBlur={() => { if (!EMAIL_PATTERN.test(email.trim())) setFormErrors((prev) => ({ ...prev, 'login-email': 'Enter a valid email address.' })); }}
                 />
+                {formErrors['login-email'] && <p className="field-error" id="login-email-error" role="alert">{formErrors['login-email']}</p>}
               </Field>
-              <Field label="Password">
+              <Field label="Password" htmlFor="login-password">
                 <input
-                  className="form-control" type="password" required
+                  id="login-password" className="form-control" type="password" required
                   placeholder="••••••••"
-                  value={password} onChange={(e) => setPassword(e.target.value)}
+                  aria-invalid={Boolean(formErrors['login-password'])}
+                  aria-describedby={formErrors['login-password'] ? 'login-password-error' : undefined}
+                  value={password} onChange={(e) => { setPassword(e.target.value); clearFieldError('login-password'); }}
+                  onBlur={() => { if (password.length < 6) setFormErrors((prev) => ({ ...prev, 'login-password': 'Password must be at least 6 characters.' })); }}
                 />
+                {formErrors['login-password'] && <p className="field-error" id="login-password-error" role="alert">{formErrors['login-password']}</p>}
               </Field>
               <div style={{ textAlign: 'right', marginBottom: 12 }}>
                 <button
@@ -301,23 +492,38 @@ export default function LoginPage({
                   Forgot Password
                 </button>
               </div>
-              <button type="submit" className="btn btn-signal btn-block">
-                Sign In to {creds.label} Dashboard
+              {formErrors.auth && <p className="field-error" role="alert">{formErrors.auth}</p>}
+              <button type="submit" className="btn btn-signal btn-block" disabled={!demoAccountsEnabled || demoPending}>
+                {demoPending ? 'Signing in…' : `Sign In to ${creds.label} Dashboard`}
               </button>
-              {creds.hint && <p style={{ fontSize: 12.7, color: 'var(--steel)', marginTop: 12, textAlign: 'center' }}>{creds.hint}</p>}
+              {!demoAccountsEnabled && <p className="auth-provider-note">Demo email sign-in is disabled in this environment. Use the configured sign-in provider.</p>}
+              {demoAccountsEnabled && creds.hint && <p style={{ fontSize: 12.7, color: 'var(--steel)', marginTop: 12, textAlign: 'center' }}>{creds.hint}</p>}
             </form>
+            {role === 'member' && (
+              <div className="auth-google-block">
+                <div className="auth-divider"><span>or continue with</span></div>
+                <button
+                  type="button"
+                  className="auth-google-button"
+                  onClick={handleGoogleSignIn}
+                  disabled={!googleProviderChecked || !googleConfigured || googlePending}
+                  aria-describedby={!googleProviderChecked || !googleConfigured ? 'google-provider-note' : undefined}
+                >
+                  <span className="google-mark" aria-hidden="true">G</span>
+                  {googlePending ? 'Connecting to Google…' : 'Continue with Google'}
+                </button>
+                {(!googleProviderChecked || !googleConfigured) && (
+                  <p className="auth-provider-note" id="google-provider-note">
+                    {!googleProviderChecked ? 'Checking Google sign-in availability…' : 'Google sign-in will be available when the administrator configures OAuth.'}
+                  </p>
+                )}
+                {googleError && <p className="field-error auth-provider-error" role="alert">{googleError}</p>}
+              </div>
+            )}
+            </>
           )}
         </motion.div>
       </div>
-
-      {showTwoFactorChallenge && (
-        <TwoFactorChallenge
-          mode="challenge"
-          email={challengeEmail}
-          onCancel={() => setShowTwoFactorChallenge(false)}
-          onVerified={() => onLogin(role)}
-        />
-      )}
 
       {toast && (
         <motion.div
@@ -332,16 +538,21 @@ export default function LoginPage({
 
       {forgotPasswordOpen && (
         <Modal title="Reset your password" className="modal-dark" onClose={closeResetFlow}>
-          <form onSubmit={handleResetPassword} style={{ padding: '0 24px 24px' }}>
+          <form onSubmit={handleResetPassword} noValidate style={{ padding: '0 24px 24px' }}>
             <p style={{ margin: '0 0 18px', color: 'var(--steel)', fontSize: 14.3, lineHeight: 1.6 }}>
               Enter your email address below and we'll send you a password reset link so you can get back to your account.
             </p>
-            <Field label="EMAIL">
+            <Field label="EMAIL" htmlFor="reset-email">
               <TextInput
+                id="reset-email"
+                type="email"
                 value={resetEmail}
-                onChange={(v) => setResetEmail(v)}
+                onChange={(v) => { setResetEmail(v); clearFieldError('reset-email'); }}
                 placeholder="you@example.com"
+                aria-invalid={Boolean(formErrors['reset-email'])}
+                aria-describedby={formErrors['reset-email'] ? 'reset-email-error' : undefined}
               />
+              {formErrors['reset-email'] && <p className="field-error" id="reset-email-error" role="alert">{formErrors['reset-email']}</p>}
             </Field>
             <button type="submit" className="btn btn-signal btn-block" style={{ marginTop: 12 }}>
               RESET PASSWORD

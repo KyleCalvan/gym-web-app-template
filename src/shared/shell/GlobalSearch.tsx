@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { Search, X } from 'lucide-react';
 import { dur, ease } from '../../motion.tsx';
 import type { NavSection } from '../../types.ts';
 
@@ -22,9 +23,11 @@ interface FlatItem {
 export function GlobalSearch({ nav, active, onNav }: GlobalSearchProps) {
   const [query, setQuery] = useState<string>('');
   const [open, setOpen] = useState<boolean>(false);
+  const [mobileExpanded, setMobileExpanded] = useState(false);
   const [highlight, setHighlight] = useState<number>(0);
 
   const wrapRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
 
   const results = useMemo<FlatItem[]>(() => {
@@ -42,6 +45,7 @@ export function GlobalSearch({ nav, active, onNav }: GlobalSearchProps) {
   const choose = (id: string) => {
     onNav(id);
     setOpen(false);
+    setMobileExpanded(false);
     setQuery('');
     setHighlight(0);
   };
@@ -49,12 +53,19 @@ export function GlobalSearch({ nav, active, onNav }: GlobalSearchProps) {
   // Close on an outside click or focus loss.
   useEffect(() => {
     if (!open) return;
-    const onDown = (e: MouseEvent) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+    const onDown = (e: PointerEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
+        setOpen(false);
+        setMobileExpanded(false);
+      }
     };
-    window.addEventListener('mousedown', onDown);
-    return () => window.removeEventListener('mousedown', onDown);
+    window.addEventListener('pointerdown', onDown);
+    return () => window.removeEventListener('pointerdown', onDown);
   }, [open]);
+
+  useEffect(() => {
+    if (mobileExpanded) inputRef.current?.focus();
+  }, [mobileExpanded]);
 
   // A new query always restarts the highlight at the top.
   useEffect(() => { setHighlight(0); }, [query]);
@@ -78,15 +89,43 @@ export function GlobalSearch({ nav, active, onNav }: GlobalSearchProps) {
       if (open && results[highlight]) { e.preventDefault(); choose(results[highlight].id); }
     } else if (e.key === 'Escape') {
       e.preventDefault();
-      if (open) setOpen(false);
-      else (e.currentTarget as HTMLInputElement).blur();
+      if (mobileExpanded) {
+        setOpen(false);
+        setMobileExpanded(false);
+        setQuery('');
+        return;
+      }
+      if (open) {
+        setOpen(false);
+        return;
+      }
+      (e.currentTarget as HTMLInputElement).blur();
     }
   };
 
   return (
-    <div className="global-search" ref={wrapRef}>
+    <div className={`global-search${mobileExpanded ? ' mobile-expanded' : ''}`} ref={wrapRef}>
+      <button
+        type="button"
+        className="global-search-trigger"
+        aria-label={mobileExpanded ? 'Close page search' : 'Search pages'}
+        aria-expanded={mobileExpanded}
+        onClick={() => {
+          if (mobileExpanded) {
+            setMobileExpanded(false);
+            setOpen(false);
+            setQuery('');
+          } else {
+            setMobileExpanded(true);
+            setOpen(true);
+          }
+        }}
+      >
+        {mobileExpanded ? <X size={19} aria-hidden="true" /> : <Search size={19} aria-hidden="true" />}
+      </button>
       <span className="gs-ic" aria-hidden="true">⌕</span>
       <input
+        ref={inputRef}
         type="text"
         placeholder="Search pages…"
         value={query}

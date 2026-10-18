@@ -6,9 +6,9 @@ import { dur, ease } from '../motion.tsx';
 import { cx, scrollToSection } from './landing-utils.ts';
 
 const NAV_LINKS = [
-  // "About Us" points at the contact strip rather than a section of its own —
-  // the page has no About section, and this link used to dangle at #about.
-  { label: 'About Us',         href: '#contact' },
+  // The about-style introduction is the "Why Members Pick" section; keep it
+  // distinct from Contact so only one item can represent each active section.
+  { label: 'About Us',         href: '#why' },
   { label: 'Promotions',       href: '#promotions' },
   { label: 'Membership Plans', href: '#plans' },
   { label: 'Trainers',         href: '#trainers' },
@@ -77,10 +77,15 @@ function LandingNav({ stuck, activeSection, onNavigate }) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: dur.base, ease: ease.out }}
     >
-      <div className="brand">
-        <img src="/logo.jpg" alt="VinAthletics" className="brand-mark-img" />
+      <a
+        className="brand landing-brand-link"
+        href="#main"
+        aria-label="VinAthletics home"
+        onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+      >
+        <img src="/logo.jpg" alt="" className="brand-mark-img" />
         <span>VinAthletics</span>
-      </div>
+      </a>
 
       <AnimatePresence initial={false}>
         {open && (

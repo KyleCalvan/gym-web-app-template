@@ -12,18 +12,17 @@ const WHY_TILES = [
 ];
 
 const WHY_ITEMS = [
-  { label: 'ACHIEVE YOUR GOALS', text: 'Programs and tools designed to help you stay focused and make real progress.' },
+  { label: 'ACHIEVE & CELEBRATE', text: 'Stay focused, make real progress, and celebrate every milestone along the way.' },
   { label: 'STAY CONSISTENT', text: 'Easy booking, reminders, and tracking to keep you on track.' },
   { label: 'FEEL CONNECTED', text: 'A supportive community that inspires you to show up and keep going.' },
   { label: 'TRAIN WITH CONFIDENCE', text: 'Quality equipment and certified coaches focused on your safety and results.' },
-  { label: 'CELEBRATE EVERY WIN', text: "From small victories to big milestones, we're here to celebrate your journey." },
 ];
 
 const WHY_TRUST = ['YOUR DATA IS SECURE', 'TRUSTED BY THOUSANDS', "WE'RE WITH YOU EVERY STEP"];
 
-function WhyCardsRow() {
+function WhyCardsRow({ whyRef }) {
   return (
-    <section className="hero-cards-row" id="why" aria-labelledby="why-heading">
+    <section className="hero-cards-row" id="why" ref={whyRef} aria-labelledby="why-heading">
       <div className="hero-cards-row-inner">
         <SectionHeading
           id="why-heading"

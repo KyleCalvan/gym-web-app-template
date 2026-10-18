@@ -1,11 +1,13 @@
 // @ts-nocheck
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Avatar, Badge, Table, TabbedCard, Modal, Field, TextInput } from '../shared';
 import { peso } from '../data.ts';
 import BookingCheckoutModal from './BookingCheckoutModal.tsx';
 import EditBookingModal from './EditBookingModal.tsx';
+import { getActivePromotionsForMember } from './promotionEligibility.ts';
+import { getBookingDateError, getBookingDatesError, getBookingToday, isBookingSlotAvailable } from './bookingDates.ts';
 
-function MemberCoaching({ bookings, setBookings, sessions, setSessions, setTransactions, trainers, setTrainers, currentUserId, members, today, toast, addAudit }){
+function MemberCoaching({ bookings, setBookings, sessions, setSessions, setTransactions, trainers, setTrainers, promotions, setPromotions, promotionRedemptions, setPromotionRedemptions, currentUserId, members, today, toast, addAudit, preferredPaymentMethod }){
   const [showBooking, setShowBooking] = useState(false);
   const [bookingTrainer, setBookingTrainer] = useState(null);
   const [editing, setEditing] = useState(null);
@@ -13,10 +15,23 @@ function MemberCoaching({ bookings, setBookings, sessions, setSessions, setTrans
   const [stars, setStars] = useState(0);
   const [comment, setComment] = useState('');
   const me = members.find(m => m.id === currentUserId) || members[0];
+  const myRedemptions = useMemo(
+    () => (promotionRedemptions || []).filter((r) => r.memberId === me?.id),
+    [promotionRedemptions, me?.id],
+  );
+  const activePromotions = useMemo(
+    () => getActivePromotionsForMember(promotions || [], myRedemptions, me),
+    [promotions, myRedemptions, me?.plan],
+  );
 
   const openBookingFor = (trainerName) => { setBookingTrainer(trainerName); setShowBooking(true); };
 
-  const handlePersistBookings = ({ id, trainer, dates, time, amount, totalAmount, method }) => {
+  const handlePersistBookings = ({ id, trainer, dates, time, amount, totalAmount, promoCode, savings }) => {
+    const dateError = getBookingDatesError(dates, getBookingToday());
+    if (dateError) return dateError;
+    const unavailableDate = dates.find((date) => !isBookingSlotAvailable(sessions, { trainer, date, time }));
+    if (unavailableDate) return `That time is no longer available on ${unavailableDate}. Choose another slot.`;
+
     const memberName = me?.name || '';
     const newBookings = dates.map((date, index) => ({
       id: index === 0 ? id : `${id}-${index + 1}`,
@@ -31,24 +46,34 @@ function MemberCoaching({ bookings, setBookings, sessions, setSessions, setTrans
     }));
     setBookings(prev => [...prev, ...newBookings]);
     setSessions(prev => [...prev, ...newBookings]);
-    setTransactions(prev => [{
-      id: 'TXN-' + (8821 + prev.length),
-      member: memberName,
-      type: `PT Sessions (${trainer}) × ${dates.length}`,
-      amount: totalAmount,
-      method,
-      date: today,
-      status: 'Paid',
-    }, ...prev]);
-    toast(`${dates.length} session${dates.length === 1 ? '' : 's'} booked and paid — ${peso(totalAmount)}`);
-    addAudit?.('info', 'Sessions booked', `${trainer} — ${dates.length} dates — ${peso(totalAmount)}`);
+    const savingsNote = savings > 0 ? ` — saved ${peso(savings)} with ${promoCode}` : '';
+    toast(`${dates.length} session${dates.length === 1 ? '' : 's'} booked with simulated payment — ${peso(totalAmount)}${savingsNote}`);
+    addAudit?.('info', 'Sessions booked', `${trainer} — ${dates.length} dates — ${peso(totalAmount)}${promoCode ? ` — promo ${promoCode}` : ''}`);
+    return null;
   };
 
   const saveEdit = (id, changes) => {
+    if (changes.date) {
+      const dateError = getBookingDateError(changes.date, getBookingToday());
+      if (dateError) return dateError;
+    }
+    const currentBooking = bookings.find((booking) => booking.id === id);
+    if (currentBooking && (changes.date || changes.time)) {
+      const date = changes.date || currentBooking.date;
+      const time = changes.time || currentBooking.time;
+      if (!isBookingSlotAvailable(sessions, {
+        trainer: currentBooking.trainer,
+        date,
+        time,
+        excludeBookingId: id,
+      })) return `That time is no longer available on ${date}. Choose another slot.`;
+    }
+
     setBookings(prev => prev.map(b => b.id===id ? {...b, ...changes} : b));
     setSessions(prev => prev.map(s => s.id===id ? {...s, ...changes} : s));
     toast('Booking updated');
     addAudit?.('info', 'Booking updated', id);
+    return null;
   };
   const cancelBooking = (id) => {
     setBookings(prev => prev.map(b => b.id===id ? {...b, status:'Cancelled'} : b));
@@ -121,6 +146,15 @@ function MemberCoaching({ bookings, setBookings, sessions, setSessions, setTrans
         <BookingCheckoutModal
           initialTrainer={bookingTrainer}
           trainers={trainers}
+          activePromotions={activePromotions}
+          promotions={promotions}
+          setPromotions={setPromotions}
+          promotionRedemptions={promotionRedemptions}
+          setPromotionRedemptions={setPromotionRedemptions}
+          member={me}
+          setTransactions={setTransactions}
+          preferredPaymentMethod={preferredPaymentMethod}
+          today={today}
           onClose={()=>setShowBooking(false)}
           onComplete={()=>setShowBooking(false)}
           onPersistBookings={handlePersistBookings}

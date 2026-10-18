@@ -10,7 +10,6 @@ import PromoStrip from './landing/PromoStrip.tsx';
 import PlansStrip from './landing/PlansStrip.tsx';
 import TrainersStrip from './landing/TrainersStrip.tsx';
 import ContactStrip from './landing/ContactStrip.tsx';
-import CtaBand from './landing/CtaBand.tsx';
 import SiteFooter from './landing/SiteFooter.tsx';
 import BackToTop from './landing/BackToTop.tsx';
 
@@ -26,7 +25,8 @@ export interface LandingProps {
 
 export default function Landing({ plans, promotions, trainers, onNavigate }: LandingProps) {
   // Section refs for scroll-spy
-  const refs: Record<'promotions' | 'plans' | 'trainers' | 'contact', RefObject<HTMLElement>> = {
+  const refs: Record<'why' | 'promotions' | 'plans' | 'trainers' | 'contact', RefObject<HTMLElement>> = {
+    why:         useRef<HTMLElement>(null),
     promotions: useRef<HTMLElement>(null),
     plans:      useRef<HTMLElement>(null),
     trainers:   useRef<HTMLElement>(null),
@@ -71,19 +71,29 @@ export default function Landing({ plans, promotions, trainers, onNavigate }: Lan
   }, []);
 
   useEffect(() => {
-    const onScroll = () => setStuck(window.scrollY > 60);
-    onScroll();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
+    const syncNavigation = () => {
+      setStuck(window.scrollY > 60);
 
-  useEffect(() => {
-    const obs = new IntersectionObserver(
-      (entries) => entries.forEach((e) => { if (e.isIntersecting) setActiveSection(e.target.id); }),
-      { rootMargin: '-30% 0px -50% 0px', threshold: 0 }
-    );
-    Object.values(refs).forEach((r) => r.current && obs.observe(r.current));
-    return () => obs.disconnect();
+      // Pick the one section crossing a single viewport marker. An observer
+      // callback can contain several intersecting entries at once and used to
+      // leave the active nav item dependent on callback order.
+      const marker = window.innerHeight * 0.35;
+      const current = Object.entries(refs).find(([, ref]) => {
+        const section = ref.current;
+        if (!section) return false;
+        const bounds = section.getBoundingClientRect();
+        return bounds.top <= marker && bounds.bottom > marker;
+      });
+      setActiveSection(current?.[0] ?? null);
+    };
+
+    syncNavigation();
+    window.addEventListener('scroll', syncNavigation, { passive: true });
+    window.addEventListener('resize', syncNavigation);
+    return () => {
+      window.removeEventListener('scroll', syncNavigation);
+      window.removeEventListener('resize', syncNavigation);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -111,12 +121,11 @@ export default function Landing({ plans, promotions, trainers, onNavigate }: Lan
       <main id="main" className="landing" ref={landingRef} tabIndex={-1}>
         <LandingNav stuck={stuck} activeSection={activeSection} onNavigate={onNavigate} />
         <LandingHero onNavigate={onNavigate} />
-        <WhyCardsRow />
+        <WhyCardsRow whyRef={refs.why} />
         <PromoStrip promotionsRef={refs.promotions} activePromos={activePromos} />
         <PlansStrip plansRef={refs.plans} activePlans={activePlans} onNavigate={onNavigate} />
         <TrainersStrip trainersRef={refs.trainers} activeTrainers={landingTrainers} onNavigate={onNavigate} />
         <ContactStrip contactRef={refs.contact} />
-        <CtaBand onNavigate={onNavigate} />
         <SiteFooter />
       </main>
       <BackToTop />

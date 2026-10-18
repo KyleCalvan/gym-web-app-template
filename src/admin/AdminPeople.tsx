@@ -4,6 +4,7 @@ import { Avatar, Badge, Table, TabbedCard, Modal, Field, TextInput, Select } fro
 import type { Staff, StaffRole, StaffShift, StaffStatus } from '../types.ts';
 
 function AdminPeople({ trainers, setTrainers, staff, setStaff, members, sessions, setSessions, toast, addAudit }){
+  const [peopleTab, setPeopleTab] = useState<'trainers' | 'staff'>('trainers');
   // ===== Trainer state =====
   const [editing, setEditing] = useState(null);
   const [editForm, setEditForm] = useState(null);
@@ -113,6 +114,33 @@ function AdminPeople({ trainers, setTrainers, staff, setStaff, members, sessions
 
   return (
     <>
+      <div className="admin-people-tabs" role="tablist" aria-label="People management">
+        <button
+          className={`admin-people-tab${peopleTab === 'trainers' ? ' selected' : ''}`}
+          type="button"
+          role="tab"
+          id="admin-people-tab-trainers"
+          aria-selected={peopleTab === 'trainers'}
+          aria-controls="admin-people-panel-trainers"
+          onClick={() => setPeopleTab('trainers')}
+        >
+          Trainers
+        </button>
+        <button
+          className={`admin-people-tab${peopleTab === 'staff' ? ' selected' : ''}`}
+          type="button"
+          role="tab"
+          id="admin-people-tab-staff"
+          aria-selected={peopleTab === 'staff'}
+          aria-controls="admin-people-panel-staff"
+          onClick={() => setPeopleTab('staff')}
+        >
+          Staff
+        </button>
+      </div>
+
+      {peopleTab === 'trainers' ? (
+        <div role="tabpanel" id="admin-people-panel-trainers" aria-labelledby="admin-people-tab-trainers">
       {/* ===== Trainer Roster ===== */}
       <TabbedCard label="Ops" title="Trainer Roster" right={<button className="btn btn-signal btn-sm" onClick={()=>setAdding(true)}>+ Add Trainer</button>}>
         <div className="grid grid-2">
@@ -164,6 +192,9 @@ function AdminPeople({ trainers, setTrainers, staff, setStaff, members, sessions
       </TabbedCard>
 
       <div style={{height:18}}></div>
+        </div>
+      ) : (
+        <div role="tabpanel" id="admin-people-panel-staff" aria-labelledby="admin-people-tab-staff">
 
       {/* ===== Staff Roster ===== */}
       <TabbedCard label="Ops" title="Staff Roster" right={<button className="btn btn-signal btn-sm" onClick={()=>setStaffAdding(true)}>+ Add Staff</button>}>
@@ -198,6 +229,8 @@ function AdminPeople({ trainers, setTrainers, staff, setStaff, members, sessions
           </div>
         )}
       </TabbedCard>
+        </div>
+      )}
 
       {/* ===== Trainer modals ===== */}
       {editing && editForm && (

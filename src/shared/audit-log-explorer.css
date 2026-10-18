@@ -1,0 +1,26 @@
+.audit-log-stats{margin-bottom:18px}
+.audit-log-categories{display:flex;gap:7px;overflow-x:auto;padding:0 0 14px;margin:0 0 15px;border-bottom:1px solid var(--line)}
+.audit-log-category{display:inline-flex;align-items:center;gap:7px;white-space:nowrap;border:1px solid var(--line);border-radius:7px;background:var(--surface);color:var(--steel);padding:7px 10px;font:600 11px var(--font-mono);cursor:pointer}
+.audit-log-category:hover,.audit-log-category.is-active{border-color:var(--signal);color:var(--ink);background:color-mix(in srgb,var(--signal) 9%,var(--surface))}
+.audit-log-filters{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:14px}
+.audit-log-filters>input,.audit-log-filters>select,.audit-log-filters label{min-height:37px;border:1px solid var(--line);border-radius:7px;background:var(--surface);color:var(--ink);padding:7px 9px;font:12px var(--font-mono)}
+.audit-log-filters>input{flex:1 1 190px}.audit-log-filters>select{flex:0 1 150px}
+.audit-log-filters label{display:flex;align-items:center;gap:6px;color:var(--steel)}
+.audit-log-filters label input{max-width:140px;border:0;background:transparent;color:var(--ink);font:12px var(--font-mono)}
+.audit-log-layout{display:grid;grid-template-columns:minmax(280px,.9fr) minmax(320px,1.1fr);gap:16px;align-items:start}
+.audit-log-list{min-width:0;max-height:min(66dvh,720px);overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-gutter:stable}
+.audit-log-row{width:100%;display:flex;gap:11px;text-align:left;align-items:flex-start;padding:13px 11px;border:0;border-bottom:1px solid var(--line);background:transparent;color:var(--ink);cursor:pointer}
+.audit-log-row:hover,.audit-log-row.is-selected{background:color-mix(in srgb,var(--signal) 7%,var(--surface))}
+.audit-log-row-copy{display:grid;gap:4px;min-width:0}.audit-log-row-copy strong{font-size:12.5px}.audit-log-row-copy span,.audit-log-row-copy time{color:var(--steel);font-size:11px;overflow-wrap:anywhere}
+.audit-log-level{display:inline-flex;align-items:center;justify-content:center;min-width:56px;padding:4px 7px;border-radius:5px;background:var(--surface);font:700 9px var(--font-mono);text-transform:uppercase}
+.audit-log-level.level-info{color:var(--steel)}.audit-log-level.level-warn{color:var(--court)}.audit-log-level.level-error{color:var(--amber)}
+.audit-log-detail{position:sticky;top:12px;min-width:0;padding:16px;border:1px solid var(--line);border-radius:9px;background:var(--surface)}
+.audit-log-detail-heading{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;padding-bottom:14px;border-bottom:1px solid var(--line)}
+.audit-log-detail-heading h3{margin:8px 0 0;font-size:16px;overflow-wrap:anywhere}.audit-log-category-tag{padding:5px 7px;border:1px solid var(--line);border-radius:5px;color:var(--steel);font:10px var(--font-mono)}
+.audit-log-fields{display:grid;gap:0;margin:8px 0 0}.audit-log-fields>div{display:grid;grid-template-columns:112px minmax(0,1fr);gap:10px;padding:9px 0;border-bottom:1px solid var(--line)}
+.audit-log-fields dt{color:var(--steel);font:10px var(--font-mono);text-transform:uppercase}.audit-log-fields dd{margin:0;font-size:12px;overflow-wrap:anywhere}
+.audit-log-structured{margin-top:14px}.audit-log-structured h4{margin:0 0 7px;font:700 10px var(--font-mono);text-transform:uppercase;color:var(--steel)}
+.audit-log-value{margin:0;padding:10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);font:11px/1.5 var(--font-mono);white-space:pre-wrap;overflow-wrap:anywhere}
+.audit-log-empty,.audit-log-sentinel,.audit-log-end{padding:18px;text-align:center;color:var(--steel);font-size:12px}.audit-log-sentinel{min-height:45px}
+@media(max-width:850px){.audit-log-layout{grid-template-columns:1fr}.audit-log-detail{position:static;grid-row:1}}
+@media(max-width:520px){.audit-log-filters>select{flex:1 1 130px}.audit-log-filters label{flex:1 1 100%;justify-content:space-between}.audit-log-filters label input{max-width:62%}.audit-log-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}

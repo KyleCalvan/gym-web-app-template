@@ -7,5 +7,10 @@ dist
 out
 next-env.d.ts
 
+# Local secrets (keep the committed template only)
+.env
+.env.*
+!.env.example
+
 # TypeScript
 tsconfig.tsbuildinfo

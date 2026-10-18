@@ -40,7 +40,7 @@
 
   /* Tables: keep the first column pinned while the rest scrolls sideways,
      so row identity stays visible. */
-  .table-wrap{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  .table-wrap{ overflow:auto; max-height:min(66dvh,720px); -webkit-overflow-scrolling:touch; }
   .table-wrap table.tbl{ min-width:560px; font-size:13.8px; }
   .table-wrap table.tbl th:first-child,
   .table-wrap table.tbl td:first-child{

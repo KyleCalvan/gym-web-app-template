@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { useMemo, useState } from 'react';
-import { Badge, BarChart, StatTile, TabbedCard, Table } from '../shared';
+import { Badge, BarChart, StatTile, TabbedCard, Table, Modal, Field } from '../shared';
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const WEEKDAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
@@ -19,7 +19,7 @@ const nowHHMM = (): string => {
 };
 
 function MemberActivity({
-  members, sessions, currentUserId,
+  members, setMembers, sessions, currentUserId,
   checkInHistory, setCheckInHistory, setCheckIns, toast,
 }) {
   const me = members.find(m => m.id === currentUserId) || members[0];
@@ -30,6 +30,31 @@ function MemberActivity({
     [checkInHistory, myId],
   );
   const isFrozen = me?.status === 'Frozen';
+  const [metrics, setMetrics] = useState(() => ({ weightKg: me?.weightKg ?? 72, heightCm: me?.heightCm ?? 172 }));
+  const [editingMetrics, setEditingMetrics] = useState(false);
+  const [metricDraft, setMetricDraft] = useState(metrics);
+  const heightM = metrics.heightCm / 100;
+  const bmi = heightM > 0 ? metrics.weightKg / (heightM * heightM) : 0;
+  const bmiCategory = bmi < 18.5 ? { label: 'Underweight', tone: 'warn' }
+    : bmi < 25 ? { label: 'Healthy', tone: 'ok' }
+    : bmi < 30 ? { label: 'Overweight', tone: 'warn' }
+    : { label: 'Obese', tone: 'warn' };
+  const mySessionsCount = sessions.filter(s => s.member === me?.name).length;
+  const sessionPct = Math.min(100, Math.round((mySessionsCount / 10) * 100));
+
+  const saveMetrics = (e) => {
+    e.preventDefault();
+    const weightKg = Number(metricDraft.weightKg);
+    const heightCm = Number(metricDraft.heightCm);
+    if (!weightKg || !heightCm || weightKg < 20 || heightCm < 50) {
+      toast('Please enter realistic values');
+      return;
+    }
+    setMembers((previous) => previous.map((member) => member.id === me?.id ? { ...member, weightKg, heightCm } : member));
+    setMetrics({ weightKg, heightCm });
+    setEditingMetrics(false);
+    toast('Progress metrics saved');
+  };
 
   const myHistory = useMemo(
     () => checkInHistory.filter(r => r.memberId === myId),
@@ -90,6 +115,7 @@ function MemberActivity({
     const ym = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
     return myHistory.filter(r => r.date.startsWith(ym)).length;
   }, [myHistory]);
+  const monthCheckPct = Math.min(100, Math.round((monthCheckIns / 20) * 100));
 
   // Real weekly chart for current month (Week 1..4 by 7-day chunks ending today).
   const weeklyData = useMemo(() => {
@@ -143,6 +169,40 @@ function MemberActivity({
         <StatTile label="Current Streak" value={`${streak} day${streak === 1 ? '' : 's'}`} tone="amber" />
         <StatTile label="Coaching Sessions" value={mySessions.length} tone="steel" />
       </div>
+
+      <TabbedCard
+        label="Progress"
+        title="Body Metrics & Goals"
+        right={<button className="btn btn-outline btn-sm" onClick={()=>{setMetricDraft(metrics); setEditingMetrics(true);}}>Update Metrics</button>}
+      >
+        <div className="metrics-tracker">
+          <div className="metric-tile">
+            <div className="lbl">Weight</div>
+            <div className="val">{metrics.weightKg.toFixed(1)}<span className="metric-unit">kg</span></div>
+            <div className="sub">Saved profile metric</div>
+          </div>
+          <div className="metric-tile">
+            <div className="lbl">Height</div>
+            <div className="val">{metrics.heightCm.toFixed(0)}<span className="metric-unit">cm</span></div>
+            <div className="sub">{(metrics.heightCm / 100).toFixed(2)} m</div>
+          </div>
+          <div className={`metric-tile ${bmiCategory.tone}`}>
+            <div className="lbl">BMI</div>
+            <div className="val">{bmi.toFixed(1)}</div>
+            <div className="sub">{bmiCategory.label}</div>
+          </div>
+        </div>
+        <div className="member-progress-goals">
+          <div>
+            <div className="member-progress-label"><span>Monthly check-in goal</span><span className="mono">{monthCheckIns}/20 · {monthCheckPct}%</span></div>
+            <div className="progress-bar"><div style={{width:`${monthCheckPct}%`}}></div></div>
+          </div>
+          <div>
+            <div className="member-progress-label"><span>Coaching session target</span><span className="mono">{mySessionsCount}/10 · {sessionPct}%</span></div>
+            <div className="progress-bar"><div style={{width:`${sessionPct}%`}}></div></div>
+          </div>
+        </div>
+      </TabbedCard>
 
       {isFrozen && (
         <TabbedCard label="Notice" title="">
@@ -239,6 +299,24 @@ function MemberActivity({
           )}
         </TabbedCard>
       </div>
+      {editingMetrics && (
+        <Modal title="Update Body Metrics" onClose={()=>setEditingMetrics(false)}>
+          <form onSubmit={saveMetrics}>
+            <div className="grid grid-2">
+              <Field label="Weight (kg)">
+                <input className="form-control" type="number" min="20" step="0.1" required
+                  value={metricDraft.weightKg} onChange={e=>setMetricDraft(d=>({...d, weightKg:e.target.value}))} />
+              </Field>
+              <Field label="Height (cm)">
+                <input className="form-control" type="number" min="50" step="0.5" required
+                  value={metricDraft.heightCm} onChange={e=>setMetricDraft(d=>({...d, heightCm:e.target.value}))} />
+              </Field>
+            </div>
+            <p className="member-metric-help">BMI is calculated automatically from weight and height.</p>
+            <button type="submit" className="btn btn-signal btn-block">Save Metrics</button>
+          </form>
+        </Modal>
+      )}
     </>
   );
 }

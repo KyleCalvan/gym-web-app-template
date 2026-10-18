@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Oswald, IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google';
 import '../src/styles.css';
+import { Providers } from './providers';
 
 // Self-hosted via next/font so the fonts load without a render-blocking
 // request to Google and stay available offline.
@@ -80,7 +81,7 @@ export default function RootLayout({
               "if(t==='light')document.documentElement.dataset.theme='light';}catch(e){}",
           }}
         />
-        {children}
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

@@ -3,8 +3,9 @@ import { useState } from 'react';
 import { Avatar, TabbedCard, Field, TextInput, Select } from '../shared';
 import { onPickImage } from '../shared/imageUpload.ts';
 import { SecurityFlow } from '../shared/components/SecurityFlow';
+import ProfileSettingsPanel from '../shared/ProfileSettingsPanel';
 
-function TrainerProfile({ trainer, setTrainers, toast, addAudit }) {
+function TrainerProfile({ trainer, setTrainers, toast, addAudit, notifPrefs, setNotifPrefs }) {
   const [form, setForm] = useState({
     name: trainer?.name || '', specialty: trainer?.specialty || '',
     email: trainer?.email || '', bio: trainer?.bio || '',
@@ -53,14 +54,17 @@ function TrainerProfile({ trainer, setTrainers, toast, addAudit }) {
             <div style={{fontSize:12.7, color:'var(--steel)', marginTop:6}}>JPG or PNG, up to 1.5 MB.</div>
           </div>
         </div>
-        <div style={{fontSize:13.8}}>
-          <div className="eyebrow">Trainer ID</div><p className="mono">{trainer?.id || '—'}</p>
-          <div className="eyebrow">Status</div><p>{trainer?.status || '—'}</p>
-          <div className="eyebrow">Rating</div><p className="mono">{trainer?.rating || '—'} ★</p>
-        </div>
       </TabbedCard>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-        <TabbedCard label="Profile" title="Trainer Profile">
+      <div>
+        <ProfileSettingsPanel
+          account={
+            <div className="profile-settings-account-grid">
+              <div className="profile-settings-account-item"><div className="eyebrow">Trainer ID</div><p className="mono">{trainer?.id || '—'}</p></div>
+              <div className="profile-settings-account-item"><div className="eyebrow">Status</div><p>{trainer?.status || '—'}</p></div>
+              <div className="profile-settings-account-item"><div className="eyebrow">Rating</div><p className="mono">{trainer?.rating || '—'} ★</p></div>
+            </div>
+          }
+          profile={
           <form onSubmit={save}>
             <Field label="Display Name"><TextInput value={form.name} onChange={v=>setForm(f=>({...f, name:v}))} /></Field>
             <Field label="Specialty">
@@ -72,10 +76,13 @@ function TrainerProfile({ trainer, setTrainers, toast, addAudit }) {
             <Field label="Short Bio"><TextInput value={form.bio} onChange={v=>setForm(f=>({...f, bio:v}))} placeholder="A short tagline for the landing page" /></Field>
             <div style={{display:'flex', gap:12, marginTop:12}}>
               <button className="btn btn-signal btn-sm" type="submit" style={{width: 'auto'}}>Save Profile</button>
-              <button className="btn btn-outline btn-sm" type="button" style={{width: 'auto'}} onClick={() => setShowSecurityFlow(true)}>Security Settings</button>
             </div>
           </form>
-        </TabbedCard>
+          }
+          onOpenSecurity={() => setShowSecurityFlow(true)}
+          notifPrefs={notifPrefs}
+          setNotifPrefs={setNotifPrefs}
+        />
       </div>
       <SecurityFlow isOpen={showSecurityFlow} onClose={() => setShowSecurityFlow(false)} toast={toast} role="trainer" accountEmail={trainer?.email || ''} />
     </div>

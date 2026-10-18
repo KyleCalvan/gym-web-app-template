@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { Avatar, Badge, Modal, TabbedCard, Field, TextInput } from '../shared';
 import { onPickImage } from '../shared/imageUpload.ts';
 import { SecurityFlow } from '../shared/components/SecurityFlow';
+import ProfileSettingsPanel from '../shared/ProfileSettingsPanel';
 import type { ViewProps } from '../types.ts';
 
-function MemberProfile({ members, setMembers, currentUserId, toast, addAudit, onDeleteAccount }: ViewProps){
+function MemberProfile({ members, setMembers, currentUserId, toast, addAudit, onDeleteAccount, notifPrefs, setNotifPrefs }: ViewProps){
   const me = members.find(m => m.id === currentUserId) || members[0];
   const [info, setInfo] = useState({
     name: me?.name || '',
@@ -15,6 +16,7 @@ function MemberProfile({ members, setMembers, currentUserId, toast, addAudit, on
 
   const [showSecurityFlow, setShowSecurityFlow] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState('');
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,8 +39,9 @@ function MemberProfile({ members, setMembers, currentUserId, toast, addAudit, on
   const isFrozen = me?.status === 'Frozen';
 
   const requestDelete = () => {
-    if (!me) return;
+    if (!me || deleteConfirmation !== 'DELETE') return;
     setConfirmDelete(false);
+    setDeleteConfirmation('');
     onDeleteAccount?.(me.id);
   };
 
@@ -69,14 +72,18 @@ function MemberProfile({ members, setMembers, currentUserId, toast, addAudit, on
             <Badge status="Frozen" /> &nbsp;Account frozen — admin must unfreeze to resume activity.
           </div>
         )}
-        <div style={{fontSize:13.8}}>
-          <div className="eyebrow">Member ID</div><p className="mono">{me?.id || '—'}</p>
-          <div className="eyebrow">Plan</div><p>{me?.plan || '—'}</p>
-          <div className="eyebrow">Member Since</div><p className="mono">{me?.joined || '—'}</p>
-        </div>
       </TabbedCard>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-        <TabbedCard label="Info" title="Account Information">
+      <div>
+        <ProfileSettingsPanel
+          account={
+            <div className="profile-settings-account-grid">
+              <div className="profile-settings-account-item"><div className="eyebrow">Member ID</div><p className="mono">{me?.id || '—'}</p></div>
+              <div className="profile-settings-account-item"><div className="eyebrow">Plan</div><p>{me?.plan || '—'}</p></div>
+              <div className="profile-settings-account-item"><div className="eyebrow">Member Since</div><p className="mono">{me?.joined || '—'}</p></div>
+              <div className="profile-settings-account-item"><div className="eyebrow">Account Status</div><p>{me?.status || 'Active'}</p></div>
+            </div>
+          }
+          profile={
           <form onSubmit={submit}>
             <div className="grid grid-2">
               <Field label="Full Name"><TextInput required value={info.name} onChange={v=>setInfo(i=>({...i, name:v}))} /></Field>
@@ -86,38 +93,37 @@ function MemberProfile({ members, setMembers, currentUserId, toast, addAudit, on
             </div>
             <div style={{display:'flex', gap:12, marginTop:12}}>
               <button className="btn btn-signal btn-sm" type="submit" style={{width: 'auto'}}>Save Changes</button>
-              <button className="btn btn-outline btn-sm" type="button" style={{width: 'auto'}} onClick={() => setShowSecurityFlow(true)}>Security Settings</button>
             </div>
           </form>
-        </TabbedCard>
-
-        <TabbedCard label="Danger Zone" title="Delete Account">
-          <p style={{ margin: '0 0 14px', fontSize: 13.8, color: 'var(--steel)', lineHeight: 1.5 }}>
-            Permanently remove your membership record. This clears your profile, plan and history
-            from the gym ledger and cannot be undone — you'd need to register again to come back.
-          </p>
-          <button
-            type="button"
-            className="btn btn-danger btn-sm"
-            style={{ width: 'auto' }}
-            onClick={() => setConfirmDelete(true)}
-          >
-            Delete Account
-          </button>
-        </TabbedCard>
+          }
+          onOpenSecurity={() => setShowSecurityFlow(true)}
+          notifPrefs={notifPrefs}
+          setNotifPrefs={setNotifPrefs}
+          deleteAccount={
+            <>
+              <h2>Delete Account</h2>
+              <p className="profile-delete-warning">
+                <strong>This action is permanent.</strong> You will lose access to this account and your membership profile will be removed from the gym app. Any financial or audit records that must be retained under the gym's operating or legal retention rules may remain. You would need to register again to use the app.
+              </p>
+              <button type="button" className="btn btn-danger btn-sm" onClick={() => setConfirmDelete(true)}>
+                Delete Account
+              </button>
+            </>
+          }
+        />
       </div>
       <SecurityFlow isOpen={showSecurityFlow} onClose={() => setShowSecurityFlow(false)} toast={toast} role="member" accountEmail={me?.email || ''} />
 
       {confirmDelete && (
-        <Modal title="Delete Account" showCloseButton={false} onClose={() => setConfirmDelete(false)}>
+        <Modal title="Confirm Account Deletion" showCloseButton={false} onClose={() => { setConfirmDelete(false); setDeleteConfirmation(''); }}>
           <div style={{ padding: '0 24px 24px' }}>
-            <p style={{ margin: '0 0 18px', color: 'var(--steel)', fontSize: 15.4, lineHeight: 1.5 }}>
-              Are you sure you want to delete your account? Your membership, plan and activity
-              history will be permanently removed, and you'll be signed out.
+            <p style={{ margin: '0 0 12px', color: 'var(--steel)', fontSize: 14, lineHeight: 1.5 }}>
+              Your profile will be removed and you will be signed out. Financial or audit records may be retained where required by the gym's retention rules. This cannot be undone.
             </p>
+            <Field label='Type "DELETE" to confirm'><TextInput value={deleteConfirmation} onChange={setDeleteConfirmation} autoComplete="off" /></Field>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-              <button className="btn btn-outline" type="button" onClick={() => setConfirmDelete(false)}>Cancel</button>
-              <button className="btn btn-danger" type="button" onClick={requestDelete}>Delete Permanently</button>
+              <button className="btn btn-outline" type="button" onClick={() => { setConfirmDelete(false); setDeleteConfirmation(''); }}>Cancel</button>
+              <button className="btn btn-danger" type="button" disabled={deleteConfirmation !== 'DELETE'} onClick={requestDelete}>Delete Permanently</button>
             </div>
           </div>
         </Modal>

@@ -1,35 +1,54 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { ArrowLeft, LogOut, Settings as SettingsIcon, UserRound } from 'lucide-react';
 import { dur, ease } from '../../motion.tsx';
 import { CURRENT, ROLE_LABEL } from '../../data.ts';
 import { Avatar } from '../primitives/Avatar.tsx';
 import { Modal } from '../primitives/Modal.tsx';
-import type { Role } from '../../types.ts';
+import { Switch } from '../primitives/Switch.tsx';
+import type { NotifPrefs, Role, Setter } from '../../types.ts';
 
 export interface ProfileMenuProps {
   role: Role;
+  availableRoles: Role[];
+  onSwitchRole: (role: Role) => void;
   open: boolean;
   onClose: () => void;
   onProfile: () => void;
   onLogout: () => void;
+  user?: { name?: string; role?: string; avatarUrl?: string };
+  notifPrefs: NotifPrefs;
+  setNotifPrefs: Setter<NotifPrefs>;
+  theme: 'dark' | 'light';
+  onToggleTheme: () => void;
   triggerRef?: React.RefObject<HTMLElement> | null;
 }
 
-export function ProfileMenu({ role, open, onClose, onProfile, onLogout, triggerRef }: ProfileMenuProps) {
-  const user = CURRENT[role];
+export function ProfileMenu({
+  role, availableRoles, onSwitchRole, open, onClose, onProfile, onLogout, user = CURRENT[role],
+  notifPrefs, setNotifPrefs, theme, onToggleTheme, triggerRef,
+}: ProfileMenuProps) {
   const menuRef = useRef<HTMLDivElement | null>(null);
   const [confirmLogout, setConfirmLogout] = useState<boolean>(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
-  // Close on Escape.
+  const closeMenu = useCallback(() => {
+    setSettingsOpen(false);
+    onClose();
+  }, [onClose]);
+
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setSettingsOpen(false);
+      return;
+    }
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { e.preventDefault(); onClose(); return; }
+      if (e.key === 'Escape') { e.preventDefault(); closeMenu(); return; }
       // Arrow keys cycle focus through the menu items (menu widget pattern).
       if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
       const el = menuRef.current;
       if (!el) return;
-      const items = Array.from(el.querySelectorAll<HTMLElement>('[role="menuitem"]'))
+      const items = Array.from(el.querySelectorAll<HTMLElement>('[role="menuitem"], [role="menuitemradio"]'))
         .filter((n) => n.offsetParent !== null);
       if (items.length === 0) return;
       e.preventDefault();
@@ -39,15 +58,19 @@ export function ProfileMenu({ role, open, onClose, onProfile, onLogout, triggerR
         : items[(i - 1 + items.length) % items.length];
       next.focus();
     };
+    const onPointerDown = (e: PointerEvent) => {
+      const target = e.target as Node;
+      if (menuRef.current?.contains(target) || triggerRef?.current?.contains(target)) return;
+      closeMenu();
+    };
     window.addEventListener('keydown', onKey);
-    // Land focus on the first item on open, per the menu widget pattern.
-    const first = menuRef.current?.querySelector<HTMLElement>('[role="menuitem"]');
-    first?.focus();
-    return () => window.removeEventListener('keydown', onKey);
-  }, [open, onClose]);
+    document.addEventListener('pointerdown', onPointerDown);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.removeEventListener('pointerdown', onPointerDown);
+    };
+  }, [open, closeMenu, triggerRef]);
 
-  // Return focus to the pill when the menu closes. The guard stops it from
-  // stealing focus when we're closing only to open the log-out confirmation.
   const prevOpen = useRef<boolean>(open);
   const skipFocusReturn = useRef<boolean>(false);
   useEffect(() => {
@@ -57,7 +80,7 @@ export function ProfileMenu({ role, open, onClose, onProfile, onLogout, triggerR
   }, [open, triggerRef]);
 
   const run = (fn: () => void) => () => {
-    onClose();
+    closeMenu();
     fn();
   };
 
@@ -65,61 +88,89 @@ export function ProfileMenu({ role, open, onClose, onProfile, onLogout, triggerR
   const requestLogout = () => {
     skipFocusReturn.current = true;
     setConfirmLogout(true);
-    onClose();
+    closeMenu();
   };
 
   return (
     <>
     <AnimatePresence>
       {open && (
-        <>
-          <motion.div
-            className="profile-menu-scrim"
-            onClick={onClose}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: dur.fast, ease: ease.out }}
-          />
           <motion.div
             ref={menuRef}
             className="profile-menu"
-            role="menu"
-            aria-label="Account"
+            role={settingsOpen ? 'region' : 'menu'}
+            aria-label={settingsOpen ? 'Settings' : 'Account'}
             initial={{ opacity: 0, y: -8, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -6, scale: 0.98 }}
             transition={{ duration: dur.fast, ease: ease.out }}
           >
             <div className="profile-menu-head">
-              <Avatar src={user.avatarUrl} name={user.name} size={32} />
+              <Avatar src={user.avatarUrl} name={user.name || 'User'} size={32} />
               <span className="who">
-                <b>{user.name}</b>
-                <span>{ROLE_LABEL[role]}</span>
+                <b>{user.name || 'User'}</b>
+                <span>{user.role || ROLE_LABEL[role]}</span>
               </span>
             </div>
 
-            <div className="profile-menu-list">
-              <button
-                type="button"
-                role="menuitem"
-                className="profile-menu-item"
-                onClick={run(onProfile)}
-              >
-                <span className="ic" aria-hidden="true"></span> My Profile
-              </button>
-
-              <button
-                type="button"
-                role="menuitem"
-                className="profile-menu-item danger"
-                onClick={requestLogout}
-              >
-                <span className="ic" aria-hidden="true">←</span> Log Out
-              </button>
-            </div>
+            {settingsOpen ? (
+              <div className="profile-settings">
+                <button type="button" className="profile-settings-back" onClick={() => setSettingsOpen(false)}>
+                  <ArrowLeft size={15} aria-hidden="true" /> Account menu
+                </button>
+                <div className="profile-setting-row">
+                  <span>Dark Mode</span>
+                  <Switch on={theme === 'dark'} onClick={onToggleTheme} ariaLabel="Toggle dark mode" />
+                </div>
+                <div className="profile-setting-row">
+                  <span>Email Notifications</span>
+                  <Switch on={notifPrefs.email} onClick={() => setNotifPrefs((previous) => ({ ...previous, email: !previous.email }))} ariaLabel="Toggle email notifications" />
+                </div>
+                <div className="profile-setting-row">
+                  <span>SMS Notifications</span>
+                  <Switch on={notifPrefs.sms} onClick={() => setNotifPrefs((previous) => ({ ...previous, sms: !previous.sms }))} ariaLabel="Toggle SMS notifications" />
+                </div>
+                <div className="profile-setting-row">
+                  <span>Session Reminders</span>
+                  <Switch on={notifPrefs.reminders} onClick={() => setNotifPrefs((previous) => ({ ...previous, reminders: !previous.reminders }))} ariaLabel="Toggle session reminders" />
+                </div>
+                <div className="profile-setting-row">
+                  <span>Promotions &amp; Offers</span>
+                  <Switch on={notifPrefs.promos} onClick={() => setNotifPrefs((previous) => ({ ...previous, promos: !previous.promos }))} ariaLabel="Toggle promotions and offers" />
+                </div>
+              </div>
+            ) : (
+              <div className="profile-menu-list">
+                {availableRoles.length > 1 && (
+                  <div className="profile-role-switch" role="group" aria-label="Switch authorized interface">
+                    <span className="profile-role-switch-label">Switch interface</span>
+                    {availableRoles.map((availableRole) => (
+                      <button
+                        key={availableRole}
+                        type="button"
+                        role="menuitemradio"
+                        aria-checked={role === availableRole}
+                        className={`profile-menu-item profile-role-option${role === availableRole ? ' selected' : ''}`}
+                        onClick={run(() => onSwitchRole(availableRole))}
+                      >
+                        <span>{ROLE_LABEL[availableRole]}</span>
+                        {role === availableRole && <span className="profile-role-current">Current</span>}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <button type="button" role="menuitem" className="profile-menu-item" onClick={run(onProfile)}>
+                  <UserRound className="ic" size={18} aria-hidden="true" /> My Profile
+                </button>
+                <button type="button" role="menuitem" className="profile-menu-item" onClick={() => setSettingsOpen(true)}>
+                  <SettingsIcon className="ic" size={18} aria-hidden="true" /> Settings
+                </button>
+                <button type="button" role="menuitem" className="profile-menu-item danger" onClick={requestLogout}>
+                  <LogOut className="ic" size={18} aria-hidden="true" /> Log Out
+                </button>
+              </div>
+            )}
           </motion.div>
-        </>
       )}
     </AnimatePresence>
 

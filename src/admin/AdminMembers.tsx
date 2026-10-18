@@ -1,9 +1,10 @@
 // @ts-nocheck
 import { useState } from 'react';
-import { StatTile, Badge, Table, Modal, Field, TextInput, Select, TabbedCard, Avatar } from '../shared';
+import { StatTile, Badge, Table, Modal, Field, TextInput, Select, TabbedCard, Avatar, PaymentSimulationModal } from '../shared';
 import { peso } from '../data.ts';
+import { createSimulatedTransaction, getConfiguredPaymentFee, updateSimulatedTransaction } from '../payments.ts';
 
-function AdminMembers({ members, setMembers, plans, setTransactions, today, toast, addAudit }){
+function AdminMembers({ members, setMembers, plans, setTransactions, today, toast, addAudit, preferredPaymentMethod = 'GCash' }){
   const [q, setQ] = useState('');
   const [statusF, setStatusF] = useState('All');
   const [showRegister, setShowRegister] = useState(false);
@@ -38,24 +39,46 @@ function AdminMembers({ members, setMembers, plans, setTransactions, today, toas
   };
 
   const [renewPlan, setRenewPlan] = useState(plans[0]?.name || 'Premium');
-  const [renewMethod, setRenewMethod] = useState('GCash');
+  const [renewMethod, setRenewMethod] = useState(preferredPaymentMethod);
+  const [payment, setPayment] = useState(null);
   const submitRenew = (e) => {
     e.preventDefault();
     const plan = plans.find(p=>p.name===renewPlan);
     const amount = plan ? plan.price : 0;
-    setTransactions(prev => [{
-      id: 'TXN-' + (8821 + prev.length),
+    const fees = getConfiguredPaymentFee(renewMethod, amount);
+    const transaction = createSimulatedTransaction({
       member: selected.name,
       type: 'Membership Renewal (' + renewPlan + ')',
       amount,
       method: renewMethod,
       date: today,
-      status: 'Paid',
-    }, ...prev]);
-    setSelected(s => ({...s, status:'Active', plan: renewPlan}));
+      fees,
+    });
+    setTransactions(prev => [transaction, ...prev]);
+    setPayment({ transactionId: transaction.id, memberId: selected.id, memberName: selected.name, plan: renewPlan, method: renewMethod, amount, fees });
     setRenewing(false);
-    toast('Renewal processed — ' + peso(amount));
-    addAudit?.('info', 'Membership renewed', selected.name + ' → ' + renewPlan);
+  };
+
+  const updatePaymentState = (paymentState) => {
+    setTransactions(prev => prev.map(tx => tx.id === payment?.transactionId
+      ? updateSimulatedTransaction(tx, paymentState)
+      : tx));
+  };
+
+  const completePayment = (paymentState) => {
+    if (paymentState !== 'Successful') {
+      toast('Simulated payment failed. Membership was not changed.');
+      return;
+    }
+    const updatedMember = { ...selected, status: 'Active', plan: payment.plan };
+    setMembers(prev => prev.map(m => m.id === payment.memberId ? updatedMember : m));
+    setSelected(updatedMember);
+    toast('Simulated test renewal completed — no real payment was processed (' + peso(payment.amount) + ').');
+    addAudit?.('info', 'Membership renewed', payment.memberName + ' → ' + payment.plan);
+  };
+
+  const closePayment = () => {
+    setPayment(null);
   };
 
   // Freeze / Unfreeze flow — modal-deferred so the destructive action has a confirmation step.
@@ -247,6 +270,14 @@ function AdminMembers({ members, setMembers, plans, setTransactions, today, toas
           </div>
         </Modal>
       )}
+      {payment && <PaymentSimulationModal
+        method={payment.method}
+        amount={payment.amount}
+        fees={payment.fees}
+        onStateChange={updatePaymentState}
+        onComplete={completePayment}
+        onClose={closePayment}
+      />}
     </>
   );
 }

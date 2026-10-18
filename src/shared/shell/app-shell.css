@@ -1,8 +1,8 @@
 /* ===== App shell (used only by App.tsx) ===== */
 
-.app-shell{display:grid;grid-template-columns:238px 1fr;min-height:100vh;background:var(--paper);}
+.app-shell{display:grid;grid-template-columns:238px minmax(0,1fr);grid-template-rows:minmax(0,1fr);height:100vh;height:100dvh;min-height:0;overflow:hidden;background:var(--paper);}
 
-.app-main{min-width:0;}
+.app-main{display:flex;flex-direction:column;min-width:0;min-height:0;height:100%;overflow:hidden;}
 
 .chat-app-shell{
   grid-template-rows:minmax(0, 1fr);
@@ -51,7 +51,7 @@
   gap:20px;
   width:100%;
   padding:16px 20px;
-  border-bottom:2px solid var(--line);background:var(--surface);
+  border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
   position:sticky;top:0;z-index:5;
 }
 /* Desktop fluid padding, scoped to >=981px for the same cascade reason as
@@ -80,17 +80,18 @@
 .topbar .path{font-family:var(--font-mono);font-size:14.3px;color:var(--steel);text-transform:uppercase;letter-spacing:1px;}
 .topbar h1{font-size:30.8px;text-transform:uppercase;}
 
-/* Right-hand group: the notification bell sits beside the profile pill. */
-.topbar-right{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+/* Right-hand group: notification and profile controls remain in one stable row. */
+.topbar-right{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex:1 1 auto;min-width:0;}
 
 /* Bell button */
 .bell-btn{
-  position:relative;border:2px solid var(--line);background:var(--surface);border-radius:50%;
-  width:38px;height:38px;display:flex;align-items:center;justify-content:center;font-size:16.5px;
-  cursor:pointer;flex-shrink:0;
+  position:relative;border:2px solid var(--line);background:var(--surface);color:var(--ink);border-radius:50%;
+  width:38px;height:38px;display:flex;align-items:center;justify-content:center;
+  cursor:pointer;flex-shrink:0;transition:border-color .12s ease,background .12s ease;
 }
 .bell-btn:hover{border-color:var(--line-strong);}
-.bell-btn .bell-dot{position:absolute;top:5px;right:6px;width:8px;height:8px;border-radius:50%;background:var(--signal);border:1.5px solid var(--surface);}
+.bell-btn[aria-expanded="true"]{border-color:var(--signal);}
+.notification-count{position:absolute;top:-5px;right:-7px;min-width:17px;height:17px;padding:0 4px;display:grid;place-items:center;border-radius:999px;background:var(--signal);color:var(--signal-ink);border:1.5px solid var(--surface);font:700 10px var(--font-mono);line-height:1;}
 
 @media (max-width: 980px) {
   .nav-toggle-btn {
@@ -100,12 +101,12 @@
   }
   /* The role pill is a tap target on mobile — give it a real hit area. */
   .role-pill{ min-height:44px; }
-  .bell-btn{ width:44px; height:44px; font-size:18.7px; }
+  .bell-btn{ width:44px; height:44px; }
 }
 
 .role-pill{
-  display:flex;align-items:center;gap:12px;border:2px solid var(--line);border-radius:var(--radius);
-  padding:6px 16px 6px 6px;background:var(--surface);transition:transform .12s ease,box-shadow .12s ease;
+  display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:999px;
+  padding:5px 12px 5px 5px;background:var(--surface);transition:transform .12s ease,box-shadow .12s ease,border-color .12s ease;
 }
 .role-pill.clickable{cursor:pointer;}
 .role-pill.clickable:hover{transform:translate(-1px,-1px);box-shadow:2px 2px 0 var(--line);}
@@ -115,6 +116,8 @@
 .role-pill .who{font-size:15.4px;}
 .role-pill .who b{display:block;font-size:15.4px;}
 .role-pill .who span{color:var(--steel);font-size:13.2px;text-transform:uppercase;letter-spacing:.5px;}
+.role-pill-chevron{color:var(--steel);flex:0 0 auto;transition:transform .15s ease;}
+.role-pill[aria-expanded="true"] .role-pill-chevron{transform:rotate(180deg);}
 /* role-short is the compact badge used on mobile only (see the 980px block). */
 .role-pill .who .role-short{display:none;}
 
@@ -141,8 +144,14 @@
    The internal grids are repeat(N,1fr), so they stretch on their own once the
    field does — no per-grid change needed. */
 .content{
+  flex:1 1 0%;
   width:100%;
-  background:var(--paper);min-height:100vh;
+  height:0;
+  min-height:0;
+  overflow-y:auto;
+  overscroll-behavior-y:contain;
+  -webkit-overflow-scrolling:touch;
+  background:var(--paper);
 }
 .content.chat-page-content{
   height:0;
@@ -152,13 +161,8 @@
   .content{ padding:26px clamp(20px, 3vw, 56px) 60px; }
 }
 
-/* Tablet down: the topbar becomes one compact row — hamburger, the page title,
-   the profile as a bare avatar, then the bell — with the search dropping to its
-   own full-width row beneath. The title leads, and the pill is avatar-only so
-   it can never crowd the title off the row; the name and role badge already
-   live in the drawer (.drawer-user) and the profile sheet. Desktop order is
-   untouched because the pill stays grouped with the bell in .topbar-right,
-   which is only flattened here. */
+/* Tablet down: keep the notification and profile controls grouped and
+   right-aligned so they do not swap sides as the title wraps. */
 @media (max-width:980px){
   .topbar{flex-wrap:wrap;gap:12px;padding:12px 16px;}
   .topbar h1{font-size:22px;line-height:1.1;overflow-wrap:anywhere;}
@@ -166,15 +170,11 @@
      the mobile header to one title line. */
   .topbar .path{display:none;}
 
-  /* Flatten the right-hand group so its children can take their own places in
-     the row; on desktop this box is what keeps the bell and pill together. */
-  .topbar-right{display:contents;}
-
   .nav-toggle-btn{order:1;}
-  .path-title{order:2;flex:1 1 auto;}
-  .role-pill{order:3;}
-  .bell-btn{order:4;}
-  /* The search's own order and sizing live in global-search.css. */
+  .path-title{order:2;flex:1 1 0;min-width:0;}
+  .topbar-right{order:3;display:flex;align-items:center;justify-content:flex-end;gap:8px;}
+  .topbar-right{flex:0 0 auto;position:static;}
+  /* Search, notifications and profile stay together in their desktop order. */
 
   /* The pill collapses to a bare avatar: no name, no badge, no frame. Its
      content can't shrink, so anything wider than the avatar itself eventually
@@ -189,7 +189,7 @@
   /* There's no border left to lift, so the desktop hover-shift would just look
      like a jump. */
   .role-pill.clickable:hover{transform:none;box-shadow:none;}
-  .role-pill .who{display:none;}
+  .role-pill .who,.role-pill-chevron{display:none;}
 }
 
 /* Small phones: give long titles ("My Schedule & Availability") as much of the

@@ -3,12 +3,31 @@ import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Modal, Field, TextInput } from '../shared';
 import { dur, ease } from '../motion.tsx';
+import { getBookingDateError, getBookingToday } from './bookingDates.ts';
 
 function EditBookingModal({ booking, onClose, onSave, onCancelBooking }){
   const [tab, setTab] = useState('modify');
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
   const [reason, setReason] = useState('');
+  const [error, setError] = useState('');
+  const minDate = getBookingToday();
+
+  const saveChanges = (event) => {
+    event.preventDefault();
+    if (date) {
+      const dateError = getBookingDateError(date, getBookingToday());
+      if (dateError) { setError(dateError); return; }
+    }
+
+    const saveError = onSave(booking.id, {
+      ...(date ? { date } : {}),
+      ...(time ? { time } : {}),
+      notes: reason,
+    });
+    if (saveError) { setError(saveError); return; }
+    onClose();
+  };
 
   return (
     <Modal title={`Edit Booking · ${booking.id}`} onClose={onClose}>
@@ -21,7 +40,7 @@ function EditBookingModal({ booking, onClose, onSave, onCancelBooking }){
         {tab==='modify' ? (
           <motion.form
             key="modify"
-            onSubmit={e=>{e.preventDefault(); onSave(booking.id, {date: date||booking.date, time: time||booking.time, notes: reason}); onClose();}}
+            onSubmit={saveChanges}
             initial={{ opacity: 0, x: 8 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -8 }}
@@ -31,9 +50,10 @@ function EditBookingModal({ booking, onClose, onSave, onCancelBooking }){
               Currently scheduled with <b>{booking.trainer}</b> on <span className="mono">{booking.date}, {booking.time}</span>.
             </p>
             <div className="grid grid-2">
-              <Field label="New Date"><TextInput type="date" onChange={setDate} /></Field>
+              <Field label="New Date"><TextInput type="date" min={minDate} value={date} onChange={(value) => { setDate(value); setError(''); }} /></Field>
               <Field label="New Time"><TextInput type="time" onChange={setTime} /></Field>
             </div>
+            {error && <p role="alert" style={{ color: 'var(--danger, #dc3545)', fontSize: 13, margin: '8px 0 0' }}>{error}</p>}
             <Field label="Notes for Trainer" style={{marginTop:12}}>
               <textarea
                 className="form-control"

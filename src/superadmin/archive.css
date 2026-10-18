@@ -1,0 +1,13 @@
+.bulk-restore-selection{padding:0 22px 22px}
+.bulk-restore-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);color:var(--steel);font-size:12px}
+.bulk-restore-toolbar label,.bulk-restore-user{display:flex;align-items:center;gap:10px;cursor:pointer}
+.bulk-restore-toolbar input,.bulk-restore-user input{accent-color:var(--signal);width:16px;height:16px;flex:0 0 auto}
+.bulk-restore-list{max-height:min(52vh,460px);overflow-y:auto}
+.bulk-restore-list>p{padding:16px 0;color:var(--steel);font-size:13px}
+.bulk-restore-user{padding:12px 3px;border-bottom:1px solid var(--line)}
+.bulk-restore-user:hover{background:color-mix(in srgb,var(--signal) 6%,transparent)}
+.bulk-restore-user-copy{display:grid;gap:4px;min-width:0}
+.bulk-restore-user-copy strong{color:var(--ink);font-size:13px}
+.bulk-restore-user-copy span{color:var(--steel);font-size:11px;overflow-wrap:anywhere}
+.bulk-restore-actions{display:flex;justify-content:flex-end;gap:9px;padding-top:16px}
+@media(max-width:520px){.bulk-restore-selection{padding:0 15px 16px}.bulk-restore-actions{flex-wrap:wrap}.bulk-restore-actions .btn{flex:1}}

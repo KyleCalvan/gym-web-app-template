@@ -1,16 +1,21 @@
 // @ts-nocheck
-import { useState } from 'react';
-import { StatTile, Badge, TabbedCard, Modal, Field, TextInput, Select } from '../shared';
+import { useMemo, useState } from 'react';
+import { Badge, TabbedCard, Modal, Field, TextInput, Select } from '../shared';
 import { onPickImage } from '../shared/imageUpload.ts';
+import { formatPromotionDate, formatPromotionDiscount } from '../member/promotionEligibility.ts';
+import type { Promotion, ViewProps } from '../types.ts';
 
-const formatDate = (iso) => {
-  if (!iso) return '';
-  const d = new Date(iso);
-  if (isNaN(d)) return iso;
-  return d.toLocaleDateString('en-US', {month:'short', day:'2-digit', year:'numeric'});
-};
+const formatDate = (value) => value ? formatPromotionDate(value) : '';
+type PromotionFilter = 'all' | 'active' | 'scheduled' | 'expired' | 'draft';
 
-function AdminPromotions({ promotions, setPromotions, plans, toast, addAudit }){
+function getPromotionBucket(promotion: Promotion, today: string): Exclude<PromotionFilter, 'all'> {
+  if (promotion.status !== 'Published') return 'draft';
+  if (promotion.validUntil < today) return 'expired';
+  if (promotion.validFrom > today) return 'scheduled';
+  return 'active';
+}
+
+function AdminPromotions({ promotions, setPromotions, plans, toast, addAudit }: Pick<ViewProps, 'promotions' | 'setPromotions' | 'plans' | 'toast' | 'addAudit'>) {
   const [form, setForm] = useState({
     title:'', discountType:'Percentage', discountValue:'', validFrom:'', validUntil:'',
     applicablePlan:'Any Plan', description:'', maxRedemptions:'', minSpend:'', code:'',
@@ -21,6 +26,16 @@ function AdminPromotions({ promotions, setPromotions, plans, toast, addAudit }){
   const [pubForm, setPubForm] = useState({promoId:'', action:'Publish'});
   const [showCreate, setShowCreate] = useState(false);
   const [detailPromo, setDetailPromo] = useState(null);
+  const [pendingDelete, setPendingDelete] = useState<Promotion | null>(null);
+  const [filter, setFilter] = useState<PromotionFilter>('all');
+  const today = new Intl.DateTimeFormat('en-CA', {
+    timeZone: process.env.NEXT_PUBLIC_BOOKING_TIME_ZONE || 'Asia/Manila',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(new Date());
+  const filteredPromotions = useMemo(
+    () => promotions.filter((promotion) => filter === 'all' || getPromotionBucket(promotion, today) === filter),
+    [promotions, filter, today],
+  );
 
   const togglePublish = (id) => {
     setPromotions(prev => prev.map(p => p.id===id ? {...p, status: p.status==='Published' ? 'Draft' : 'Published'} : p));
@@ -30,14 +45,14 @@ function AdminPromotions({ promotions, setPromotions, plans, toast, addAudit }){
   const submitNew = (e) => {
     e.preventDefault();
     if (!form.title.trim() || !form.validFrom || !form.validUntil) { toast('Title and validity dates required'); return; }
+    if (form.validFrom > form.validUntil) { toast('The end date must be on or after the start date'); return; }
     const id = 'PROMO-0' + (promotions.length + 1);
-    const fromISO = new Date(form.validFrom);
-    const untilISO = new Date(form.validUntil);
-    const validFrom = isNaN(fromISO) ? form.validFrom : formatDate(form.validFrom);
-    const validUntil = isNaN(untilISO) ? form.validUntil : formatDate(form.validUntil);
+    const validFrom = form.validFrom;
+    const validUntil = form.validUntil;
     const newPromo = {
       id, title: form.title.trim(),
       discountType: form.discountType, discount: form.discountValue || 'Custom',
+      description: form.description.trim(),
       validFrom, validUntil, plan: form.applicablePlan,
       code: form.code || ('AUTO' + Date.now().toString().slice(-5)),
       maxRedemptions: Number(form.maxRedemptions) || 0,
@@ -55,10 +70,21 @@ function AdminPromotions({ promotions, setPromotions, plans, toast, addAudit }){
 
   const startEdit = (p) => {
     setEditing(p);
-    setEditForm({title:p.title, discountType:p.discountType, discount:p.discount, code:p.code, validUntil:p.validUntil, imageUrl: p.imageUrl || ''});
+    setEditForm({
+      title:p.title,
+      discountType:p.discountType,
+      discount:p.discount,
+      code:p.code,
+      validFrom:p.validFrom,
+      validUntil:p.validUntil,
+      plan:p.plan,
+      imageUrl: p.imageUrl || '',
+    });
   };
   const submitEdit = (e) => {
     e.preventDefault();
+    if (!editForm.title.trim() || !editForm.validFrom || !editForm.validUntil) { toast('Title and validity dates are required'); return; }
+    if (editForm.validFrom > editForm.validUntil) { toast('The end date must be on or after the start date'); return; }
     setPromotions(prev => prev.map(p => p.id===editing.id ? {...p, ...editForm} : p));
     toast('Promotion updated — ' + editForm.title);
     addAudit?.('info', 'Promotion updated', editForm.title + ' (' + editing.id + ')');
@@ -75,13 +101,21 @@ function AdminPromotions({ promotions, setPromotions, plans, toast, addAudit }){
     addAudit?.('info', pubForm.action === 'Publish' ? 'Promotion published' : 'Promotion unpublished', target.title);
   };
 
+  const deletePromotion = () => {
+    if (!pendingDelete) return;
+    setPromotions((prev) => prev.filter((promotion) => promotion.id !== pendingDelete.id));
+    addAudit?.('warn', 'Promotion deleted', `${pendingDelete.title} (${pendingDelete.id})`);
+    toast(`Promotion deleted — ${pendingDelete.title}`);
+    setPendingDelete(null);
+  };
+
   return (
     <>
       <div className="grid grid-4" style={{marginBottom:18}}>
-        <StatTile label="Total Promotions" value={promotions.length} />
-        <StatTile label="Published" value={promotions.filter(p=>p.status==='Published').length} tone="court" />
-        <StatTile label="Drafts" value={promotions.filter(p=>p.status==='Draft').length} tone="amber" />
-        <StatTile label="Total Redemptions" value={promotions.reduce((a,p)=>a+p.redemptions,0)} tone="steel" />
+        <div className="admin-promo-stat"><strong>{promotions.length}</strong><span>Total promotions</span></div>
+        <div className="admin-promo-stat"><strong>{promotions.filter((p) => getPromotionBucket(p, today) === 'active').length}</strong><span>Active</span></div>
+        <div className="admin-promo-stat"><strong>{promotions.filter((p) => getPromotionBucket(p, today) === 'scheduled').length}</strong><span>Scheduled</span></div>
+        <div className="admin-promo-stat"><strong>{promotions.reduce((total, p) => total + p.redemptions, 0)}</strong><span>Redemptions</span></div>
       </div>
 
       <TabbedCard
@@ -89,38 +123,59 @@ function AdminPromotions({ promotions, setPromotions, plans, toast, addAudit }){
         title="Promotion Resources"
         right={<div style={{display:'flex', gap:8}}><button className="btn btn-outline btn-sm" onClick={()=>setShowCreate(true)}>+ New Promotion</button></div>}
       >
-        {promotions.length === 0 ? (
-          <div style={{fontSize:14.3, color:'var(--steel)', padding:'10px 0'}}>
-            No promotion resources yet. Click <b>+ New Promotion</b> to add the first one.
+        <div className="admin-promo-filters" role="group" aria-label="Filter promotions">
+          {(['all', 'active', 'scheduled', 'expired', 'draft'] as const).map((option) => (
+            <button
+              key={option}
+              type="button"
+              className={`admin-promo-filter${filter === option ? ' selected' : ''}`}
+              aria-pressed={filter === option}
+              onClick={() => setFilter(option)}
+            >
+              {option[0].toUpperCase() + option.slice(1)}
+              <span>{option === 'all' ? promotions.length : promotions.filter((promotion) => getPromotionBucket(promotion, today) === option).length}</span>
+            </button>
+          ))}
+        </div>
+        {filteredPromotions.length === 0 ? (
+          <div className="admin-promo-empty">
+            {promotions.length === 0 ? (
+              <>No promotions yet. Use <b>+ New Promotion</b> to add one.</>
+            ) : <>No {filter === 'all' ? '' : `${filter} `}promotions match this filter.</>}
           </div>
         ) : (
-          <div className="resource-grid">
-            {promotions.map(p=>(
-              <div className="resource-card" key={p.id} onClick={()=>setDetailPromo(p)}>
-                <div
-                  className="thumb"
-                  style={{ backgroundImage: 'url(' + (p.imageUrl || '/gym-interior.jpg') + ')' }}
-                  aria-hidden="true"
-                />
-                <div className="head">
-                  <div>
-                    <div className="ttl">{p.title}</div>
-                    <div className="mono" style={{fontSize:11.6, color:'var(--steel)', marginTop:2}}>{p.id} · {p.code}</div>
+          <div className="admin-promo-grid">
+            {filteredPromotions.map((p) => {
+              const bucket = getPromotionBucket(p, today);
+              const plan = p.plan === 'Any' || p.plan === 'Any Plan' ? 'All plans' : p.plan;
+              return (
+                <article className="admin-promo-card" key={p.id}>
+                  <header className="admin-promo-card-head">
+                    <div><h3>{p.title}</h3><small>{p.id} · {p.code}</small></div>
+                    <span className={`admin-promo-status status-${bucket}`}>{bucket}</span>
+                  </header>
+                  <div className="admin-promo-offer">
+                    <strong>{formatPromotionDiscount(p)}</strong>
+                    <span>{p.discountType} · {p.discount}</span>
                   </div>
-                  <Badge status={p.status}/>
-                </div>
-                <div className="desc">{p.discount} off · {p.plan}</div>
-                <div className="meta">
-                  <span className="pill">{p.discount}</span>
-                  <span className="pill">{p.plan}</span>
-                  <span className="pill">{p.redemptions}/{p.maxRedemptions} used</span>
-                </div>
-                <div className="foot">
-                  <span>Valid until {p.validUntil}</span>
-                  <span className="open">See Resources →</span>
-                </div>
-              </div>
-            ))}
+                  <dl className="admin-promo-details">
+                    <div><dt>Audience</dt><dd>Members</dd></div>
+                    <div><dt>Applicable plans</dt><dd>{plan}</dd></div>
+                    <div><dt>Starts</dt><dd>{formatDate(p.validFrom)}</dd></div>
+                    <div><dt>Ends</dt><dd>{formatDate(p.validUntil)}</dd></div>
+                  </dl>
+                  <div className="admin-promo-card-foot">
+                    <span>{p.redemptions} redeemed{Number(p.maxRedemptions) > 0 ? ` · ${p.maxRedemptions} max` : ''}</span>
+                    <div className="admin-promo-card-actions">
+                      <button type="button" className="btn btn-outline btn-sm" onClick={() => setDetailPromo(p)}>Details</button>
+                      <button type="button" className="btn btn-outline btn-sm" onClick={() => startEdit(p)}>Edit</button>
+                      <button type="button" className="btn btn-ghost btn-sm" onClick={() => togglePublish(p.id)}>{p.status === 'Published' ? 'Unpublish' : 'Publish'}</button>
+                      <button type="button" className="btn btn-ghost btn-sm admin-promo-delete" onClick={() => setPendingDelete(p)}>Delete</button>
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
           </div>
         )}
       </TabbedCard>
@@ -148,6 +203,15 @@ function AdminPromotions({ promotions, setPromotions, plans, toast, addAudit }){
 
       {detailPromo && (
         <Modal title={detailPromo.title} onClose={()=>setDetailPromo(null)} wide>
+          {detailPromo.imageUrl ? (
+            <img
+              className="admin-promo-detail-image"
+              src={detailPromo.imageUrl}
+              alt={`${detailPromo.title} promotion`}
+            />
+          ) : (
+            <div className="admin-promo-detail-image-empty">No promotion image set</div>
+          )}
           <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14}}>
             <div>
               <div className="eyebrow">Promotion</div>
@@ -157,8 +221,8 @@ function AdminPromotions({ promotions, setPromotions, plans, toast, addAudit }){
           </div>
           <div className="resource-detail-row"><span className="lbl">Discount</span><span className="val">{detailPromo.discount} {detailPromo.discountType ? `(${detailPromo.discountType})` : ''}</span></div>
           <div className="resource-detail-row"><span className="lbl">Applicable Plan</span><span className="val">{detailPromo.plan}</span></div>
-          <div className="resource-detail-row"><span className="lbl">Valid From</span><span className="val">{detailPromo.validFrom}</span></div>
-          <div className="resource-detail-row"><span className="lbl">Valid Until</span><span className="val">{detailPromo.validUntil}</span></div>
+          <div className="resource-detail-row"><span className="lbl">Valid From</span><span className="val">{formatDate(detailPromo.validFrom)}</span></div>
+          <div className="resource-detail-row"><span className="lbl">Valid Until</span><span className="val">{formatDate(detailPromo.validUntil)}</span></div>
           <div className="resource-detail-row"><span className="lbl">Min. Spend</span><span className="val">₱{detailPromo.minSpend?.toLocaleString('en-PH') || 0}</span></div>
           <div className="resource-detail-row"><span className="lbl">Redemptions</span><span className="val">{detailPromo.redemptions} / {detailPromo.maxRedemptions}</span></div>
           <div style={{display:'flex', gap:8, marginTop:18}}>
@@ -245,13 +309,23 @@ function AdminPromotions({ promotions, setPromotions, plans, toast, addAudit }){
         <Modal title="Edit Promotion" onClose={()=>{setEditing(null); setEditForm(null);}} wide>
           <form onSubmit={submitEdit}>
             <Field label="Title"><TextInput required value={editForm.title} onChange={v=>setEditForm(f=>({...f, title:v}))} /></Field>
-            <Field label="Discount Type">
-              <Select value={editForm.discountType} onChange={v=>setEditForm(f=>({...f, discountType:v}))}>
-                <option>Percentage</option><option>Fixed Amount</option><option>Bundle</option>
-              </Select>
-            </Field>
-            <Field label="Discount"><TextInput value={editForm.discount} onChange={v=>setEditForm(f=>({...f, discount:v}))} /></Field>
-            <Field label="Promo Code"><TextInput value={editForm.code} onChange={v=>setEditForm(f=>({...f, code:v}))} /></Field>
+            <div className="grid grid-2">
+              <Field label="Discount Type">
+                <Select value={editForm.discountType} onChange={v=>setEditForm(f=>({...f, discountType:v}))}>
+                  <option>Percentage</option><option>Fixed</option><option>Bundle</option>
+                </Select>
+              </Field>
+              <Field label="Discount"><TextInput value={editForm.discount} onChange={v=>setEditForm(f=>({...f, discount:v}))} /></Field>
+            </div>
+            <div className="grid grid-2">
+              <Field label="Promo Code"><TextInput value={editForm.code} onChange={v=>setEditForm(f=>({...f, code:v}))} /></Field>
+              <Field label="Applicable Plan">
+                <Select value={editForm.plan} onChange={v=>setEditForm(f=>({...f, plan:v}))}>
+                  <option>Any Plan</option>
+                  {plans.map(p=><option key={p.name}>{p.name}</option>)}
+                </Select>
+              </Field>
+            </div>
             <Field label="Promotion Image">
               <div
                 className="dropzone"
@@ -286,9 +360,23 @@ function AdminPromotions({ promotions, setPromotions, plans, toast, addAudit }){
                 onChange={e => setEditForm(f => ({ ...f, imageUrl: e.target.value }))}
               />
             </Field>
-            <Field label="Valid Until"><TextInput type="date" value={editForm.validUntil} onChange={v=>setEditForm(f=>({...f, validUntil:v}))} /></Field>
+            <div className="grid grid-2">
+              <Field label="Valid From"><TextInput type="date" required value={editForm.validFrom} onChange={v=>setEditForm(f=>({...f, validFrom:v}))} /></Field>
+              <Field label="Valid Until"><TextInput type="date" required value={editForm.validUntil} onChange={v=>setEditForm(f=>({...f, validUntil:v}))} /></Field>
+            </div>
             <button className="btn btn-signal btn-block" type="submit">Save Changes</button>
           </form>
+        </Modal>
+      )}
+      {pendingDelete && (
+        <Modal title="Delete Promotion?" onClose={() => setPendingDelete(null)}>
+          <p className="admin-promo-delete-copy">
+            Delete <strong>{pendingDelete.title}</strong>? This removes the promotion from the admin list and member-facing offers.
+          </p>
+          <div className="admin-promo-confirm-actions">
+            <button type="button" className="btn btn-outline" onClick={() => setPendingDelete(null)}>Keep promotion</button>
+            <button type="button" className="btn btn-danger" onClick={deletePromotion}>Delete promotion</button>
+          </div>
         </Modal>
       )}
     </>

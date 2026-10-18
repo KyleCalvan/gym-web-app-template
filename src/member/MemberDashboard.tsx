@@ -1,14 +1,49 @@
 // @ts-nocheck
-import { useState } from 'react';
-import { Badge, BarChart, Table, TabbedCard, Modal, Field } from '../shared';
+import { useMemo, useState } from 'react';
+import { Badge, Table, TabbedCard } from '../shared';
 import BookingCheckoutModal from './BookingCheckoutModal.tsx';
+import { formatPromotionDate, formatPromotionDiscount, getActivePromotionsForMember, getEligiblePromotions } from './promotionEligibility.ts';
+import { getBookingDatesError, getBookingToday, isBookingSlotAvailable } from './bookingDates.ts';
+import { peso } from '../data.ts';
 
-function MemberDashboard({ members, sessions, setSessions, bookings, setBookings, setTransactions, trainers, currentUserId, plans, onNav, toast, checkInHistory, today, addAudit }){
+function MemberDashboard({ members, sessions, setSessions, bookings, setBookings, setTransactions, transactions, trainers, currentUserId, plans, promotions, setPromotions, promotionRedemptions, setPromotionRedemptions, onNav, toast, today, addAudit, preferredPaymentMethod }){
   const me = members.find(m => m.id === currentUserId) || members[0];
-  const upcoming = bookings.length > 0 ? bookings : sessions.filter(s => s.member === me?.name).slice(0, 3);
+  const dashboardToday = new Date();
+  const todayISO = `${dashboardToday.getFullYear()}-${String(dashboardToday.getMonth() + 1).padStart(2, '0')}-${String(dashboardToday.getDate()).padStart(2, '0')}`;
+  const myRedemptions = useMemo(
+    () => (promotionRedemptions || []).filter((r) => r.memberId === me?.id),
+    [promotionRedemptions, me?.id],
+  );
+  const activePromotions = useMemo(
+    () => getActivePromotionsForMember(promotions || [], myRedemptions, me),
+    [promotions, myRedemptions, me?.plan],
+  );
+  const upcomingSource = bookings.length > 0 ? bookings : sessions.filter(s => s.member === me?.name);
+  const upcoming = upcomingSource
+    .filter(s => s.status !== 'Cancelled' && s.date >= todayISO)
+    .slice()
+    .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time))
+    .slice(0, 4);
+  const latestPayment = (transactions || [])
+    .filter(t => t.member === me?.name)
+    .slice()
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+  const expiry = me?.membershipValidUntil ? new Date(`${me.membershipValidUntil.slice(0, 10)}T00:00:00`) : null;
+  const remainingDays = expiry && !Number.isNaN(expiry.getTime())
+    ? Math.ceil((expiry.getTime() - new Date(new Date().toDateString()).getTime()) / 86400000)
+    : null;
+  const validityText = remainingDays === null ? 'Expiry date not recorded'
+    : remainingDays < 0 ? `Expired ${Math.abs(remainingDays)} day${Math.abs(remainingDays) === 1 ? '' : 's'} ago`
+    : remainingDays === 0 ? 'Expires today'
+    : `${remainingDays} day${remainingDays === 1 ? '' : 's'} remaining`;
+  const eligiblePromotions = getEligiblePromotions(promotions || [], me).slice(0, 2);
   const [showBook, setShowBook] = useState(false);
 
-  const persistBookings = ({ id, trainer, dates, time, amount, totalAmount, method }) => {
+  const persistBookings = ({ id, trainer, dates, time, amount, totalAmount }) => {
+    const dateError = getBookingDatesError(dates, getBookingToday());
+    if (dateError) return dateError;
+    const unavailableDate = dates.find(date => !isBookingSlotAvailable(sessions, { trainer, date, time }));
+    if (unavailableDate) return `That time is no longer available on ${unavailableDate}. Choose another slot.`;
     const newBookings = dates.map((date, index) => ({
       id: index === 0 ? id : `${id}-${index + 1}`,
       member: me?.name || '',
@@ -22,166 +57,109 @@ function MemberDashboard({ members, sessions, setSessions, bookings, setBookings
     }));
     setBookings(prev => [...prev, ...newBookings]);
     setSessions(prev => [...prev, ...newBookings]);
-    setTransactions(prev => [{
-      id: 'TXN-' + (8821 + prev.length),
-      member: me?.name || '',
-      type: `PT Sessions (${trainer}) × ${dates.length}`,
-      amount: totalAmount,
-      method,
-      date: today,
-      status: 'Paid',
-    }, ...prev]);
-    toast(`${dates.length} session${dates.length === 1 ? '' : 's'} booked and paid`);
+    toast(`${dates.length} session${dates.length === 1 ? '' : 's'} booked with simulated payment — ${peso(totalAmount)}`);
     addAudit?.('info', 'Sessions booked', `${trainer} — ${dates.length} dates`);
+    return null;
   };
 
-  // ---- Metrics tracker (weight / height / BMI) ----
-  const [metrics, setMetrics] = useState(() => ({
-    weightKg: me?.weightKg ?? 72,
-    heightCm: me?.heightCm ?? 172,
-  }));
-  const [editingMetrics, setEditingMetrics] = useState(false);
-  const [draft, setDraft] = useState(metrics);
 
-  const heightM = metrics.heightCm / 100;
-  const bmi = heightM > 0 ? metrics.weightKg / (heightM * heightM) : 0;
-  const bmiCategory =
-    bmi < 18.5 ? {label:'Underweight', tone:'warn'} :
-    bmi < 25   ? {label:'Healthy', tone:'ok'} :
-    bmi < 30   ? {label:'Overweight', tone:'warn'} :
-                 {label:'Obese', tone:'warn'};
 
-  const saveMetrics = (e) => {
-    e.preventDefault();
-    const w = Number(draft.weightKg);
-    const h = Number(draft.heightCm);
-    if (!w || !h || w < 20 || h < 50) { toast('Please enter realistic values'); return; }
-    setMetrics({weightKg:w, heightCm:h});
-    setEditingMetrics(false);
-    toast('Metrics updated — BMI ' + (w / Math.pow(h/100, 2)).toFixed(1));
-  };
 
-  // Real data: this month's check-ins + session count.
-  const myId = me?.id || '';
-  const monthCheckIns = (checkInHistory || []).filter(r => {
-    if (r.memberId !== myId) return false;
-    const now = new Date();
-    const ym = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-    return r.date.startsWith(ym);
-  }).length;
-  const monthCheckPct = Math.min(100, Math.round((monthCheckIns / 20) * 100));
-  const mySessionsCount = sessions.filter(s => s.member === me?.name).length;
-  const sessionGoal = 10;
-  const sessionPct = Math.min(100, Math.round((mySessionsCount / sessionGoal) * 100));
 
-  // Weekly chart derived from real check-ins.
-  const weeklyData = (() => {
-    const now = new Date();
-    const buckets = [0, 0, 0, 0];
-    (checkInHistory || []).forEach(r => {
-      if (r.memberId !== myId) return;
-      const d = new Date(r.date);
-      const diffDays = Math.floor((now - d) / (1000 * 60 * 60 * 24));
-      if (diffDays < 0 || diffDays > 28) return;
-      const idx = Math.min(3, Math.floor(diffDays / 7));
-      buckets[idx]++;
-    });
-    return [
-      { d: 'Wk1', v: buckets[0] },
-      { d: 'Wk2', v: buckets[1] },
-      { d: 'Wk3', v: buckets[2] },
-      { d: 'Wk4', v: buckets[3] },
-    ];
-  })();
+
+
+
+
 
   return (
     <>
-      <TabbedCard label="Welcome" title="">
-        <h2 style={{fontSize:24.2, marginBottom:6}}>Welcome back{me?.name ? `, ${me.name.split(' ')[0]}` : ''}</h2>
-        <p style={{color:'var(--steel)', margin:0}}>You're on the <b>{me?.plan || 'Premium'}</b> plan, renewing Sep 12, 2026.</p>
-      </TabbedCard>
-      <div style={{height:18}}></div>
-      <div className="grid grid-2-1">
+      <section className="member-dashboard-summary card" aria-labelledby="member-dashboard-heading">
+        <div className="member-dashboard-intro">
+          <span className="eyebrow">Member home</span>
+          <h2 id="member-dashboard-heading">Welcome back{me?.name ? `, ${me.name.split(' ')[0]}` : ''}</h2>
+          <p>Your membership, sessions, and payments at a glance.</p>
+        </div>
+        <div className="member-dashboard-membership">
+          <div className="member-dashboard-plan">
+            <span className="member-summary-label">Current plan</span>
+            <strong>{me?.plan || 'No plan selected'}</strong>
+            {me?.status && <Badge status={me.status} />}
+          </div>
+          <div className="member-summary-detail">
+            <span className="member-summary-label">Validity</span>
+            <strong>{validityText}</strong>
+            {expiry && !Number.isNaN(expiry.getTime()) && <span>Through {formatPromotionDate(me.membershipValidUntil)}</span>}
+          </div>
+          <div className="member-summary-detail">
+            <span className="member-summary-label">Latest payment</span>
+            {latestPayment ? <><strong><Badge status={latestPayment.status} /></strong><span>{latestPayment.type} · {latestPayment.date}</span></> : <strong>No payment recorded</strong>}
+          </div>
+        </div>
+      </section>
+
+      <div className="grid grid-2-1 member-dashboard-main-grid">
         <TabbedCard label="Sessions" title="Upcoming Sessions">
           {upcoming.length === 0 ? (
-            <div style={{fontSize:14.3, color:'var(--steel)', padding:'10px 0'}}>No upcoming sessions. Book one to get started.</div>
+            <div className="member-dashboard-empty">No upcoming sessions. Book a coaching session to get started.</div>
           ) : (
-            <Table columns={['Date','Time','Trainer','Type','Status']} rows={upcoming} renderRow={s=>(
-              <tr key={s.id}><td className="mono">{s.date}</td><td className="mono">{s.time}</td><td>{s.trainer}</td><td>{s.type}</td><td><Badge status={s.status}/></td></tr>
+            <Table columns={['Date','Time','Trainer','Session','Booking','Payment']} rows={upcoming} renderRow={s=>(
+              <tr key={s.id}>
+                <td className="mono">{formatPromotionDate(s.date)}</td>
+                <td className="mono">{s.time}</td>
+                <td>{s.trainer}</td>
+                <td>{s.type}</td>
+                <td><Badge status={s.status}/></td>
+                <td><Badge status={s.paid ? 'Paid' : 'Pending'}/></td>
+              </tr>
             )} />
           )}
         </TabbedCard>
         <TabbedCard label="Quick" title="Quick Actions">
-          <div style={{display:'flex', flexDirection:'column', gap:8}}>
+          <div className="member-dashboard-actions">
             <button className="btn btn-signal btn-block" onClick={()=>setShowBook(true)}>Book a Session</button>
-            <button className="btn btn-outline btn-block" onClick={()=>onNav && onNav('membership')}>Renew Membership</button>
-            <button className="btn btn-outline btn-block" onClick={()=>onNav && onNav('payments')}>View Receipts</button>
+            <button className="btn btn-outline btn-block" onClick={()=>onNav && onNav('membership')}>Manage Membership</button>
+            <button className="btn btn-outline btn-block" onClick={()=>onNav && onNav('payments')}>View Payments</button>
+            <button className="btn btn-outline btn-block" onClick={()=>onNav && onNav('promotions')}>Browse Promotions</button>
           </div>
-        </TabbedCard>
-      </div>
-      <div style={{height:18}}></div>
-      <div className="grid grid-2">
-        <TabbedCard
-          label="Progress"
-          title="Your Progress"
-          right={<button className="btn btn-outline btn-sm" onClick={()=>{setDraft(metrics); setEditingMetrics(true);}}>Update Metrics</button>}
-        >
-          <div className="metrics-tracker">
-            <div className="metric-tile">
-              <div className="lbl">Weight</div>
-              <div className="val">{metrics.weightKg.toFixed(1)}<span style={{fontSize:13.2, color:'var(--steel)', marginLeft:4}}>kg</span></div>
-              <div className="sub">Last entry: today</div>
-            </div>
-            <div className="metric-tile">
-              <div className="lbl">Height</div>
-              <div className="val">{metrics.heightCm.toFixed(0)}<span style={{fontSize:13.2, color:'var(--steel)', marginLeft:4}}>cm</span></div>
-              <div className="sub">{(metrics.heightCm/100).toFixed(2)} m</div>
-            </div>
-            <div className={"metric-tile "+bmiCategory.tone}>
-              <div className="lbl">BMI</div>
-              <div className="val">{bmi.toFixed(1)}</div>
-              <div className="sub">{bmiCategory.label}</div>
-            </div>
-          </div>
-          <hr style={{border:'none', borderTop:'1px solid var(--line)', margin:'14px 0'}}/>
-          <div style={{marginBottom:12}}>
-            <div style={{display:'flex', justifyContent:'space-between', fontSize:13.2, marginBottom:5}}><span>Monthly check-in goal</span><span className="mono">{monthCheckIns}/20 ({monthCheckPct}%)</span></div>
-            <div className="progress-bar"><div style={{width:`${monthCheckPct}%`}}></div></div>
-          </div>
-          <div>
-            <div style={{display:'flex', justifyContent:'space-between', fontSize:13.2, marginBottom:5}}><span>PT sessions used</span><span className="mono">{mySessionsCount}/{sessionGoal} ({sessionPct}%)</span></div>
-            <div className="progress-bar"><div style={{width:`${sessionPct}%`}}></div></div>
-          </div>
-        </TabbedCard>
-        <TabbedCard label="Activity" title="Activity This Month">
-          <BarChart data={weeklyData} valueKey="v" labelKey="d" />
         </TabbedCard>
       </div>
 
-      {editingMetrics && (
-        <Modal title="Update Metrics" onClose={()=>setEditingMetrics(false)}>
-          <form onSubmit={saveMetrics}>
-            <div className="grid grid-2">
-              <Field label="Weight (kg)">
-                <input className="form-control" type="number" step="0.1" required
-                  value={draft.weightKg} onChange={e=>setDraft(d=>({...d, weightKg:e.target.value}))} />
-              </Field>
-              <Field label="Height (cm)">
-                <input className="form-control" type="number" step="0.5" required
-                  value={draft.heightCm} onChange={e=>setDraft(d=>({...d, heightCm:e.target.value}))} />
-              </Field>
-            </div>
-            <p style={{fontSize:12.7, color:'var(--steel)', marginTop:6, marginBottom:14}}>
-              BMI is calculated automatically: weight ÷ (height in m)².
-            </p>
-            <button type="submit" className="btn btn-signal btn-block">Save Metrics</button>
-          </form>
-        </Modal>
-      )}
+      <TabbedCard
+        label="Member benefits"
+        title="Current Promotions"
+        right={<button className="btn btn-outline btn-sm" onClick={()=>onNav && onNav('promotions')}>View all</button>}
+      >
+        {eligiblePromotions.length === 0 ? (
+          <div className="member-dashboard-empty">No active promotions are available for your current plan.</div>
+        ) : (
+          <div className="member-promo-preview-grid">
+            {eligiblePromotions.map(p => (
+              <article className="member-promo-preview" key={p.id}>
+                <div className="member-promo-preview-head">
+                  <span className="badge ok">{formatPromotionDiscount(p)}</span>
+                  <span className="member-promo-preview-code">{p.code}</span>
+                </div>
+                <h3>{p.title}</h3>
+                <p>{p.description || `Available for ${p.plan === 'Any' || p.plan === 'Any Plan' ? 'all plans' : p.plan}.`}</p>
+                <span className="member-promo-preview-valid">Valid through {formatPromotionDate(p.validUntil)}</span>
+              </article>
+            ))}
+          </div>
+        )}
+      </TabbedCard>
 
       {showBook && (
         <BookingCheckoutModal
           trainers={trainers}
+          activePromotions={activePromotions}
+          promotions={promotions}
+          setPromotions={setPromotions}
+          promotionRedemptions={promotionRedemptions}
+          setPromotionRedemptions={setPromotionRedemptions}
+          member={me}
+          setTransactions={setTransactions}
+          preferredPaymentMethod={preferredPaymentMethod}
+          today={today}
           onClose={()=>setShowBook(false)}
           onComplete={()=>{setShowBook(false);}}
           onPersistBookings={persistBookings}
