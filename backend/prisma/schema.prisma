@@ -37,6 +37,7 @@ model AuthUser {
   phone         String?
   termsVersion  String?
   termsAcceptedAt DateTime?
+  mfaEnabledAt  DateTime?
   assignedRoles AssignedRole[]
 }
 
@@ -110,6 +111,10 @@ model AuthSession {
   sessionToken String   @unique
   userId       String
   expires      DateTime
+  createdAt    DateTime @default(now())
+  lastActiveAt DateTime @default(now())
+  primaryAuthenticatedAt DateTime?
+  mfaVerifiedAt DateTime?
   user         AuthUser @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])

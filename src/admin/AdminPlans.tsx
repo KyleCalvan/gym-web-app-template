@@ -15,6 +15,7 @@ interface PlanApiResponse {
   activePlanCount: number;
   maxActivePlans: number;
   error?: string;
+  message?: string;
 }
 
 type PlanEditor = { mode: 'create' } | { mode: 'edit'; plan: Plan };
@@ -26,7 +27,7 @@ async function readPlanResponse(response: Response): Promise<PlanApiResponse> {
   if (!result || typeof result !== 'object') throw new Error('The plan service returned an invalid response.');
   const payload = result as Partial<PlanApiResponse>;
   if (!response.ok) {
-    throw new Error(typeof payload.error === 'string' ? payload.error : 'The plan request failed.');
+    throw new Error(payload.message ?? payload.error ?? 'The plan request failed.');
   }
   if (!Array.isArray(payload.plans)
     || !Number.isSafeInteger(payload.activePlanCount)

@@ -1,7 +1,10 @@
 import type { NextAuthOptions } from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
 import { authAdapter } from './adapter';
-import { establishGoogleAccount, getAccountStatus, recordGoogleRejection } from './account';
+import { establishGoogleAccount, recordGoogleRejection } from './account';
+import { sessionCookiePolicy, requestSessionToken } from './session-cookie';
+import { readSession } from './sessions';
+import { cookies } from 'next/headers';
 
 const googleClientId = process.env.GOOGLE_CLIENT_ID?.trim();
 const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET?.trim();
@@ -19,7 +22,8 @@ export const authOptions: NextAuthOptions = {
         allowDangerousEmailAccountLinking: false,
       })]
     : [],
-  session: { strategy: 'database' },
+  session: { strategy: 'database', maxAge: 30 * 24 * 60 * 60, updateAge: 24 * 60 * 60 },
+  cookies: { sessionToken: sessionCookiePolicy() },
   logger: {
     error(code) { console.error('Authentication request failed:', code); },
     warn(code) { console.warn('Authentication configuration warning:', code); },
@@ -39,8 +43,11 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, user }) {
       if (session.user) {
-        const status = await getAccountStatus(user.id);
-        if (!status) throw new Error('Account unavailable');
+        // NextAuth v4 projects away adapter assurance fields before this
+        // callback. Resolve the actual requesting cookie, never client updates.
+        const record = await readSession(requestSessionToken({ cookies: await cookies() }));
+        const status = record?.status;
+        if (!status || record.user.id !== user.id) throw new Error('Account unavailable');
         const roles = status.account.status === 'enabled' ? status.roles : [];
         session.user.id = user.id;
         session.user.roles = roles;

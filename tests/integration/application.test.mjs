@@ -1,26 +1,82 @@
 import assert from 'node:assert/strict';
 import { after, before, test } from 'node:test';
-import { copyFile, mkdir, readFile } from 'node:fs/promises';
+import { copyFile, mkdir, readFile, writeFile, unlink, rmdir } from 'node:fs/promises';
 import path from 'node:path';
 import { startDatabase, startApplication, runNode, withDatabaseClient } from './harness.mjs';
 import { startGoogle } from './google.mjs';
+import { randomUUID } from 'node:crypto';
 
 let database;
 let application;
 let google;
+
+test('plan mutations reject missing sessions with a structured request-correlated error', async () => {
+  const response = await fetch(`${application.url}/api/gym-plans`, {
+    method: 'POST', headers: { origin: application.url, 'content-type': 'application/json' }, body: '{}',
+  });
+  assert.equal(response.status, 401);
+  const error = await response.json();
+  assert.equal(error.code, 'UNAUTHENTICATED');
+  assert.equal(typeof error.message, 'string');
+  assert.equal(error.requestId, response.headers.get('x-request-id'));
+});
 const adminCookie = 'next-auth.session-token=fixture-admin-session-token';
 const memberCookie = 'next-auth.session-token=fixture-member-session-token';
+
+test('logout reports revocation storage failure and preserves the usable cookie for retry', async () => {
+  const signedIn = await google.signIn(application, { sub: 'logout-failure-subject', email: 'logout-failure@example.test', email_verified: true });
+  const csrf = await fetch(`${application.url}/api/auth/csrf`);
+  const { csrfToken } = await csrf.json();
+  const cookie = `${signedIn.cookie}; ${responseCookieHeader(csrf)}`;
+  await withDatabaseClient(database.env, (client) => client.query(`
+    CREATE FUNCTION fail_revocation_audit() RETURNS trigger LANGUAGE plpgsql AS $$
+    BEGIN IF NEW.action = 'session.revoked' THEN RAISE EXCEPTION 'test audit failure'; END IF; RETURN NEW; END $$;
+    CREATE TRIGGER fail_revocation BEFORE INSERT ON "AuditEvent" FOR EACH ROW EXECUTE FUNCTION fail_revocation_audit();
+  `));
+  try {
+    const response = await fetch(`${application.url}/api/auth/signout`, {
+      method: 'POST', headers: { cookie, 'content-type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ csrfToken, callbackUrl: application.url, json: 'true' }),
+    });
+    assert.equal(response.status, 503);
+    assert.equal((await response.json()).code, 'UNAVAILABLE');
+    assert.equal(response.headers.getSetCookie().length, 0);
+    assert.equal((await fetch(`${application.url}/api/me`, { headers: { cookie: signedIn.cookie } })).status, 200);
+  } finally {
+    await withDatabaseClient(database.env, (client) => client.query('DROP TRIGGER fail_revocation ON "AuditEvent"; DROP FUNCTION fail_revocation_audit()'));
+  }
+  const retried = await fetch(`${application.url}/api/auth/signout`, {
+    method: 'POST', headers: { cookie, 'content-type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ csrfToken, callbackUrl: application.url, json: 'true' }),
+  });
+  assert.equal(retried.status, 200);
+  assert.equal((await fetch(`${application.url}/api/me`, { headers: { cookie: signedIn.cookie } })).status, 401);
+});
 
 before(async () => {
   database = await startDatabase();
   google = await startGoogle();
   Object.assign(database.env, google.env);
+  database.env.INTEGRATION_CLOCK_FILE = path.join(database.directory, 'clock');
+  database.env.INTEGRATION_SESSION_KEY = 'isolated-session-test-driver';
+  await writeFile(database.env.INTEGRATION_CLOCK_FILE, '');
+  const clockModule = new URL('./clock.cjs', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
+  database.env.NODE_OPTIONS += ` --require="${decodeURIComponent(clockModule)}"`;
   await runNode('scripts/prisma.mjs', ['generate'], database.env);
   await runNode('scripts/prisma.mjs', ['migrate', 'deploy'], database.env);
   const fixture = await readFile(new URL('./fixtures/legacy-account.sql', import.meta.url), 'utf8');
   await withDatabaseClient(database.env, (client) => client.query(fixture));
   database.env.ROLE_ASSIGNMENTS = JSON.stringify({ 'operator@example.test': ['member', 'admin'] });
-  await runNode('node_modules/next/dist/bin/next', ['build'], database.env);
+  const fixtureDirectory = new URL('../../app/api/integration-session-fixture/', import.meta.url);
+  const fixtureRoute = new URL('route.ts', fixtureDirectory);
+  await mkdir(fixtureDirectory);
+  try {
+    await copyFile(new URL('./fixtures/session-route.ts', import.meta.url), fixtureRoute);
+    await runNode('node_modules/next/dist/bin/next', ['build'], database.env);
+  } finally {
+    await unlink(fixtureRoute);
+    await rmdir(fixtureDirectory);
+  }
   application = await startApplication(database.env);
 }, { timeout: 240_000 });
 
@@ -158,7 +214,7 @@ test('Google remains configured and database sessions work through NextAuth HTTP
 
   const csrfResponse = await fetch(`${application.url}/api/auth/csrf`);
   const { csrfToken } = await csrfResponse.json();
-  const csrfCookies = csrfResponse.headers.getSetCookie().map((cookie) => cookie.split(';')[0]).join('; ');
+  const csrfCookies = responseCookieHeader(csrfResponse);
   const signout = await fetch(`${application.url}/api/auth/signout`, {
     method: 'POST',
     headers: { cookie: `${memberCookie}; ${csrfCookies}`, 'content-type': 'application/x-www-form-urlencoded' },
@@ -286,7 +342,7 @@ test('limited status, client session updates, and enabled preview demos cannot c
   assert.equal(limited.account.emailVerifiedSubject, undefined);
   const csrf = await fetch(`${application.url}/api/auth/csrf`);
   const { csrfToken } = await csrf.json();
-  const cookie = `${signedIn.cookie}; ${csrf.headers.getSetCookie().map((value) => value.split(';')[0]).join('; ')}`;
+  const cookie = `${signedIn.cookie}; ${responseCookieHeader(csrf)}`;
   const update = await fetch(`${application.url}/api/auth/session`, {
     method: 'POST', headers: { cookie, 'content-type': 'application/json' },
     body: JSON.stringify({ csrfToken, data: { user: { roles: ['superadmin'], role: 'superadmin', restricted: false, gymUserId: 41 } } }),
@@ -306,7 +362,7 @@ test('limited status, client session updates, and enabled preview demos cannot c
       body: JSON.stringify({ email: 'admin@vinathletics.gym', password: 'admin123' }),
     });
     assert.equal(login.status, 200, preview.logs());
-    const demoCookie = login.headers.getSetCookie().map((value) => value.split(';')[0]).join('; ');
+    const demoCookie = responseCookieHeader(login);
     assert.equal((await fetch(`${preview.url}/api/me`, { headers: { cookie: demoCookie } })).status, 401);
     const demoMutation = await fetch(`${preview.url}/api/gym-plans`, {
       method: 'PATCH', headers: { cookie: demoCookie, 'content-type': 'application/json' }, body: '{}',
@@ -402,9 +458,299 @@ async function readLegacyRecords(env) {
   return withDatabaseClient(env, async (client) => {
     const records = [];
     for (const table of ['User', 'Post', 'AuthUser', 'AuthAccount', 'AuthSession']) {
-      const columns = table === 'AuthUser' ? '"id", "email", "name", "emailVerified", "image", "gymUserId"' : '*';
+      const columns = table === 'AuthUser' ? '"id", "email", "name", "emailVerified", "image", "gymUserId"'
+        : table === 'AuthSession' ? '"id", "sessionToken", "userId", "expires"' : '*';
       records.push((await client.query(`SELECT ${columns} FROM "${table}" ORDER BY "id"`)).rows);
     }
     return records;
   });
 }
+
+async function seedSessionAccount({ roles = ['member'], mfa = false } = {}) {
+  const accountId = randomUUID();
+  await withDatabaseClient(database.env, async (client) => {
+    const { rows: [gym] } = await client.query('INSERT INTO "User" ("email", "name") VALUES ($1, $2) RETURNING "id"', [`${accountId}@example.test`, 'Session Member']);
+    await client.query(`INSERT INTO "AuthUser" ("id", "email", "name", "gymUserId", "establishedAt", "emailVerified", "emailVerifiedProvider", "phone", "termsVersion", "termsAcceptedAt", "mfaEnabledAt")
+      VALUES ($1, $2, 'Session Member', $3, NOW(), NOW(), 'password', '0912345678', '2026-10-21', NOW(), CASE WHEN $4 THEN (CURRENT_TIMESTAMP AT TIME ZONE 'UTC') - INTERVAL '1 second' ELSE NULL END)`,
+    [accountId, `${accountId}@example.test`, gym.id, mfa]);
+    for (const role of roles) {
+      const profileId = randomUUID();
+      await client.query('INSERT INTO "RoleProfile" ("id", "gymUserId", "role") VALUES ($1, $2, $3)', [profileId, gym.id, role]);
+      await client.query('INSERT INTO "AssignedRole" ("accountId", "role", "profileId") VALUES ($1, $2, $3)', [accountId, role, profileId]);
+    }
+  });
+  return accountId;
+}
+
+async function sessionCommand(action, input = {}, app = application, origin = app.url) {
+  const { cookie, ...body } = input;
+  return fetch(`${app.url}/api/integration-session-fixture`, {
+    method: 'POST', headers: { 'content-type': 'application/json', origin,
+      'x-test-key': database.env.INTEGRATION_SESSION_KEY, ...(cookie ? { cookie } : {}) },
+    body: JSON.stringify({ action, ...body }),
+  });
+}
+
+async function issueSession(accountId, app = application) {
+  const response = await sessionCommand('issue', { accountId }, app);
+  assert.equal(response.status, 200, app.logs());
+  return { cookie: responseCookieHeader(response), response };
+}
+
+function responseCookieHeader(response) {
+  return response.headers.getSetCookie().map((cookie) => cookie.split(';')[0]).join('; ');
+}
+
+test('shared application-issued sessions work with NextAuth and polling never extends the seven-day member idle boundary', async () => {
+  const accountId = await seedSessionAccount();
+  const now = Date.now();
+  const setTime = (value) => writeFile(database.env.INTEGRATION_CLOCK_FILE, String(value));
+  try {
+    await setTime(now);
+    const { cookie, response } = await issueSession(accountId);
+    const setCookie = response.headers.getSetCookie()[0];
+    assert.match(setCookie, /^next-auth.session-token=[A-Za-z0-9_-]{43};/);
+    assert.match(setCookie, /HttpOnly/i);
+    assert.match(setCookie, /SameSite=Lax/i);
+    assert.match(setCookie, /Path=\//i);
+    assert.doesNotMatch(setCookie, /; Secure/i);
+    const status = await fetch(`${application.url}/api/me`, { headers: { cookie } }).then((r) => r.json());
+    assert.equal(status.restricted, false);
+    assert.deepEqual(status.roles, ['member']);
+    assert.equal(status.account.id, accountId);
+    await setTime(now + 7 * 86_400_000 - 1);
+    const session = await fetch(`${application.url}/api/auth/session`, { headers: { cookie } }).then((r) => r.json());
+    assert.equal(session.user.id, accountId);
+    assert.equal((await fetch(`${application.url}/api/me`, { headers: { cookie } })).status, 200);
+    await setTime(now + 7 * 86_400_000);
+    assert.equal((await fetch(`${application.url}/api/me`, { headers: { cookie } })).status, 401);
+    assert.deepEqual(await fetch(`${application.url}/api/auth/session`, { headers: { cookie } }).then((r) => r.json()), {});
+  } finally { await writeFile(database.env.INTEGRATION_CLOCK_FILE, ''); }
+});
+
+test('MFA assurance belongs to one session and only fully authorized administrators can persist plan writes', async () => {
+  const accountId = await seedSessionAccount({ roles: ['member', 'admin'], mfa: true });
+  const first = await issueSession(accountId);
+  const second = await issueSession(accountId);
+  const catalog = await fetch(`${application.url}/api/gym-plans`).then((r) => r.json());
+  const original = catalog.plans[0];
+  const mutate = (cookie, body, origin = application.url) => fetch(`${application.url}/api/gym-plans`, {
+    method: 'PATCH', headers: { cookie, origin, 'content-type': 'application/json' }, body: JSON.stringify(body),
+  });
+  assert.equal((await mutate(first.cookie, { action: 'deactivate', name: original.name })).status, 403);
+  const rotation = await sessionCommand('rotate', { accountId, cookie: first.cookie, mfaVerified: true });
+  assert.equal(rotation.status, 200);
+  const assuredCookie = responseCookieHeader(rotation);
+  assert.notEqual(assuredCookie, first.cookie);
+  assert.equal((await fetch(`${application.url}/api/me`, { headers: { cookie: first.cookie } })).status, 401);
+  const assuredSession = await fetch(`${application.url}/api/auth/session`, { headers: { cookie: assuredCookie } }).then((r) => r.json());
+  assert.equal(assuredSession.user.restricted, false, JSON.stringify(assuredSession));
+  const other = await fetch(`${application.url}/api/me`, { headers: { cookie: second.cookie } }).then((r) => r.json());
+  assert.equal(other.restricted, true);
+  assert.ok(other.nextSteps.includes('complete-two-step-verification'));
+  assert.equal(other.roles, undefined);
+  assert.equal((await mutate(second.cookie, { action: 'deactivate', name: original.name })).status, 403);
+  const foreign = await mutate(assuredCookie, { action: 'deactivate', name: original.name }, 'https://attacker.example');
+  assert.equal(foreign.status, 403);
+  assert.equal((await foreign.json()).code, 'ORIGIN_REJECTED');
+  assert.equal((await mutate(assuredCookie, { action: 'deactivate', name: original.name }, '')).status, 403);
+  assert.deepEqual(await fetch(`${application.url}/api/gym-plans`).then((r) => r.json()), catalog);
+  const response = await mutate(assuredCookie, { action: 'deactivate', name: original.name });
+  assert.equal(response.status, 200, application.logs());
+  assert.equal((await response.json()).plans.find((p) => p.name === original.name).status, 'Inactive');
+  const createdPlan = { ...original, name: `Session authorized plan ${randomUUID()}` };
+  const created = await fetch(`${application.url}/api/gym-plans`, {
+    method: 'POST', headers: { cookie: assuredCookie, origin: application.url, 'content-type': 'application/json' },
+    body: JSON.stringify({ plan: createdPlan }),
+  });
+  assert.equal(created.status, 201);
+  assert.equal((await mutate(assuredCookie, { action: 'update', originalName: createdPlan.name, plan: { ...createdPlan, price: 1234 } })).status, 200);
+  assert.equal((await mutate(assuredCookie, { action: 'deactivate', name: createdPlan.name })).status, 200);
+  assert.equal((await mutate(assuredCookie, { action: 'activate', name: original.name })).status, 200);
+  const missing = await mutate(assuredCookie, { action: 'deactivate', name: 'does not exist' });
+  assert.equal(missing.status, 404);
+  assert.equal((await missing.json()).code, 'PLAN_NOT_FOUND');
+  const invalid = await mutate(assuredCookie, {});
+  assert.equal(invalid.status, 400);
+  assert.equal((await invalid.json()).code, 'INVALID_REQUEST');
+  await withDatabaseClient(database.env, (client) => client.query('DELETE FROM "AssignedRole" WHERE "accountId" = $1 AND "role" = $2', [accountId, 'admin']));
+  const stale = await mutate(assuredCookie, { action: 'deactivate', name: original.name });
+  assert.equal(stale.status, 403);
+  assert.equal((await stale.json()).code, 'FORBIDDEN');
+});
+
+test('member activity cannot extend thirty-day absolute expiry, including credential rotation', async () => {
+  const accountId = await seedSessionAccount();
+  const now = Date.now();
+  try {
+    await writeFile(database.env.INTEGRATION_CLOCK_FILE, String(now));
+    const issued = await issueSession(accountId);
+    let cookie = issued.cookie;
+    for (const day of [6, 12, 18, 24, 29]) {
+      await writeFile(database.env.INTEGRATION_CLOCK_FILE, String(now + day * 86_400_000));
+      assert.equal((await sessionCommand('business', { cookie })).status, 200);
+    }
+    await writeFile(database.env.INTEGRATION_CLOCK_FILE, String(now + 30 * 86_400_000 - 1));
+    const rotated = await sessionCommand('rotate', { accountId, cookie, primaryAuthenticated: true });
+    assert.equal(rotated.status, 200);
+    cookie = responseCookieHeader(rotated);
+    assert.equal((await fetch(`${application.url}/api/me`, { headers: { cookie } })).status, 200);
+    await writeFile(database.env.INTEGRATION_CLOCK_FILE, String(now + 30 * 86_400_000));
+    assert.equal((await sessionCommand('business', { cookie })).status, 401);
+  } finally { await writeFile(database.env.INTEGRATION_CLOCK_FILE, ''); }
+});
+
+test('every privileged Assigned Role uses thirty-minute idle and twelve-hour absolute expiry', async () => {
+  const now = Date.now();
+  try {
+    for (const role of ['staff', 'trainer', 'admin', 'superadmin']) {
+      const accountId = await seedSessionAccount({ roles: ['member', role], mfa: true });
+      await writeFile(database.env.INTEGRATION_CLOCK_FILE, String(now));
+      const { cookie } = await issueSession(accountId);
+      await writeFile(database.env.INTEGRATION_CLOCK_FILE, String(now + 30 * 60_000 - 1));
+      assert.equal((await fetch(`${application.url}/api/auth/session`, { headers: { cookie } }).then((r) => r.json())).user.id, accountId);
+      await writeFile(database.env.INTEGRATION_CLOCK_FILE, String(now + 30 * 60_000));
+      assert.equal((await fetch(`${application.url}/api/me`, { headers: { cookie } })).status, 401, role);
+    }
+    const accountId = await seedSessionAccount({ roles: ['member', 'trainer'], mfa: true });
+    await writeFile(database.env.INTEGRATION_CLOCK_FILE, String(now));
+    const initial = await issueSession(accountId);
+    const rotated = await sessionCommand('rotate', { accountId, cookie: initial.cookie, mfaVerified: true });
+    const cookie = responseCookieHeader(rotated);
+    for (let minute = 29; minute < 720; minute += 29) {
+      await writeFile(database.env.INTEGRATION_CLOCK_FILE, String(now + minute * 60_000));
+      assert.equal((await sessionCommand('business', { cookie })).status, 200);
+    }
+    await writeFile(database.env.INTEGRATION_CLOCK_FILE, String(now + 12 * 60 * 60_000 - 1));
+    assert.equal((await sessionCommand('business', { cookie })).status, 200);
+    await writeFile(database.env.INTEGRATION_CLOCK_FILE, String(now + 12 * 60 * 60_000));
+    assert.equal((await sessionCommand('business', { cookie })).status, 401);
+  } finally { await writeFile(database.env.INTEGRATION_CLOCK_FILE, ''); }
+});
+
+test('current Account requirements are enforced on every plan mutation and disablement revokes all sessions', async () => {
+  const catalog = await fetch(`${application.url}/api/gym-plans`).then((r) => r.json());
+  for (const change of [
+    '"emailVerified" = NULL', '"emailVerifiedProvider" = NULL', '"establishedAt" = NULL',
+    '"phone" = NULL', '"name" = \'  \'', '"termsVersion" = \'obsolete\'', '"termsAcceptedAt" = NULL',
+    '"mfaEnabledAt" = NULL', '"gymUserId" = NULL', '"status" = \'disabled\'',
+  ]) {
+    const accountId = await seedSessionAccount({ roles: ['admin'], mfa: true });
+    const first = await issueSession(accountId);
+    const second = await issueSession(accountId);
+    const rotation = await sessionCommand('rotate', { accountId, cookie: first.cookie, mfaVerified: true });
+    const cookie = responseCookieHeader(rotation);
+    await withDatabaseClient(database.env, (client) => client.query(`UPDATE "AuthUser" SET ${change} WHERE "id" = $1`, [accountId]));
+    const denied = await fetch(`${application.url}/api/gym-plans`, {
+      method: 'PATCH', headers: { cookie, origin: application.url, 'content-type': 'application/json' },
+      body: JSON.stringify({ action: 'deactivate', name: catalog.plans[0].name }),
+    });
+    assert.equal(denied.status, change.includes('disabled') ? 401 : 403, change);
+    const error = await denied.json();
+    assert.equal(typeof error.code, 'string');
+    assert.equal(error.requestId, denied.headers.get('x-request-id'));
+    if (change.includes('disabled')) {
+      await withDatabaseClient(database.env, (client) => client.query('UPDATE "AuthUser" SET "status" = $1 WHERE "id" = $2', ['enabled', accountId]));
+      assert.equal((await fetch(`${application.url}/api/me`, { headers: { cookie } })).status, 401);
+      assert.equal((await fetch(`${application.url}/api/me`, { headers: { cookie: second.cookie } })).status, 401);
+      const fresh = await issueSession(accountId);
+      assert.equal((await fetch(`${application.url}/api/me`, { headers: { cookie: fresh.cookie } })).status, 200);
+    }
+  }
+  const noRoles = await seedSessionAccount({ roles: [] });
+  const { cookie } = await issueSession(noRoles);
+  const status = await fetch(`${application.url}/api/me`, { headers: { cookie } }).then((r) => r.json());
+  assert.equal(status.restricted, true);
+  assert.ok(status.nextSteps.includes('contact-support'));
+  assert.equal((await sessionCommand('business', { cookie })).status, 403);
+  assert.deepEqual(await fetch(`${application.url}/api/gym-plans`).then((r) => r.json()), catalog);
+});
+
+test('optional MFA also restricts members and concurrent rotation consumes only one old token', async () => {
+  const accountId = await seedSessionAccount({ mfa: true });
+  const first = await issueSession(accountId);
+  const second = await issueSession(accountId);
+  assert.equal((await sessionCommand('business', { cookie: first.cookie })).status, 403);
+  const results = await Promise.all([1, 2].map(() => sessionCommand('rotate', { accountId, cookie: first.cookie, mfaVerified: true })));
+  assert.deepEqual(results.map((r) => r.status).sort(), [200, 409]);
+  const assured = responseCookieHeader(results.find((r) => r.status === 200));
+  assert.equal((await sessionCommand('business', { cookie: assured })).status, 200);
+  assert.equal((await sessionCommand('business', { cookie: second.cookie })).status, 403);
+  const strangerId = await seedSessionAccount();
+  const stranger = await issueSession(strangerId);
+  assert.equal((await sessionCommand('rotate', { accountId: strangerId, cookie: assured, mfaVerified: true })).status, 409);
+  assert.equal((await sessionCommand('business', { cookie: assured })).status, 200);
+  assert.equal((await sessionCommand('revoke-all', { accountId })).status, 200);
+  for (const cookie of [assured, second.cookie]) assert.equal((await fetch(`${application.url}/api/me`, { headers: { cookie } })).status, 401);
+  assert.equal((await fetch(`${application.url}/api/me?accountId=${accountId}`, { headers: { cookie: stranger.cookie } }).then((r) => r.json())).account.id, strangerId);
+});
+
+test('primary proof expires at five minutes and a successful Google reauthentication rotates the old credential', async () => {
+  const accountId = await seedSessionAccount();
+  const now = Date.now();
+  try {
+    await writeFile(database.env.INTEGRATION_CLOCK_FILE, String(now));
+    const { cookie } = await issueSession(accountId);
+    await writeFile(database.env.INTEGRATION_CLOCK_FILE, String(now + 5 * 60_000 - 1));
+    assert.deepEqual(await sessionCommand('fresh', { cookie }).then((r) => r.json()), { fresh: true });
+    await writeFile(database.env.INTEGRATION_CLOCK_FILE, String(now + 5 * 60_000));
+    assert.deepEqual(await sessionCommand('fresh', { cookie }).then((r) => r.json()), { fresh: false });
+  } finally { await writeFile(database.env.INTEGRATION_CLOCK_FILE, ''); }
+  const profile = { sub: 'fresh-google-subject', email: 'fresh-google@example.test', email_verified: true };
+  const first = await google.signIn(application, profile);
+  const again = await google.signIn(application, profile, first.cookie);
+  assert.equal(new URL(again.location).href, `${application.url}/`, application.logs());
+  assert.notEqual(again.cookie, first.cookie);
+  assert.equal((await fetch(`${application.url}/api/me`, { headers: { cookie: first.cookie } })).status, 401);
+  assert.equal((await fetch(`${application.url}/api/me`, { headers: { cookie: again.cookie } })).status, 200);
+});
+
+test('HTTPS policy shares secure cookies with NextAuth and logout cannot be forged or revoke another Account', async () => {
+  const accountId = await seedSessionAccount();
+  const secure = await startApplication(database.env, { https: true });
+  try {
+    const { cookie, response } = await issueSession(accountId, secure);
+    assert.match(response.headers.getSetCookie()[0], /^__Secure-next-auth.session-token=/);
+    assert.match(response.headers.getSetCookie()[0], /; Secure/i);
+    assert.match(response.headers.getSetCookie()[0], /HttpOnly/i);
+    assert.equal((await fetch(`${secure.url}/api/auth/session`, { headers: { cookie } }).then((r) => r.json())).user.id, accountId);
+    const insecureCookie = cookie.replace('__Secure-', '');
+    assert.equal((await fetch(`${secure.url}/api/me`, { headers: { cookie: insecureCookie } })).status, 401);
+    const rejected = await fetch(`${secure.url}/api/auth/signout`, {
+      method: 'POST', headers: { cookie, origin: 'https://attacker.example', 'content-type': 'application/json' }, body: '{}',
+    });
+    assert.equal(rejected.status, 403);
+    assert.equal(rejected.headers.getSetCookie().length, 0);
+    const noCsrf = await fetch(`${secure.url}/api/auth/signout`, {
+      method: 'POST', headers: { cookie, 'content-type': 'application/json' }, body: '{}',
+    });
+    assert.equal(noCsrf.status, 403);
+    const otherId = await seedSessionAccount();
+    const other = await issueSession(otherId, secure);
+    const signedOut = await fetch(`${secure.url}/api/auth/signout`, {
+      method: 'POST', headers: { cookie: `${cookie}; __Secure-next-auth.session-token.0=old-chunk; next-auth.session-token.0=old-local-chunk`,
+        origin: secure.url.replace('http:', 'https:'), 'content-type': 'application/json' },
+      body: JSON.stringify({ accountId: otherId, callbackUrl: 'https://attacker.example' }),
+    });
+    assert.equal(signedOut.status, 200);
+    assert.equal((await signedOut.json()).url, secure.url.replace('http:', 'https:'));
+    assert.ok(signedOut.headers.getSetCookie().some((c) => c.startsWith('next-auth.session-token.0=;') && /Max-Age=0/.test(c)));
+    assert.ok(signedOut.headers.getSetCookie().some((c) => c.startsWith('__Secure-next-auth.session-token.0=;') && /Max-Age=0/.test(c)));
+    assert.equal((await fetch(`${secure.url}/api/me`, { headers: { cookie } })).status, 401);
+    assert.equal((await fetch(`${secure.url}/api/me`, { headers: { cookie: other.cookie } })).status, 200);
+    const [cookieName, cookieValue] = other.cookie.split('=');
+    const malformed = await fetch(`${secure.url}/api/auth/signout`, {
+      method: 'POST', headers: { cookie: `${cookieName}.1=${cookieValue}`, origin: secure.url.replace('http:', 'https:'),
+        'content-type': 'application/json' }, body: '{}',
+    });
+    assert.equal(malformed.status, 400);
+    assert.equal((await malformed.json()).code, 'INVALID_SESSION_COOKIE');
+    assert.equal(malformed.headers.getSetCookie().length, 0);
+    const chunked = await fetch(`${secure.url}/api/auth/signout`, {
+      method: 'POST', headers: { cookie: `${cookieName}.0=${cookieValue.slice(0, 20)}; ${cookieName}.1=${cookieValue.slice(20)}`,
+        origin: secure.url.replace('http:', 'https:'), 'content-type': 'application/json' }, body: '{}',
+    });
+    assert.equal(chunked.status, 200);
+    assert.equal((await fetch(`${secure.url}/api/me`, { headers: { cookie: other.cookie } })).status, 401);
+  } finally { await secure.stop(); }
+});

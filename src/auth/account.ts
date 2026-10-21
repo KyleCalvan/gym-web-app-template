@@ -3,6 +3,9 @@ import { prisma } from './prisma';
 import { writeAudit } from './audit';
 import { authRequestContext } from './request-context';
 import type { AccountNextStep } from './account-contract';
+import type { Prisma } from '@/backend/generated/prisma/client';
+
+export const CURRENT_TERMS_VERSION = '2026-10-21';
 
 export function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
@@ -26,6 +29,7 @@ export async function establishGoogleAccount(profile: {
   const context = authRequestContext.getStore();
   const requestId = context?.requestId ?? randomUUID();
   const email = normalizeEmail(profile.email);
+  let authenticatedAccountId: string | undefined;
   if (!profile.email_verified || !email || !profile.sub) return recordGoogleRejection();
 
   try {
@@ -82,7 +86,9 @@ export async function establishGoogleAccount(profile: {
         await writeAudit(tx, { actor: account.id, action: 'account.established', target: account.id, result: 'success', requestId });
       }
       await writeAudit(tx, { actor: account.id, action: 'google.sign-in', target: account.id, result: 'success', requestId });
+      authenticatedAccountId = account.id;
     });
+    if (context) context.googleAuthenticatedAccountId = authenticatedAccountId;
     return true;
   } catch (error) {
     // Rejections survive the rolled-back account transaction. Neither the
@@ -94,8 +100,8 @@ export async function establishGoogleAccount(profile: {
   }
 }
 
-export async function getAccountStatus(id: string) {
-  const account = await prisma.authUser.findUnique({
+export async function getAccountStatus(id: string, session?: { mfaVerifiedAt: Date | null }, tx: Prisma.TransactionClient = prisma) {
+  const account = await tx.authUser.findUnique({
     where: { id }, include: { assignedRoles: { include: { profile: true }, orderBy: { role: 'asc' } } },
   });
   if (!account) return null;
@@ -105,17 +111,17 @@ export async function getAccountStatus(id: string) {
   const nextSteps: AccountNextStep[] = [];
   if (account.status === 'disabled') nextSteps.push('contact-support');
   if (!account.establishedAt || account.gymUserId === null) nextSteps.push('sign-in-with-google');
-  if (!account.emailVerified || !account.emailVerifiedProvider) nextSteps.push('verify-email');
+  if (!account.email?.trim() || !account.emailVerified || !account.emailVerifiedProvider) nextSteps.push('verify-email');
   if (!account.name?.trim() || !account.phone?.trim()) nextSteps.push('complete-profile');
-  if (!account.termsAcceptedAt || !account.termsVersion) nextSteps.push('accept-terms');
+  if (!account.termsAcceptedAt || account.termsVersion !== CURRENT_TERMS_VERSION) nextSteps.push('accept-terms');
   if (roles.length === 0) nextSteps.push('contact-support');
-  // Privileged access remains closed until the session-assurance slice supplies
-  // authenticator enrollment and proof. A legacy session is never such proof.
-  if (roles.some((role) => role !== 'member')) nextSteps.push('set-up-two-step-verification');
+  if (roles.some((role) => role !== 'member') && !account.mfaEnabledAt) nextSteps.push('set-up-two-step-verification');
+  if (account.mfaEnabledAt && (!session?.mfaVerifiedAt || session.mfaVerifiedAt < account.mfaEnabledAt
+    || session.mfaVerifiedAt > new Date())) nextSteps.push('complete-two-step-verification');
   return {
     account: { id: account.id, gymUserId: account.gymUserId, name: account.name, email: account.email,
       status: account.status, emailVerified: Boolean(account.emailVerified && account.emailVerifiedProvider) },
-    roles, profiles: account.assignedRoles.map(({ role, profileId }) => ({ role, profileId })),
+    roles, profiles: account.assignedRoles.filter(({ role }) => roles.includes(role)).map(({ role, profileId }) => ({ role, profileId })),
     restricted: nextSteps.length > 0, nextSteps: [...new Set(nextSteps)],
   };
 }

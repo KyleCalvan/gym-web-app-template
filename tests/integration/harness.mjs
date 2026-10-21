@@ -126,13 +126,13 @@ export async function withDatabaseClient(env, action) {
   }
 }
 
-export async function startApplication(env) {
+export async function startApplication(env, { https = false } = {}) {
   const port = await unusedPort();
   const url = `http://127.0.0.1:${port}`;
   const child = spawn(process.execPath, [
     path.join(root, 'node_modules/next/dist/bin/next'), 'start', '--hostname', '127.0.0.1', '--port', String(port),
   ], {
-    cwd: root, env: { ...env, NODE_ENV: 'production', NEXTAUTH_URL: url },
+    cwd: root, env: { ...env, NODE_ENV: 'production', NEXTAUTH_URL: https ? url.replace('http:', 'https:') : url },
     windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'],
   });
   let output = '';

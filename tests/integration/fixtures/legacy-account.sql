@@ -13,3 +13,4 @@ INSERT INTO "AuthAccount" ("id", "userId", "type", "provider", "providerAccountI
 INSERT INTO "AuthSession" ("id", "sessionToken", "userId", "expires") VALUES
   ('fixture-admin-session', 'fixture-admin-session-token', 'fixture-auth-admin', '2099-01-01'),
   ('fixture-member-session', 'fixture-member-session-token', 'fixture-auth-member', '2099-01-01');
+SELECT setval(pg_get_serial_sequence('"User"', 'id'), (SELECT max("id") FROM "User"));

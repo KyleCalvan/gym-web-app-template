@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { signIn, signOut } from 'next-auth/react';
+import { signIn } from 'next-auth/react';
 import type { getAccountStatus } from './account';
 import type { AccountNextStep } from './account-contract';
 
@@ -12,6 +12,7 @@ const STEP_LABELS: Record<AccountNextStep, string> = {
   'verify-email': 'Verify ownership of your email address.',
   'complete-profile': 'Complete your full name and contact phone.',
   'accept-terms': 'Read and accept the current terms.',
+  'complete-two-step-verification': 'Complete authenticator-app verification for this session.',
   'set-up-two-step-verification': 'Set up authenticator-app verification before using privileged interfaces.',
   'contact-support': 'Contact the gym for help with your Account.',
 };
@@ -39,13 +40,11 @@ export default function AccountStatus({ initialStatus }: { initialStatus?: Statu
     setPending(true);
     setError('');
     try {
-      const result = await signOut({ redirect: false, callbackUrl: '/login' });
-      if (!result?.url) throw new Error('Sign-out could not be confirmed. Please retry.');
-      const session = await fetch('/api/auth/session', { cache: 'no-store' }).then((response) => {
-        if (!response.ok) throw new Error('Sign-out could not be confirmed. Please retry.');
-        return response.json();
+      const response = await fetch('/api/auth/signout', {
+        method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ callbackUrl: '/login' }),
       });
-      if (session?.user) throw new Error('Your session is still active. Please retry sign-out.');
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message ?? 'Sign-out could not be confirmed. Please retry.');
       window.location.assign('/login');
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Sign-out could not be confirmed. Please retry.');

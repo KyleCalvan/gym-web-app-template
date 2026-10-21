@@ -1,9 +1,7 @@
 import { PrismaAdapter } from '@next-auth/prisma-adapter';
 import { prisma } from './prisma';
 import { normalizeEmail } from './account';
-import { randomUUID } from 'node:crypto';
-import { writeAudit } from './audit';
-import { authRequestContext } from './request-context';
+import { createSession, readSession, revokeSession } from './sessions';
 
 // Keep the existing integer-keyed gym User/Post schema intact. The Auth.js
 // tables use string IDs, so expose them under the delegate names the official
@@ -32,18 +30,18 @@ export const authAdapter: typeof adapter = {
   // fall back to its separate create/link writes if that identity disappears.
   async createUser() { throw new Error('Account provisioning requires verified identity establishment.'); },
   async linkAccount() { throw new Error('Adding a sign-in method requires fresh authentication.'); },
+  async createSession(session) {
+    return prisma.$transaction((tx) => createSession(tx, { accountId: session.userId, sessionToken: session.sessionToken }));
+  },
+  async updateSession({ sessionToken }) {
+    // NextAuth's rolling refresh must not extend idle or absolute lifetime.
+    return (await readSession(sessionToken))?.session ?? null;
+  },
+  async deleteSession(sessionToken) {
+    return prisma.$transaction((tx) => revokeSession(tx, sessionToken));
+  },
   async getSessionAndUser(sessionToken) {
-    return prisma.$transaction(async (tx) => {
-      const record = await tx.authSession.findUnique({ where: { sessionToken }, include: { user: true } });
-      if (!record) return null;
-      if (record.user.status === 'disabled') {
-        await tx.authSession.deleteMany({ where: { userId: record.userId } });
-        await writeAudit(tx, { actor: null, action: 'session.revoked', target: record.userId, result: 'success',
-          requestId: authRequestContext.getStore()?.requestId ?? randomUUID() });
-        return null;
-      }
-      const { user, ...session } = record;
-      return user.email ? { user: { ...user, email: user.email }, session } : null;
-    });
+    const record = await readSession(sessionToken);
+    return record?.user.email ? { user: { ...record.user, email: record.user.email }, session: record.session } : null;
   },
 };

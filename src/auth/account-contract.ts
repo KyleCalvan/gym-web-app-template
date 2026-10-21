@@ -4,4 +4,5 @@ export type AccountNextStep =
   | 'complete-profile'
   | 'accept-terms'
   | 'contact-support'
+  | 'complete-two-step-verification'
   | 'set-up-two-step-verification';
