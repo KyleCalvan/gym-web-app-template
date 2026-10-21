@@ -47,9 +47,9 @@ Unused components are not committed features: `src/shared/chat/ChatView.tsx` has
 
 ### API boundary
 
-Working assumption: extend the existing same-origin Next.js `/api` routes, keep business services and persistence separate from route handlers, and use the existing PostgreSQL database and auth session. This preserves the plan/auth integrations already present. It is a proposed direction, not an existing architecture decision.
+Agreed S01 direction: extend the existing same-origin Next.js `/api` routes, keep business services and persistence separate from route handlers, and use the existing PostgreSQL database and database sessions. See [ADR 0001](docs/adr/0001-nextjs-api-ownership.md) and the [shared-session decision](docs/adr/0003-shared-database-session-service.md). These are design decisions; implementation remains pending.
 
-If the intended backend must run as the separate Express service, settle that before S01. Keep the contracts below, route browser requests through a same-origin boundary, and establish authenticated server-to-server identity or a shared session verifier. Express must not trust browser-supplied user IDs or roles. Give the two processes distinct ports; the Express scaffold currently defaults to 3000 too. Avoid duplicating business rules across both servers.
+The separate Express scaffold does not own S01 authentication or authorization. Moving business endpoints there would require revisiting ADR 0001 and defining authenticated server-to-server identity or a shared session verifier. Express must not trust browser-supplied user IDs or roles. Give the two processes distinct ports if both are run; the Express scaffold currently defaults to 3000 too.
 
 Read the installed Next.js guides before implementation: `node_modules/next/dist/docs/01-app/01-getting-started/15-route-handlers.md` and `01-app/02-guides/backend-for-frontend.md`. Both were consulted for this plan. Align root/backend Prisma versions, generated-client paths, migration commands, and database configuration before expanding the schema; current generation/import locations need reconciliation.
 
@@ -87,16 +87,20 @@ Retain local state for forms, modal steps, navigation, charts derived from loade
 
 **Implementation steps:**
 
-1. Preserve Google OAuth and database sessions. Add persistent account status, role assignments, terms acceptance/version/time, and a minimal server audit writer. Bootstrap the first superadmin through a controlled server process.
-2. Implement the email/password login and registration advertised by the UI, including normalized unique email, password hashing, verified ownership, and safe linking with existing OAuth accounts. Keep demo login a separate development facility.
-3. Add single-use expiring reset/verification tokens, delivery, password change, and session invalidation. Replace the hardcoded two-factor code and role-keyed local-storage flags with per-account enrollment/challenge state, attempt limits, expiry, and server enforcement before a full session is issued. Define recovery and reauthentication for disabling it. OAuth-only accounts need a provider-appropriate security flow.
-4. Connect sign-in/register/reset/security forms and role switching to the server. Add a small onboarding step for required gym profile fields after Google signup, with no paid access until a membership is fulfilled.
+1. Preserve Google OAuth and database sessions through a shared application session service. Add enabled/disabled account status, authoritative database role assignments, versioned terms acceptance, and a minimal append-only server audit writer. Bootstrap the first superadmin through a one-time operator command and protect the last enabled superadmin against concurrent removal, disablement, or demotion.
+2. Implement email-first password registration, password sign-in, normalized unique email, password hashing, verified ownership, and explicit authenticated linking with existing OAuth accounts. Supply scoped invitation commands for assisted registration. Demo identities must not authorize real business APIs.
+3. Add single-use expiring verification/reset/invitation tokens, durable SMTP delivery, password change, and session invalidation. Replace simulated email-code MFA and role-keyed local-storage flags with authenticator enrollment, per-session challenges, recovery codes, durable abuse limits, and server authorization gates. Required enrollment/challenges restrict access after both Google and password sign-in; recognized restricted identity sessions cannot access business operations. Implement the agreed fresh-authentication, factor-change, and operator-assisted recovery rules.
+4. Connect sign-in/register/reset/security forms and role switching to server results and `GET /api/me`. Require full name, verified email, contact phone, and terms acceptance for both registration paths. Create minimal durable identity/profile links in S01, leaving complete profile management to S02. Show real loading/empty/unavailable states instead of sample identities or fabricated membership. Defer email changes and removal of linked methods.
 
-**Proposed contracts/data:** Keep `/api/auth/*`; add registration, verification/reset, password-change, and two-factor endpoints plus `GET /api/me`. Extend the auth/session integration rather than registering conflicting auth routes. Add `UserRole`, credential/recovery/challenge records as needed.
+**Proposed contracts/data:** Keep `/api/auth/*`; add registration, verification/reset, invitation, password-change, and authenticator/recovery endpoints plus `GET /api/me`. Extend the shared auth/session integration rather than registering conflicting auth routes. Add `UserRole`, credential/recovery/challenge, terms, audit, and mail-job records as needed. The [S01 design](docs/s01-account-design.md) supplies the agreed lifetimes, provisioning permissions, session limits, and acceptance matrix; concrete route schemas remain implementation work.
 
-**Done when:** Sign-in survives reload; signup creates one real identity; reset/challenge reuse fails; unauthenticated and unassigned-role requests are rejected; changing a client role or local-storage flag cannot grant access.
+**Done when:** Both sign-in methods pass real database-backed integration checks for reload persistence, first Google signup, safe linking, restricted sessions, cross-account isolation, token/challenge concurrency, revocation, expiry, logout, and demo isolation. Client role/local-storage changes cannot grant access. Verify compatible Prisma generation, migration collision checks, and end-to-end email delivery. See the detailed [acceptance matrix](docs/s01-account-design.md#acceptance-matrix).
 
-**Depends on:** API boundary decision and database/client configuration.
+**Depends on:** Reconciled database/client configuration and implementation of the agreed shared-session integration. The API boundary decision is recorded in ADR 0001.
+
+**Design interview:** Completed and confirmed by the user on 2026-10-21. [S01 account design](docs/s01-account-design.md) records the agreed answers to Q1-Q35 and final shared-understanding confirmation in Q36. One account supports assigned roles in one gym organization; purchased membership remains separate. The final consistency review is complete. Implementation is separate work and has not started as part of this interview.
+
+**Implementation spec:** [GitHub issue #2](https://github.com/KyleCalvan/gym-web-app-template/issues/2), published with `ready-for-agent` after synthesis of the confirmed design and approved testing boundary.
 
 ### S02 — Create, find, and maintain member and self profiles
 
@@ -106,7 +110,7 @@ Retain local state for forms, modal steps, navigation, charts derived from loade
 
 **Implementation steps:**
 
-1. Add a `MemberProfile` linked to the canonical user, with display member number, phone, emergency contact, joined date, and avatar asset reference. Keep role-specific profile details separate from account credentials and membership entitlements.
+1. Extend S01's minimal identity/profile links into a complete `MemberProfile` linked to the canonical user, with display member number, phone, emergency contact, joined date, and avatar asset reference. Keep role-specific profile details separate from account credentials and membership entitlements.
 2. Implement member search/filter/detail/create/edit and self-profile endpoints. Staff get the operational fields needed for lookup; members cannot edit plan/status/roles through profile payloads. Admin plan edits must use S04 purchase/adjustment rules.
 3. Map each role's profile to the signed-in identity. Complete trainer/staff profile details in S08, including fields currently missing from strict shared types such as trainer email/bio and member emergency contact.
 4. Replace base64 avatar persistence with authenticated uploads and durable asset metadata. Validate actual file type/size server-side and connect all profile photo pickers. Keep this small upload service reusable for S06/S13.
@@ -414,7 +418,7 @@ Retain local state for forms, modal steps, navigation, charts derived from loade
 
 **Implementation steps:**
 
-1. Build the unified user list from canonical identities and role profiles. Implement superadmin create/edit/role assignment/status/invitation commands. Make database role assignments authoritative and reconcile the earlier environment bootstrap rules.
+1. Build the unified user list from canonical identities and role profiles. Implement superadmin create/edit/role assignment/status/invitation commands using the database role authority established in S01. Environment configuration is limited to controlled first-superadmin bootstrap rather than ongoing role overrides.
 2. Persist archive time/actor/reason. Apply archive filtering across lookup, booking, auth, and public projections, not only the UI. Archiving disables applicable access and revokes sessions while retaining financial/session references.
 3. Implement single/bulk restore with bounded input and a defined atomic/result policy. Recheck uniqueness, roles/status, and entitlement validity; restoring must not silently renew an expired membership.
 4. Implement purge and self-deletion under an explicit retention/anonymization policy. Resolve outstanding bookings, money/refunds, verification files, OAuth identity, and sessions; protect audit/accounting history and the last active superadmin.
@@ -481,13 +485,13 @@ Introduce each slice's schema incrementally. Reuse shared `User`, profile IDs, o
 
 ## 5. Decisions to settle before the affected slice
 
-These are unresolved product/architecture choices discovered in the frontend, not implemented policies.
+These checkpoints include unresolved choices discovered in the frontend and S01 decisions already settled in the design interview. Settled design decisions do not imply implemented policies.
 
 | Decision | Evidence/gap | Needed by |
 | --- | --- | --- |
-| Next.js API or separate Express ownership | Auth/plans are in Next.js; Express only has health/middleware. | S01 |
-| Email credentials and two-step scope | UI advertises password login/reset and email codes; only Google and development demos currently authenticate. Define provider-account linking, recovery, and whether Google sessions also require app-level challenges. | S01 |
-| Paid access versus account creation | Current registration/Google client paths fabricate Active membership profiles without a confirmed purchase. | S02/S04 |
+| Next.js API or separate Express ownership | Settled: extend Next.js APIs and shared database sessions; see ADR 0001 and ADR 0003. | S01 implementation |
+| Email credentials and two-step scope | Settled: Google plus email/password, explicit authenticated linking, authenticator/recovery codes, and required MFA for privileged accounts after either sign-in method; see S01 design. | S01 implementation |
+| Paid access versus account creation | Settled: accounts, assigned roles, and purchased membership are separate; signup grants no paid access. Remove fabricated membership from real flows. | S01/S02/S04 implementation |
 | Billing period, plan capacity, and entitlements | Quarterly duration is inconsistent; `members` has mixed semantics. Session limits, included PT, off-peak restrictions, two-person accounts, classes, dietary plans, and auto-renewal are shown in plan data but lack operational workflows. | S03/S04/S10/S12 |
 | Auto-renewal | Catalog terms promise it, while the visible flow is manual renewal. Implement consent, recurring payment authorization, renewal jobs, and failures if retained; otherwise revise the terms. Do not infer recurring billing from a preferred method. | S04/S05 |
 | Plan change, freeze, cancellation, and refunds | Full-price switches, immediate expiry, pending approval text, zero-value refund entries, and promised paid-session refunds do not form a consistent policy. Decide timing, proration, freeze expiry, cutoffs, and money consequences. | S04/S05/S11 |
@@ -496,7 +500,7 @@ These are unresolved product/architecture choices discovered in the frontend, no
 | Coaching approval and timing | Member payment creates a Pending booking; admin assignment is unpaid; explicit approval routing, duration, and cancellation deadlines are not established. | S09–S11 |
 | Attendance policy | Member UI suggests once daily; staff increments have no deduplication/history. Decide eligible statuses, self-check-in, daily limit, and whether proof of presence is required. | S12 |
 | Verification/review ownership | Student approval, membership cancellation review, cash confirmation, and trainer change-request decisions need added operational UI. Decide reviewers and required fields. | S04/S11/S13 |
-| Role and deletion policy | Environment-assigned roles conflict with local editable controls; self-delete removes immediately while admin removal archives. Define authority, restore effects, retention/anonymization, and privileged-account safeguards. | S18 |
+| Role and deletion policy | S01 settles database role authority, provisioning permissions, and last-superadmin safeguards. S18 still needs restore effects, retention/anonymization, and deletion policy; self-delete currently removes immediately while admin removal archives. | S01 authority; S18 governance |
 | Recovery scope and hosting | Existing backup is browser state, not a complete database/asset recovery mechanism. Decide operational hosting, job execution, artifact store, and recovery objectives. | Before production; S20 UI |
 
 Plan labels/perks alone do not justify building class scheduling, family-account administration, dietary-plan management, or an internal chat service. Define whether to implement, enforce, or revise those advertised benefits before promising them in production.
