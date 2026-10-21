@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { AuditLogEntry, Role } from '../types.ts';
+import { StatTile } from './primitives/StatTile.tsx';
 
 const PAGE_SIZE = 25;
 const SENSITIVE_KEY = /password|secret|token|credential|authorization|cookie|email|phone|address|birth|ssn|payment.?details/i;
-const ROLES: Role[] = ['superadmin', 'admin', 'staff', 'trainer', 'member'];
+const ALL_ROLES: Role[] = ['superadmin', 'admin', 'staff', 'trainer', 'member'];
 const ROLE_LABELS: Record<Role, string> = {
   superadmin: 'Super Admin',
   admin: 'Admin',
@@ -64,11 +65,11 @@ function DetailValue({ value }: { value: unknown }) {
 export default function AuditLogExplorer({
   auditLog,
   title,
-  label,
+  allowedRoles,
 }: {
   auditLog: AuditLogEntry[];
   title: string;
-  label: string;
+  allowedRoles?: Role[];
 }) {
   const [query, setQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
@@ -81,6 +82,7 @@ export default function AuditLogExplorer({
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const roles = allowedRoles && allowedRoles.length > 0 ? allowedRoles : ALL_ROLES;
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   const entries = useMemo(() => {
@@ -163,14 +165,13 @@ export default function AuditLogExplorer({
   return (
     <section className="audit-log-explorer" aria-label={title}>
       <div className="grid grid-4 audit-log-stats">
-        <div className="stat-tile"><div className="eyebrow">Total Entries</div><div className="num">{entries.length}</div></div>
-        <div className="stat-tile"><div className="eyebrow">Info</div><div className="num">{counts.info}</div></div>
-        <div className="stat-tile"><div className="eyebrow">Warning</div><div className="num">{counts.warn}</div></div>
-        <div className="stat-tile"><div className="eyebrow">Errors</div><div className="num">{counts.error}</div></div>
+        <StatTile label="Total Entries" value={entries.length} />
+        <StatTile label="Info" value={counts.info} />
+        <StatTile label="Warnings" value={counts.warn} />
+        <StatTile label="Errors" value={counts.error} />
       </div>
 
       <section className="card tabbed">
-        <span className="tab-label">{label}</span>
         <div className="card-head"><h2>{title}</h2></div>
 
         <div className="audit-log-categories" role="tablist" aria-label="Log categories">
@@ -196,7 +197,7 @@ export default function AuditLogExplorer({
           </select>
           <select aria-label="Filter by role" value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)}>
             <option value="all">All roles</option>
-            {ROLES.map((role) => <option value={role} key={role}>{ROLE_LABELS[role]}</option>)}
+            {roles.map((role) => <option value={role} key={role}>{ROLE_LABELS[role]}</option>)}
           </select>
           <label>From <input aria-label="Filter from date" type="date" value={fromDate} onChange={(event) => setFromDate(event.target.value)} /></label>
           <label>To <input aria-label="Filter to date" type="date" value={toDate} onChange={(event) => setToDate(event.target.value)} /></label>
@@ -222,6 +223,9 @@ export default function AuditLogExplorer({
                     <strong>{safeText(entry.action)}</strong>
                     <span>{safeText(entry.actor)} · {ROLE_LABELS[entry.actorRole]}</span>
                     <time dateTime={entry.at}>{formattedDate(entry.at)}</time>
+                    {entry.details && (
+                      <span className="audit-log-details">{safeText(entry.details)}</span>
+                    )}
                   </span>
                 </button>
               ))}

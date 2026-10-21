@@ -44,7 +44,7 @@ function MemberPromotions({
   };
 
   return (
-    <TabbedCard label="Member benefits" title="Promotions for your plan">
+    <TabbedCard title="Promotions for your plan">
       {activePromotions.length > 0 && (
         <div className="member-promo-active" aria-label="Your active discounts">
           <div className="member-promo-active-head">

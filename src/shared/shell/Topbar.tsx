@@ -3,7 +3,6 @@ import { CURRENT, ROLE_LABEL } from '../../data.ts';
 import { ChevronDown, Menu } from 'lucide-react';
 import type { NavSection, Notification, Role, Setter } from '../../types.ts';
 import { Avatar } from '../primitives/Avatar.tsx';
-import { GlobalSearch } from './GlobalSearch.tsx';
 import NotificationsDropdown from './NotificationsDropdown.tsx';
 
 const VIEW_TITLES: Record<string, string> = {
@@ -69,10 +68,7 @@ export function Topbar({
       </div>
 
       <div className="topbar-right">
-        {/* Mobile collapses this field to a compact trigger without moving the account controls. */}
-        {nav && onNav && (
-          <GlobalSearch nav={nav} active={view} onNav={onNav} />
-        )}
+        {/* Search bar removed from header - requirement 7 */}
         <NotificationsDropdown
           open={notificationsOpen}
           onClose={onCloseNotifications}

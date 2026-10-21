@@ -331,15 +331,6 @@ export default function LoginPage({
             href="/"
             onClick={(e) => { e.preventDefault(); onBack(); }}
           >← Back to Home</a>
-          <h2 style={{ fontSize: 22, textTransform: 'uppercase', marginBottom: 4 }}>
-            {role === 'member' && memberTab === 'register' ? 'Create Account' : `${creds.label} Sign In`}
-          </h2>
-          <p style={{ color: 'var(--steel)', fontSize: 14.3, margin: '4px 0 14px' }}>
-            {role === 'member'
-              ? (memberTab === 'login' ? 'Access your member dashboard' : 'Join VinAthletics Gym today')
-              : `Sign in to the ${creds.label} dashboard.`}
-          </p>
-
           {demoAccountsEnabled && !(role === 'member' && memberTab === 'register') && (
             <>
               <div className="role-grid" style={{ marginBottom: 10 }} role="group" aria-label="Choose demo role">
@@ -358,7 +349,16 @@ export default function LoginPage({
               <p className="demo-account-notice">Development demo accounts only. Do not use these credentials in production.</p>
             </>
           )}
+<h2 style={{ fontSize: 22, textTransform: 'uppercase', marginBottom: 4 }}>
+            {role === 'member' && memberTab === 'register' ? 'Create Account' : `${creds.label} Sign In`}
+          </h2>
+          <p style={{ color: 'var(--steel)', fontSize: 14.3, margin: '4px 0 14px' }}>
+            {role === 'member'
+              ? (memberTab === 'login' ? 'Access your member dashboard' : 'Join VinAthletics Gym today')
+              : `Sign in to the ${creds.label} dashboard.`}
+          </p>
 
+          
           {role === 'member' && (
             <div className="auth-tabs" style={{ marginTop: 0 }}>
               <button type="button" className={memberTab === 'login' ? 'active' : ''} onClick={() => { setMemberTab('login'); setFormErrors({}); }}>Login</button>

@@ -113,7 +113,7 @@ function SuperAdminBackups({
         <StatTile label="Active Sessions" value={stats.activeSessions} tone="signal" />
       </div>
 
-      <TabbedCard label="Maintenance" title="Database Backup">
+      <TabbedCard title="Database Backup">
         <p style={{ fontSize: 14.3, color: 'var(--steel)', margin: '0 0 14px' }}>
           Download a JSON snapshot of every in-memory slice. Useful before destructive changes or for offline analysis.
           The file contains all members, trainers, plans, transactions, sessions, promotions, staff, admins, notifications, bookings, check-ins, audit log, and active sessions.
@@ -151,7 +151,6 @@ function SuperAdminBackups({
         </div>
 
         <div style={{ borderTop: '1px solid var(--line)', paddingTop: 14 }}>
-          <div className="eyebrow">Snapshot preview</div>
           <Table
             columns={['Slice','Records']}
             rows={Object.entries(stats)}

@@ -23,8 +23,7 @@ function AdminPromotions({ promotions, setPromotions, plans, toast, addAudit }: 
   });
   const [editing, setEditing] = useState(null);
   const [editForm, setEditForm] = useState(null);
-  const [pubForm, setPubForm] = useState({promoId:'', action:'Publish'});
-  const [showCreate, setShowCreate] = useState(false);
+    const [showCreate, setShowCreate] = useState(false);
   const [detailPromo, setDetailPromo] = useState(null);
   const [pendingDelete, setPendingDelete] = useState<Promotion | null>(null);
   const [filter, setFilter] = useState<PromotionFilter>('all');
@@ -91,15 +90,7 @@ function AdminPromotions({ promotions, setPromotions, plans, toast, addAudit }: 
     setEditing(null); setEditForm(null);
   };
 
-  const applyPub = () => {
-    if (!pubForm.promoId) { toast('Pick a promotion'); return; }
-    const target = promotions.find(p => p.id === pubForm.promoId);
-    if (!target) return;
-    const nextStatus = pubForm.action === 'Publish' ? 'Published' : 'Draft';
-    setPromotions(prev => prev.map(p => p.id===pubForm.promoId ? {...p, status:nextStatus} : p));
-    toast(pubForm.action + ' applied to ' + target.title);
-    addAudit?.('info', pubForm.action === 'Publish' ? 'Promotion published' : 'Promotion unpublished', target.title);
-  };
+  ;
 
   const deletePromotion = () => {
     if (!pendingDelete) return;
@@ -119,7 +110,6 @@ function AdminPromotions({ promotions, setPromotions, plans, toast, addAudit }: 
       </div>
 
       <TabbedCard
-        label="Operations"
         title="Promotion Resources"
         right={<div style={{display:'flex', gap:8}}><button className="btn btn-outline btn-sm" onClick={()=>setShowCreate(true)}>+ New Promotion</button></div>}
       >
@@ -180,27 +170,7 @@ function AdminPromotions({ promotions, setPromotions, plans, toast, addAudit }: 
         )}
       </TabbedCard>
 
-      <div style={{height:18}}></div>
-
-      <TabbedCard label="Operations" title="Bulk Publish / Unpublish">
-        <div className="grid grid-3">
-          <Field label="Promotion">
-            <Select value={pubForm.promoId} onChange={v=>setPubForm(f=>({...f, promoId:v}))}>
-              <option value="">Select…</option>
-              {promotions.map(p=><option key={p.id} value={p.id}>{p.title} ({p.status})</option>)}
-            </Select>
-          </Field>
-          <Field label="Action">
-            <Select value={pubForm.action} onChange={v=>setPubForm(f=>({...f, action:v}))}>
-              <option>Publish</option><option>Unpublish</option>
-            </Select>
-          </Field>
-          <div style={{display:'flex', alignItems:'flex-end'}}>
-            <button className="btn btn-signal btn-sm" onClick={applyPub}>Apply</button>
-          </div>
-        </div>
-      </TabbedCard>
-
+      
       {detailPromo && (
         <Modal title={detailPromo.title} onClose={()=>setDetailPromo(null)} wide>
           {detailPromo.imageUrl ? (
@@ -214,7 +184,6 @@ function AdminPromotions({ promotions, setPromotions, plans, toast, addAudit }: 
           )}
           <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14}}>
             <div>
-              <div className="eyebrow">Promotion</div>
               <div className="mono" style={{fontSize:14.3, marginTop:2}}>{detailPromo.id} · {detailPromo.code}</div>
             </div>
             <Badge status={detailPromo.status}/>

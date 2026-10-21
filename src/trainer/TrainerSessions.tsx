@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { useState } from 'react';
 import { TabbedCard, Table, Badge, Modal, Field, TextInput, Select } from '../shared';
+import { formatTime12h } from './availability.ts';
 
 function formatDate(iso) {
   if (!iso) return '';
@@ -42,7 +43,6 @@ function TrainerSessions({ sessions, setSessions, toast, addAudit }) {
 
   return (
     <TabbedCard
-      label="Sessions"
       title="ASSIGNEED SESSIONS"
       right={
         <button
@@ -61,7 +61,7 @@ function TrainerSessions({ sessions, setSessions, toast, addAudit }) {
             <td className="mono">{s.id}</td>
             <td>{s.member}</td>
             <td>{formatDate(s.date)}</td>
-            <td className="mono">{s.time}</td>
+            <td className="mono">{formatTime12h(s.time)}</td>
             <td>{s.type}</td>
             <td><Badge status={s.status} /></td>
             <td>
@@ -143,7 +143,7 @@ function TrainerSessions({ sessions, setSessions, toast, addAudit }) {
                   .filter((s) => s.status !== 'Completed' && s.status !== 'Cancelled')
                   .map((s) => (
                     <option key={s.id} value={s.id}>
-                      {s.member} - {formatDate(s.date)} {s.time}
+                      {s.member} - {formatDate(s.date)} {formatTime12h(s.time)}
                     </option>
                   ))}
               </Select>

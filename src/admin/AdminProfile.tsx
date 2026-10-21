@@ -36,7 +36,7 @@ function AdminProfile({ admins, setAdmins, currentUserId, toast, addAudit, notif
 
   return (
     <div className="grid grid-1-2">
-      <TabbedCard label="Profile" title={me?.name || 'Admin'}>
+      <TabbedCard title={me?.name || 'Admin'}>
         <div style={{textAlign:'center', marginBottom:14}}>
           <Avatar src={me?.avatarUrl} name={me?.name || 'Admin'} size={64} />
           <div style={{marginTop:10}}>

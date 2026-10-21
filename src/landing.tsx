@@ -55,11 +55,16 @@ export default function Landing({ plans, promotions, trainers, onNavigate }: Lan
       // agree, and on mobile the smaller of the two is always the screen.
       const vw = Math.min(window.innerWidth, window.screen.width || window.innerWidth);
       const scale = Math.min(1, vw / DESIGN_WIDTH);
-      el.style.zoom = scale < 1 ? String(scale) : '';
+      if (scale < 1) {
+        el.style.zoom = String(scale);
+      } else {
+        el.style.removeProperty('zoom');
+        el.style.removeProperty('width');
+      }
       // Publish the scale so CSS can divide it back out: each content strip
       // counter-zooms by 1/--fit-scale so its text renders at true device
       // pixels instead of the zoomed-down ones (see landing.css).
-      el.style.setProperty('--fit-scale', String(scale));
+      el.style.setProperty('--fit-scale', String(scale < 1 ? scale : 1));
     };
     fit();
     window.addEventListener('resize', fit);

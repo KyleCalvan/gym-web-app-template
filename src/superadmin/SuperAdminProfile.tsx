@@ -36,7 +36,7 @@ function SuperAdminProfile({ superadmins, setSuperadmins, currentUserId, toast, 
 
   return (
     <div className="grid grid-1-2">
-      <TabbedCard label="Profile" title={me?.name || 'Super Admin'}>
+      <TabbedCard title={me?.name || 'Super Admin'}>
         <div style={{textAlign:'center', marginBottom:14}}>
           <Avatar src={me?.avatarUrl} name={me?.name || 'Super Admin'} size={64} />
           <div style={{marginTop:10}}>

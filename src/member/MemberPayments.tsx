@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Badge, Table, TabbedCard, Modal, ReceiptDocument, Select } from '../shared';
 import { peso } from '../data.ts';
 
-const PAYMENT_METHODS = ['GCash', 'Card', 'Cash'];
+const PAYMENT_METHODS = ['GCash', 'Cash'];
 
 function MemberPayments({ transactions, members, currentUserId, toast, preferredPaymentMethod = 'GCash', setPreferredPaymentMethod }){
   const [receipt, setReceipt] = useState(null);
@@ -13,7 +13,7 @@ function MemberPayments({ transactions, members, currentUserId, toast, preferred
   const [historyError, setHistoryError] = useState('');
   const me = members.find(m => m.id === currentUserId) || members[0];
   const mine = Array.isArray(transactions)
-    ? (me ? transactions.filter(t => t.member === me.name) : transactions)
+    ? (me ? transactions.filter(t => t.member === me.name && !t.isSimulated) : transactions)
     : [];
 
   const openDocument = (transaction, type) => {
@@ -35,7 +35,6 @@ function MemberPayments({ transactions, members, currentUserId, toast, preferred
   return (
     <>
       <TabbedCard
-        label="Finance"
         title="My Payment History"
         right={<button className="btn btn-outline btn-sm" onClick={() => { setSelectedMethod(preferredPaymentMethod); setShowPaymentMethod(true); }}>Switch Payment Method</button>}
       >

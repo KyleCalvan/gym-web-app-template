@@ -22,7 +22,7 @@ function SuperAdminDashboard({
         <StatTile label="Admin Users" value={liveAdmins} tone="signal" />
       </div>
 
-      <TabbedCard label="System" title="Super Admin Overview">
+      <TabbedCard title="Super Admin Overview">
         <p style={{ fontSize: 14.3, color: 'var(--steel)', margin: '0 0 14px' }}>
           Today is <b>{today}</b>. You have <b>{liveSessions}</b> active session{liveSessions === 1 ? '' : 's'} and <b>{auditLog.length}</b> log entries on file.
         </p>
@@ -37,7 +37,7 @@ function SuperAdminDashboard({
 
       <div style={{ height: 18 }}></div>
 
-      <TabbedCard label="System" title="Recent Activity">
+      <TabbedCard title="Recent Activity">
         {recent.length === 0 ? (
           <div style={{ fontSize: 14.3, color: 'var(--steel)' }}>No log entries yet.</div>
         ) : (

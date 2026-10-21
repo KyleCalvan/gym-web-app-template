@@ -45,8 +45,13 @@ function AdminPlans({ plans, setPlans, toast }: Pick<ViewProps, 'plans' | 'setPl
   const [saving, setSaving] = useState(false);
   const [serviceError, setServiceError] = useState('');
 
+  // Compute active plan count from local plans as fallback / primary source
+  const localActiveCount = plans.filter((p) => p.status === 'Active').length;
+
   useEffect(() => {
     let mounted = true;
+    // Initialize with local count immediately
+    setActivePlanCount(localActiveCount);
     fetch('/api/gym-plans')
       .then(readPlanResponse)
       .then((result) => {
@@ -59,10 +64,12 @@ function AdminPlans({ plans, setPlans, toast }: Pick<ViewProps, 'plans' | 'setPl
       .catch((error: unknown) => {
         if (!mounted) return;
         setServiceError(error instanceof Error ? error.message : 'Membership plans could not be loaded.');
+        // Keep local count as fallback
+        setActivePlanCount(localActiveCount);
       })
       .finally(() => { if (mounted) setLoading(false); });
     return () => { mounted = false; };
-  }, [setPlans]);
+  }, [setPlans, localActiveCount]);
 
   const syncPlanMutation = async (method: 'POST' | 'PATCH', body: unknown): Promise<boolean> => {
     setSaving(true);
@@ -160,23 +167,20 @@ function AdminPlans({ plans, setPlans, toast }: Pick<ViewProps, 'plans' | 'setPl
       <div className="admin-plan-limit" role="status">
         <div>
           <strong>Active plan limit</strong>
-          <span>{loading ? 'Loading limit…' : `${activePlanCount} of ${maxActivePlans} active plans`}</span>
+          <span style={{ marginLeft: 12 }}>{loading ? 'Loading limit…' : `${activePlanCount} of ${maxActivePlans} active plans`}</span>
         </div>
         <div className="admin-plan-limit-track" aria-hidden="true">
           <span style={{ width: `${Math.min(100, maxActivePlans > 0 ? activePlanCount / maxActivePlans * 100 : 0)}%` }} />
         </div>
       </div>
       {serviceError && <p className="admin-plan-error" role="alert">{serviceError}</p>}
-      <div className="grid grid-3" style={{ marginBottom: 22 }}>
+      <div className="grid grid-4" style={{ marginBottom: 22 }}>
         {plans.map((plan) => {
           const isFeatured = plan.featured;
           const isInactive = plan.status === 'Inactive';
           return (
             <div className={`plan-card${isFeatured ? ' featured' : ''}`} key={plan.name} style={isInactive ? { opacity: .55 } : undefined}>
               {isFeatured && <span className="ribbon">Most Popular</span>}
-              <div className="eyebrow" style={{ color: isFeatured ? 'var(--ink-soft)' : 'var(--steel)' }}>
-                {plan.members} active members · {plan.status}
-              </div>
               <h3 style={{ fontSize: 22 }}>{plan.name}</h3>
               <div className="price">{peso(plan.price)}<span>/{plan.period}</span></div>
               <ul>{plan.perks.map((perk, index) => <li key={index}>✓ {perk}</li>)}</ul>
@@ -192,7 +196,6 @@ function AdminPlans({ plans, setPlans, toast }: Pick<ViewProps, 'plans' | 'setPl
         })}
       </div>
       <TabbedCard
-        label="Plans"
         title="Plan Management"
         right={<button className="btn btn-signal btn-sm" type="button" onClick={openCreate} disabled={loading || saving || atLimit}>+ Create Plan</button>}
       >

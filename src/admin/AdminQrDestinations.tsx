@@ -56,7 +56,7 @@ function AdminQrDestinations({ qrDestinations = DEFAULT_QR_DESTINATIONS, setQrDe
   };
 
   return (
-    <TabbedCard label="Communication" title="Gym QR Destinations">
+    <TabbedCard title="Gym QR Destinations">
       <p className="gym-qr-admin-intro">
         Set the gym’s official public URLs. Only HTTPS destinations are accepted; the Facebook field must point to a Facebook-owned domain.
         These settings are stored in this browser and can be changed by an administrator.

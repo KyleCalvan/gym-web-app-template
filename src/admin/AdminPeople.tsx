@@ -142,7 +142,7 @@ function AdminPeople({ trainers, setTrainers, staff, setStaff, members, sessions
       {peopleTab === 'trainers' ? (
         <div role="tabpanel" id="admin-people-panel-trainers" aria-labelledby="admin-people-tab-trainers">
       {/* ===== Trainer Roster ===== */}
-      <TabbedCard label="Ops" title="Trainer Roster" right={<button className="btn btn-signal btn-sm" onClick={()=>setAdding(true)}>+ Add Trainer</button>}>
+      <TabbedCard title="Trainer Roster" right={<button className="btn btn-signal btn-sm" onClick={()=>setAdding(true)}>+ Add Trainer</button>}>
         <div className="grid grid-2">
           {trainers.filter(t => !t.deletedAt).map(t=>(
             <div className="card" key={t.id}>
@@ -163,7 +163,7 @@ function AdminPeople({ trainers, setTrainers, staff, setStaff, members, sessions
               </div>
               <div style={{display:'flex', gap:8, marginTop:14}}>
                 <button className="btn btn-outline btn-sm" onClick={()=>startEdit(t)}>Edit</button>
-                <button className="btn btn-ghost btn-sm" onClick={()=>setViewing(t)}>View Schedule</button>
+                <button className="btn btn-outline btn-sm" style={{border: '1px solid var(--line-strong)'}} onClick={()=>setViewing(t)}>View Schedule</button>
                 <button className="btn btn-danger-ghost btn-sm" onClick={()=>setPendingTrainerRemove(t)}>Remove</button>
               </div>
             </div>
@@ -172,7 +172,7 @@ function AdminPeople({ trainers, setTrainers, staff, setStaff, members, sessions
       </TabbedCard>
 
       <div style={{height:18}}></div>
-      <TabbedCard label="Ops" title="Assign Trainer to Session">
+      <TabbedCard title="Assign Trainer to Session">
         <form onSubmit={submitAssign}>
           <div className="grid grid-3">
             <Field label="Trainer">
@@ -197,7 +197,7 @@ function AdminPeople({ trainers, setTrainers, staff, setStaff, members, sessions
         <div role="tabpanel" id="admin-people-panel-staff" aria-labelledby="admin-people-tab-staff">
 
       {/* ===== Staff Roster ===== */}
-      <TabbedCard label="Ops" title="Staff Roster" right={<button className="btn btn-signal btn-sm" onClick={()=>setStaffAdding(true)}>+ Add Staff</button>}>
+      <TabbedCard title="Staff Roster" right={<button className="btn btn-signal btn-sm" onClick={()=>setStaffAdding(true)}>+ Add Staff</button>}>
         {staff.filter(s => !s.deletedAt).length === 0 ? (
           <div style={{fontSize:14.3, color:'var(--steel)', padding:'10px 0'}}>
             No staff yet. Click <b>+ Add Staff</b> to add the first one.

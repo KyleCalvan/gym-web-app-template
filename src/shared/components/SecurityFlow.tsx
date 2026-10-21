@@ -99,7 +99,6 @@ export function SecurityFlow({ isOpen, onClose, toast, role, accountEmail }: Sec
       {step === 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
           <div>
-            <div className="eyebrow" style={{ marginBottom: 12 }}>Authentication Method</div>
             <div style={{
               display: 'flex',
               alignItems: 'center',

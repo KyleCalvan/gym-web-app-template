@@ -26,17 +26,9 @@ export const MEMBERS: Member[] = [
   { id: 'M-1004', name: 'Antonio Luna', email: 'antonio.luna@mail.com', phone: '+63 920 456 7890', plan: 'Premium', status: 'Frozen', joined: '2026-04-20', avatarUrl: '/avatar-m4.jpg' },
 ];
 
-export const TRAINERS: Trainer[] = [
-  { id: 'T-001', name: 'James Reyes', specialty: 'Strength & Conditioning', certs: 'NASM-CPT, Precision Nutrition', rating: 4.9, sessionsWeek: 22, status: 'Active', sessionPrice: 1200, reviews: [], avatarUrl: '/avatar-t1.jpg' },
-  { id: 'T-002', name: 'Sarah Jenkins', specialty: 'Yoga & Mobility', certs: 'RYT-500', rating: 4.7, sessionsWeek: 15, status: 'Active', sessionPrice: 1000, reviews: [], avatarUrl: '/avatar-t2.jpg' },
-  { id: 'T-003', name: 'Mike Ross', specialty: 'Powerlifting', certs: 'CSCS', rating: 4.8, sessionsWeek: 18, status: 'On Leave', sessionPrice: 1500, reviews: [], avatarUrl: '/avatar-t3.jpg' },
-];
+export const TRAINERS: Trainer[] = [];
 
-export const STAFF: Staff[] = [
-  { id: 'S-01', name: 'Clara Lee', role: 'Front Desk', shift: 'Morning', status: 'Active', email: 'clara.lee@mail.com', phone: '+63 917 000 1111', hireDate: '2025-05-20', avatarUrl: '/avatar-s1.jpg' },
-  { id: 'S-02', name: 'David Tan', role: 'Manager', shift: 'Evening', status: 'Active', email: 'david.tan@mail.com', phone: '+63 918 000 2222', hireDate: '2025-01-10', avatarUrl: '/avatar-s2.jpg' },
-  { id: 'S-03', name: 'Sofia Ruiz', role: 'Sales', shift: 'Night', status: 'On Leave', email: 'sofia.ruiz@mail.com', phone: '+63 919 000 3333', hireDate: '2025-08-15', avatarUrl: '/avatar-s3.jpg' },
-];
+export const STAFF: Staff[] = [];
 
 export const PLANS: Plan[] = [
   {
@@ -119,58 +111,7 @@ export const PLANS: Plan[] = [
 
 export const TRANSACTIONS: Transaction[] = [];
 
-export const SESSIONS: Session[] = [
-  {
-    id: 'S-401',
-    member: 'Juan Dela Cruz',
-    trainer: 'James Reyes',
-    date: '2026-08-20',
-    time: '7:00 AM',
-    type: 'Strength',
-    status: 'Confirmed',
-    paid: true,
-    amount: 1200,
-    rated: true,
-    rating: 5,
-  },
-  {
-    id: 'S-404',
-    member: 'Angela Torres',
-    trainer: 'James Reyes',
-    date: '2026-08-21',
-    time: '6:00 PM',
-    type: 'Strength',
-    status: 'Confirmed',
-    paid: true,
-    amount: 1200,
-    rated: true,
-    rating: 4.8,
-  },
-  {
-    id: 'S-410',
-    member: 'Marco Villanueva',
-    trainer: 'James Reyes',
-    date: '2026-08-24',
-    time: '9:00 AM',
-    type: 'Conditioning',
-    status: 'Pending',
-    paid: false,
-    amount: 1200,
-  },
-  {
-    id: 'S-415',
-    member: 'Liza Mendoza',
-    trainer: 'James Reyes',
-    date: '2026-08-26',
-    time: '5:00 PM',
-    type: 'Mobility',
-    status: 'Confirmed',
-    paid: true,
-    amount: 1500,
-    rated: true,
-    rating: 4.9,
-  },
-];
+export const SESSIONS: Session[] = [];
 
 export const REVENUE_TREND: MonthDatum[] = [];
 
@@ -182,77 +123,11 @@ export const MEMBERSHIP_DIST: LabeledDatum[] = [];
 
 export const NOTIFICATIONS: Notification[] = [];
 
-export const PROMOTIONS: Promotion[] = [
-  {
-    id: 'promo-1',
-    title: 'New Member Starter Pack',
-    discountType: 'Percentage',
-    discount: '20',
-    validFrom: '2026-08-01',
-    validUntil: '2026-10-31',
-    plan: 'Any',
-    code: 'WELCOME20',
-    maxRedemptions: 100,
-    redemptions: 0,
-    minSpend: 1500,
-    status: 'Published',
-    imageUrl: '/promo-1.jpg',
-  },
-  {
-    id: 'promo-2',
-    title: 'Bring-a-Friend Bundle',
-    discountType: 'Bundle',
-    discount: '2-for-1',
-    validFrom: '2026-08-15',
-    validUntil: '2026-09-30',
-    plan: 'Pair Membership',
-    code: 'BRINGAFRIEND',
-    maxRedemptions: 50,
-    redemptions: 0,
-    minSpend: 0,
-    status: 'Published',
-    imageUrl: '/promo-2.jpg',
-  },
-  {
-    id: 'promo-3',
-    title: 'Student Strength Pass',
-    discountType: 'Fixed',
-    discount: '500',
-    validFrom: '2026-08-01',
-    validUntil: '2026-12-15',
-    plan: 'Monthly Strength',
-    code: 'STUDENT500',
-    maxRedemptions: 200,
-    redemptions: 0,
-    minSpend: 0,
-    status: 'Published',
-    imageUrl: '/promo-3.jpg',
-  },
-  {
-    id: 'promo-4',
-    title: 'Personal Training Kickoff',
-    discountType: 'Percentage',
-    discount: '15',
-    validFrom: '2026-08-20',
-    validUntil: '2026-11-20',
-    plan: 'PT Bundle',
-    code: 'PT15',
-    maxRedemptions: 40,
-    redemptions: 0,
-    minSpend: 2500,
-    status: 'Published',
-    imageUrl: '/promo-4.png',
-  },
-];
+export const PROMOTIONS: Promotion[] = [];
 
-export const ADMINS: Admin[] = [
-  { id: 'A-01', name: 'Admin One', email: 'admin1@mail.com', status: 'Active', createdAt: '2025-03-01', avatarUrl: '/avatar-a1.jpg' },
-  { id: 'A-02', name: 'Admin Two', email: 'admin2@mail.com', status: 'Inactive', createdAt: '2025-06-15', avatarUrl: '/avatar-a2.jpg' },
-];
+export const ADMINS: Admin[] = [];
 
-export const SUPERADMINS: Admin[] = [
-  { id: 'SD-1042', name: 'Juan Dela Cruz', email: 'juan.delacruz@mail.com', status: 'Active', createdAt: '2025-02-12', avatarUrl: '/avatar-sd.jpg' },
-];
+export const SUPERADMINS: Admin[] = [];
 
 export const CURRENT: Record<Role, CurrentUser> = {
   admin:      { name: 'Admin',       role: 'Administrator',       initials: 'AD' },
@@ -266,18 +141,8 @@ export const SEED_AUDIT_LOG: AuditLogEntry[] = [];
 
 export const SEED_SESSIONS: ActiveSession[] = [];
 
-export const MESSAGES: any[] = [
-  { id: 'msg-1', conversationId: 'conv-1', senderId: 'T-001', senderName: 'James Reyes', content: 'Hey Maria! Your form on the squats was great today.', isRead: true, createdAt: '2026-10-14T10:00:00Z' },
-  { id: 'msg-2', conversationId: 'conv-1', senderId: 'M-1001', senderName: 'Maria Santos', content: 'Thanks Coach! I felt much more stable.', isRead: true, createdAt: '2026-10-14T10:05:00Z' },
-  { id: 'msg-3', conversationId: 'conv-1', senderId: 'T-001', senderName: 'James Reyes', content: 'Keep it up. See you on Thursday!', isRead: false, createdAt: '2026-10-14T10:10:00Z' },
-  { id: 'msg-4', conversationId: 'conv-2', senderId: 'M-1002', senderName: 'Ricardo Gomez', content: 'Can we move my session to 5pm?', isRead: true, createdAt: '2026-10-15T08:00:00Z' },
-  { id: 'msg-5', conversationId: 'conv-2', senderId: 'T-002', senderName: 'Sarah Jenkins', content: 'Let me check the schedule... yes, 5pm works!', isRead: false, createdAt: '2026-10-15T08:30:00Z' },
-];
-
-export const CONVERSATIONS: any[] = [
-  { id: 'conv-1', participantId: 'T-001', participantName: 'James Reyes', participantAvatar: '/avatar-t1.jpg', participantRole: 'trainer', lastMessage: 'See you on Thursday!', updatedAt: '2026-10-14T10:10:00Z', unreadCount: 0 },
-  { id: 'conv-2', participantId: 'M-1002', participantName: 'Ricardo Gomez', participantAvatar: '/avatar-m2.jpg', participantRole: 'member', lastMessage: 'yes, 5pm works!', updatedAt: '2026-10-15T08:30:00Z', unreadCount: 1 },
-];
+export const MESSAGES: any[] = [];
+export const CONVERSATIONS: any[] = [];
 
 export const peso = (n: number): string => '₱' + Number(n).toLocaleString('en-PH');
 

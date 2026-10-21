@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { useState, useMemo } from 'react';
-import { Table, Modal, TabbedCard, TextInput, Select, Avatar } from '../shared';
+import { Table, Modal, TabbedCard, TextInput, Select, Avatar, StatTile } from '../shared';
 
 const fmt = (iso) => {
   if (!iso) return '—';
@@ -142,14 +142,13 @@ function SuperAdminTrash({
   return (
     <>
       <div className="grid grid-4" style={{ marginBottom: 18 }}>
-        <div className="stat-tile"><div className="eyebrow">Archived Admins</div><div className="num">{counts.admin}</div></div>
-        <div className="stat-tile"><div className="eyebrow">Archived Members</div><div className="num">{counts.member}</div></div>
-        <div className="stat-tile"><div className="eyebrow">Archived Trainers</div><div className="num">{counts.trainer}</div></div>
-        <div className="stat-tile"><div className="eyebrow">Archived Staff</div><div className="num">{counts.staff}</div></div>
+        <StatTile label="Archived Admins" value={counts.admin} />
+        <StatTile label="Archived Members" value={counts.member} />
+        <StatTile label="Archived Trainers" value={counts.trainer} />
+        <StatTile label="Archived Staff" value={counts.staff} />
       </div>
 
       <TabbedCard
-        label="Maintenance"
         title="Archive"
         right={
           <div style={{ display: 'flex', gap: 8 }}>

@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { useState, useMemo } from 'react';
-import { Table, Modal, Badge, TabbedCard } from '../shared';
+import { Table, Modal, Badge, TabbedCard, StatTile } from '../shared';
 
 const fmt = (iso) =>
   new Date(iso).toLocaleString('en-US', { month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' });
@@ -38,9 +38,9 @@ function SuperAdminSessions({ activeSessions, setActiveSessions, currentSessionI
   return (
     <>
       <div className="grid grid-4" style={{ marginBottom: 18 }}>
-        <div className="stat-tile"><div className="eyebrow">Total Sessions</div><div className="num">{activeSessions.length}</div></div>
-        <div className="stat-tile"><div className="eyebrow">Your Session</div><div className="num" style={{ fontSize: 17.6 }}>{me ? 'Active' : 'None'}</div></div>
-        <div className="stat-tile"><div className="eyebrow">Other Sessions</div><div className="num">{others.length}</div></div>
+        <StatTile label="Total Sessions" value={activeSessions.length} />
+        <StatTile label="Your Session" value={me ? 'Active' : 'None'} />
+        <StatTile label="Other Sessions" value={others.length} />
         <div className="stat-tile">
           <button className="btn btn-outline btn-sm" disabled={others.length === 0} onClick={() => setConfirmAll(true)}>
             Terminate All Others
@@ -48,7 +48,7 @@ function SuperAdminSessions({ activeSessions, setActiveSessions, currentSessionI
         </div>
       </div>
 
-      <TabbedCard label="Maintenance" title="Active Sessions">
+      <TabbedCard title="Active Sessions">
         {activeSessions.length === 0 ? (
           <div style={{ fontSize: 14.3, color: 'var(--steel)', padding: '14px 0' }}>
             No active sessions right now.

@@ -75,7 +75,6 @@ function MemberDashboard({ members, sessions, setSessions, bookings, setBookings
     <>
       <section className="member-dashboard-summary card" aria-labelledby="member-dashboard-heading">
         <div className="member-dashboard-intro">
-          <span className="eyebrow">Member home</span>
           <h2 id="member-dashboard-heading">Welcome back{me?.name ? `, ${me.name.split(' ')[0]}` : ''}</h2>
           <p>Your membership, sessions, and payments at a glance.</p>
         </div>
@@ -98,7 +97,7 @@ function MemberDashboard({ members, sessions, setSessions, bookings, setBookings
       </section>
 
       <div className="grid grid-2-1 member-dashboard-main-grid">
-        <TabbedCard label="Sessions" title="Upcoming Sessions">
+        <TabbedCard title="Upcoming Sessions">
           {upcoming.length === 0 ? (
             <div className="member-dashboard-empty">No upcoming sessions. Book a coaching session to get started.</div>
           ) : (
@@ -114,7 +113,7 @@ function MemberDashboard({ members, sessions, setSessions, bookings, setBookings
             )} />
           )}
         </TabbedCard>
-        <TabbedCard label="Quick" title="Quick Actions">
+        <TabbedCard title="Quick Actions">
           <div className="member-dashboard-actions">
             <button className="btn btn-signal btn-block" onClick={()=>setShowBook(true)}>Book a Session</button>
             <button className="btn btn-outline btn-block" onClick={()=>onNav && onNav('membership')}>Manage Membership</button>
@@ -125,7 +124,6 @@ function MemberDashboard({ members, sessions, setSessions, bookings, setBookings
       </div>
 
       <TabbedCard
-        label="Member benefits"
         title="Current Promotions"
         right={<button className="btn btn-outline btn-sm" onClick={()=>onNav && onNav('promotions')}>View all</button>}
       >

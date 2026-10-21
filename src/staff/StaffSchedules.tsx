@@ -4,7 +4,7 @@ import { TabbedCard } from '../shared';
 function StaffSchedules({ trainers }) {
   const days = ['Mon','Tue','Wed','Thu','Fri','Sat'];
   return (
-    <TabbedCard label="Ops" title="Weekly Trainer Schedule (View Only)">
+    <TabbedCard title="Weekly Trainer Schedule (View Only)">
       <div className="table-wrap">
         <table className="tbl">
           <thead><tr><th>Trainer</th>{days.map(d=><th key={d}>{d}</th>)}</tr></thead>

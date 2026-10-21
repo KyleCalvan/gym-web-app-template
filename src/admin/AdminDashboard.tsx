@@ -43,7 +43,7 @@ function AdminDashboard({ onNav, members, trainers, transactions, sessions, prom
       </div>
 
       <div className="grid grid-2-1" style={{marginBottom:18, alignItems:'start'}}>
-        <TabbedCard label="Finance" title="Recent Transactions" right={<button className="btn btn-outline btn-sm" onClick={()=>onNav && onNav('payments')}>View All</button>}>
+        <TabbedCard title="Recent Transactions" right={<button className="btn btn-outline btn-sm" onClick={()=>onNav && onNav('payments')}>View All</button>}>
           <Table columns={['ID','Member','Type','Amount','Status']} rows={transactions.slice(0,5)} renderRow={t=>(
             <tr key={t.id}>
               <td className="mono">{t.id}</td>
@@ -55,7 +55,7 @@ function AdminDashboard({ onNav, members, trainers, transactions, sessions, prom
           )} />
         </TabbedCard>
 
-        <TabbedCard label="Quick" title="Quick Actions">
+        <TabbedCard title="Quick Actions">
           <div style={{display:'flex', flexDirection:'column', gap:8}}>
             <button className="btn btn-signal btn-block" onClick={()=>onNav && onNav('members')}>+ Register Member</button>
             <button className="btn btn-outline btn-block" onClick={()=>onNav && onNav('trainers')}>+ Add Trainer</button>
@@ -66,16 +66,15 @@ function AdminDashboard({ onNav, members, trainers, transactions, sessions, prom
       </div>
 
       <div className="grid grid-2" style={{marginBottom:18}}>
-        <TabbedCard label="Finance" title="Revenue — Last 7 Days">
+        <TabbedCard title="Revenue — Last 7 Days">
           <BarChart data={REVENUE_7D} valueKey="v" labelKey="d" prefix="₱" />
         </TabbedCard>
-        <TabbedCard label="Members" title="Membership Distribution">
+        <TabbedCard title="Membership Distribution">
           <Donut data={MEMBERSHIP_DIST} />
         </TabbedCard>
       </div>
 
       <TabbedCard
-        label="Operations"
         title="Promotional Management"
         right={<button className="btn btn-signal btn-sm" onClick={()=>onNav && onNav('promotions')}>+ Create Promotion</button>}
       >

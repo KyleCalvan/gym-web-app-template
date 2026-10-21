@@ -26,8 +26,9 @@ function StaffMembers({ members, setMembers, plans, setCheckIns, today, toast, a
     addAudit?.('info', 'Member checked in', m.name + ' (' + m.id + ')');
   };
 
+  const isRegisteredMember = (m) => !m.deletedAt && Number(String(m?.id || '').replace(/\D/g, '')) >= 1042;
   const filtered = members
-    .filter(m => !m.deletedAt)
+    .filter(isRegisteredMember)
     .filter(m =>
       (statusF==='All' || m.status===statusF) &&
       (m.name.toLowerCase().includes(q.toLowerCase()) || m.id.toLowerCase().includes(q.toLowerCase()))
@@ -35,7 +36,7 @@ function StaffMembers({ members, setMembers, plans, setCheckIns, today, toast, a
 
   return (
     <>
-      <TabbedCard label="Members" title="Member Lookup" right={<button className="btn btn-signal btn-sm" onClick={()=>setShowRegister(true)}>+ Register Member</button>}>
+      <TabbedCard title="Member Lookup" right={<button className="btn btn-signal btn-sm" onClick={()=>setShowRegister(true)}>+ Register Member</button>}>
         <div className="search-row">
           <TextInput placeholder="Search name or member ID…" value={q} onChange={setQ} />
           <Select value={statusF} onChange={setStatusF} style={{maxWidth:180}}>

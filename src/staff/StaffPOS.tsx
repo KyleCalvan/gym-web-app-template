@@ -65,9 +65,17 @@ function StaffPOS({ setTransactions, members, plans, toast, preferredPaymentMeth
       .slice(0, 8);
   }, [members, memberSearch, memberStatus]);
 
-  const addPlan = (item: POSCartItem) => {
+  const isPtItem = (item: { planName: string; name: string }) =>
+  /pt|personal training|trainer/i.test(item.planName + ' ' + item.name);
+const addPlan = (item: POSCartItem) => {
     if (cart.some((entry) => entry.id === item.id)) {
       toast(`${item.planName} is already in the cart.`);
+      return;
+    }
+    const existingMembership = cart.find((entry) => !isPtItem(entry));
+    const addingMembership = !isPtItem(item);
+    if (existingMembership && addingMembership) {
+      toast('Only one membership plan can be selected per sale. Remove the current plan before adding another.');
       return;
     }
     setCart((previous) => [...previous, item]);
@@ -108,7 +116,7 @@ function StaffPOS({ setTransactions, members, plans, toast, preferredPaymentMeth
   return (
     <>
       <div className="grid grid-2-1 staff-pos">
-        <TabbedCard label="POS" title="Membership Plans">
+        <TabbedCard title="Membership Plans">
           <p className="staff-pos-hint">Add one of each membership plan to this sale.</p>
           <div className="staff-pos-products">
             {items.map((item) => {
@@ -133,7 +141,6 @@ function StaffPOS({ setTransactions, members, plans, toast, preferredPaymentMeth
         </TabbedCard>
 
         <TabbedCard
-          label="Cart"
           title="Sale Summary"
           right={cart.length > 0 ? (
             <button type="button" className="btn btn-danger-ghost btn-sm" onClick={() => setCart([])}>
@@ -204,7 +211,7 @@ function StaffPOS({ setTransactions, members, plans, toast, preferredPaymentMeth
 
           <Field label="Payment method">
             <Select value={method} onChange={setMethod} aria-label="Payment method">
-              <option>GCash</option><option>Card</option><option>Cash</option>
+              <option>GCash</option><option>Cash</option>
             </Select>
           </Field>
 

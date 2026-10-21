@@ -44,7 +44,7 @@ export default function GymQrLinks({ destinations = [] }: GymQrLinksProps) {
   }, [destinations]);
 
   return (
-    <TabbedCard label="Gym links" title="Connect with VinAthletics">
+    <TabbedCard title="Connect with VinAthletics">
       <p className="gym-qr-intro">
         Scan a QR code with your phone camera to open the labeled official gym destination. Check the displayed URL before continuing.
       </p>

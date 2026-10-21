@@ -69,7 +69,7 @@ function AdminCoaching({
   const cancelledBookings = dayBookings.filter((session) => session.status === 'Cancelled').length;
 
   return (
-    <TabbedCard label="Operations" title="Trainer Availability">
+    <TabbedCard title="Trainer Availability">
       <div className="admin-availability-filters">
         <Field label="Date">
           <input className="form-control" type="date" value={date} onChange={(event) => setDate(event.target.value)} />

@@ -47,7 +47,7 @@ function MemberProfile({ members, setMembers, currentUserId, toast, addAudit, on
 
   return (
     <div className="grid grid-1-2">
-      <TabbedCard label="Profile" title={me?.name || 'Member'}>
+      <TabbedCard title={me?.name || 'Member'}>
         <div style={{textAlign:'center', marginBottom:14}}>
           <Avatar src={me?.avatarUrl} name={me?.name || 'Member'} size={64} />
           <div style={{marginTop:10}}>

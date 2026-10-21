@@ -33,7 +33,7 @@ function TrainerProfile({ trainer, setTrainers, toast, addAudit, notifPrefs, set
 
   return (
     <div className="grid grid-1-2">
-      <TabbedCard label="Profile" title={trainer?.name || 'Trainer'}>
+      <TabbedCard title={trainer?.name || 'Trainer'}>
         <div style={{textAlign:'center', marginBottom:14}}>
           <Avatar src={trainer?.avatarUrl} name={trainer?.name || 'Trainer'} size={64} />
           <div style={{marginTop:10}}>

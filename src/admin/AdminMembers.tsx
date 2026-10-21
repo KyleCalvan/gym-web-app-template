@@ -114,13 +114,13 @@ function AdminMembers({ members, setMembers, plans, setTransactions, today, toas
   };
 
   const filtered = members
-    .filter(m => !m.deletedAt)
+    .filter(m => !m.deletedAt && Number(String(m?.id || '').replace(/\D/g, '')) >= 1042)
     .filter(m =>
       (statusF==='All' || m.status===statusF) &&
       (m.name.toLowerCase().includes(q.toLowerCase()) || m.id.toLowerCase().includes(q.toLowerCase()))
     );
 
-  const liveMembers = members.filter(m => !m.deletedAt);
+  const liveMembers = members.filter(m => !m.deletedAt && Number(String(m?.id || '').replace(/\D/g, '')) >= 1042);
   const counts = {
     active: liveMembers.filter(m=>m.status==='Active').length,
     expiring: liveMembers.filter(m=>m.status==='Expiring').length,
@@ -136,7 +136,7 @@ function AdminMembers({ members, setMembers, plans, setTransactions, today, toas
         <StatTile label="Expired / Frozen" value={counts.ef} />
       </div>
 
-      <TabbedCard label="Members" title="Member Directory" right={<button className="btn btn-signal btn-sm" onClick={()=>setShowRegister(true)}>+ Register Member</button>}>
+      <TabbedCard title="Member Directory" right={<button className="btn btn-signal btn-sm" onClick={()=>setShowRegister(true)}>+ Register Member</button>}>
         <div className="search-row">
           <TextInput placeholder="Search by name or member ID…" value={q} onChange={setQ} />
           <Select value={statusF} onChange={setStatusF} style={{maxWidth:180}}>
@@ -150,7 +150,7 @@ function AdminMembers({ members, setMembers, plans, setTransactions, today, toas
             <td>{m.plan}</td>
             <td><Badge status={m.status} /></td>
             <td className="mono">{m.joined}</td>
-            <td><button className="btn btn-ghost btn-sm" onClick={()=>setSelected(m)}>View →</button></td>
+            <td><button className="btn btn-outline btn-sm" style={{border: '1px solid var(--line-strong)'}} onClick={()=>setSelected(m)}>View</button></td>
           </tr>
         )} />
       </TabbedCard>
@@ -226,7 +226,7 @@ function AdminMembers({ members, setMembers, plans, setTransactions, today, toas
             </Field>
             <Field label="Payment Method">
               <Select value={renewMethod} onChange={setRenewMethod}>
-                {['GCash','Card','Cash'].map(m=><option key={m}>{m}</option>)}
+                {['GCash','Cash'].map(m=><option key={m}>{m}</option>)}
               </Select>
             </Field>
             <button className="btn btn-signal btn-block" type="submit">Confirm Renewal — {peso((plans.find(p=>p.name===renewPlan)||{}).price||0)}</button>

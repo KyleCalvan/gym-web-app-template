@@ -70,7 +70,7 @@
   box-shadow:0 3px 12px rgba(0,0,0,.18);
 }
 .brand > span:last-child{letter-spacing:.7px;}
-.brand > span:last-child::first-letter{color:var(--signal-ink);}
+.brand > span:last-child::first-letter{color:#fff;}
 
 /* ---- Hero ---- */
 .landing-hero{
@@ -359,13 +359,13 @@
 }
 .trainer-card h3{font-size:17.6px;text-transform:uppercase;margin:0;}
 .trainer-card .spec{font-size:13.2px;color:var(--signal-ink);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:1px;}
-.trainer-card .meta{font-size:13.2px;color:var(--steel);margin-top:6px;line-height:1.5;}
+.trainer-card .meta{font-size:13.2px;color:var(--steel);margin-top:6px;line-height:1.5;flex:1;}
 .trainer-card .meta .row{display:flex;justify-content:space-between;gap:4px 12px;flex-wrap:wrap;padding:2px 0;}
 /* Rating row: star + number, same monospace weight as the certs above it. */
 .trainer-card .meta .row .rating{display:inline-flex;align-items:center;gap:4px;color:var(--signal-ink);}
 .trainer-card .meta .row .rating svg{flex-shrink:0;}
-/* Book button sits a fixed 10px under the meta block. Not margin-top:auto —
-   pinning it to the card bottom like the plan cards would change the design. */
+/* Let the metadata absorb card-height differences so booking buttons align
+   along the bottom edge even when trainer certifications wrap differently. */
 .trainer-card .btn{margin-top:10px;}
 
 /* ---- Plans strip ---- */
@@ -498,7 +498,7 @@ a.contact-card .value:hover{ color:var(--signal-ink); }
    no dead space below the content. The fixed width lives here next to the
    breakpoint that gates it, and only applies below the design width -- on a
    wide monitor the page is unchanged. */
-@media (max-width: 1200px){
+@media (max-width: 1200px), (max-device-width: 1200px){
   .landing{
     width:1180px;
     overflow-x:clip;
@@ -536,7 +536,7 @@ a.contact-card .value:hover{ color:var(--signal-ink); }
     grid-template-columns:repeat(4, minmax(0,1fr));
   }
 
-  @media (max-width:900px){
+  @media (max-width:900px), (max-device-width:900px){
     /* Nav. The desktop bar is too wide to survive at device scale, so the inline
        links and action buttons are swapped for the hamburger drawer that's
        already wired up in LandingNav.tsx. The nav is un-zoomed like the sections
@@ -621,8 +621,22 @@ a.contact-card .value:hover{ color:var(--signal-ink); }
       min-width:260px; max-width:300px;
       scroll-snap-align:start;
       /* Flex items stretch to the tallest card by default, so a short plan
-         doesn't leave its Choose button dangling mid-card. */
+         doesn't leave its Choose button dangling mid-card. Fixed height would
+         re-introduce the misalignment, so let the flex line size these. */
+      display:flex;
+      flex-direction:column;
+      height:auto;
+      align-self:stretch;
+      min-height:0;
       margin:0;
+    }
+    .plans-strip .grid-3 > .plan-card .btn{
+      margin-top:auto;
+      width:100%;
+      min-height:44px;
+      padding:11px 16px;
+      justify-content:center;
+      box-sizing:border-box;
     }
     .plans-strip .grid-3 > .empty-state{ flex:1 1 100%; }
 
@@ -703,6 +717,21 @@ a.contact-card .value:hover{ color:var(--signal-ink); }
        column without dominating it, and the stat row pairs up two across. */
     .landing-hero h1{ font-size:clamp(33px, 9.9vw, 46.2px); }
     .landing-hero p.lede{ font-size:16.5px; margin:16px 0 22px; }
+
+    /* Button alignment on mobile: every button shares the same height, padding,
+       and full-row width so nothing looks randomly sized or misaligned, and
+       all labels stay centered. */
+    .landing .btn{
+      width:100%;
+      min-height:44px;
+      padding:11px 16px;
+      justify-content:center;
+      box-sizing:border-box;
+    }
+    .landing-hero .btn-group{ flex-direction:column; align-items:stretch; gap:10px; }
+    .landing-hero .btn-group .btn{ width:100%; justify-content:center; }
+    .trainers-grid .btn{ width:100%; justify-content:center; }
+    .plan-carousel-dots{ justify-content:center; }
     .hero-stats{
       display:grid;
       grid-template-columns:repeat(2, minmax(0,1fr));
@@ -789,3 +818,14 @@ a.contact-card .value:hover{ color:var(--signal-ink); }
   box-shadow:0 12px 24px rgba(0,0,0,.10);
 }
 :root[data-theme="light"] .mobile-menu-content .landing-nav-links a{ border-bottom-color:rgba(0,0,0,.10); }
+
+/* Make sure the miniaturized-desktop sizing never leaks into the desktop view
+   (e.g. when toggling from mobile back to desktop in devtools) and that the
+   page re-flows instead of staying stuck in a corner. */
+@media (min-width: 1201px){
+  .landing{
+    width:100% !important;
+    zoom:1 !important;
+    overflow-x:visible;
+  }
+}

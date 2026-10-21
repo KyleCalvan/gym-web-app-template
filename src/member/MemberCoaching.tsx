@@ -101,7 +101,7 @@ function MemberCoaching({ bookings, setBookings, sessions, setSessions, setTrans
 
   return (
     <>
-      <TabbedCard label="Book" title="Available Schedules" right={<button className="btn btn-signal btn-sm" onClick={()=>openBookingFor(null)}>+ Book Session</button>}>
+      <TabbedCard title="Available Schedules" right={<button className="btn btn-signal btn-sm" onClick={()=>openBookingFor(null)}>+ Book Session</button>}>
         <div className="grid grid-2">
           {trainers.map(t=>(
             <div className="card" key={t.id}>
@@ -116,7 +116,7 @@ function MemberCoaching({ bookings, setBookings, sessions, setSessions, setTrans
         </div>
       </TabbedCard>
       <div style={{height:18}}></div>
-      <TabbedCard label="Bookings" title="My Bookings">
+      <TabbedCard title="My Bookings">
         {bookings.length === 0 ? (
           <div style={{fontSize:14.3, color:'var(--steel)', padding:'10px 0'}}>No bookings yet. Book your first session above.</div>
         ) : (

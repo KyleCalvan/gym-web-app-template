@@ -11,6 +11,25 @@ function timeInMinutes(value: string): number | null {
   return hour * 60 + Number(twelveHour[2]);
 }
 
+export function formatTime12h(value: string): string {
+  const trimmed = value.trim();
+  // If it's already 12-hour with AM/PM, return as-is with proper format
+  const twelveHour = /^(1[0-2]|0?[1-9]):([0-5]\d)\s*(AM|PM)$/i.exec(trimmed);
+  if (twelveHour) {
+    return `${Number(twelveHour[1])}:${twelveHour[2]} ${twelveHour[3].toUpperCase()}`;
+  }
+  // Parse as 24-hour
+  const twentyFourHour = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(trimmed);
+  if (twentyFourHour) {
+    const hour24 = Number(twentyFourHour[1]);
+    const min = twentyFourHour[2];
+    const period = hour24 >= 12 ? 'PM' : 'AM';
+    const hour12 = hour24 % 12 === 0 ? 12 : hour24 % 12;
+    return `${hour12}:${min} ${period}`;
+  }
+  return value;
+}
+
 function isValidISODate(value: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const parsed = new Date(`${value}T00:00:00.000Z`);

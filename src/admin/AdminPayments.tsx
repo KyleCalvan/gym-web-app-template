@@ -32,7 +32,7 @@ function AdminPayments({ transactions, setTransactions, members = [], today, toa
         <StatTile label="Pending" value={pendingCount} tone="amber"/>
         <StatTile label="Refunded (MTD)" value={peso(refundedMtd)} tone="steel"/>
       </div>
-      <TabbedCard label="Finance" title="All Transactions" right={<button className="btn btn-outline btn-sm" onClick={()=>setShowReceipts(true)}>View Receipts</button>}>
+      <TabbedCard title="All Transactions" right={<button className="btn btn-outline btn-sm" onClick={()=>setShowReceipts(true)}>View Receipts</button>}>
         {transactions.length === 0 ? <div className="payment-history-state">No transactions have been recorded yet.</div> : <Table columns={['Transaction reference','Receipt reference','Member','Type','Amount','Fees','Method','Date','Status','']} rows={transactions} renderRow={t=>(
           <tr key={t.id}>
             <td className="mono">{t.transactionReference || t.id}</td>

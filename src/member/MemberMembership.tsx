@@ -19,7 +19,6 @@ import { createSimulatedTransaction, getConfiguredPaymentFee, updateSimulatedTra
 
 const PAYMENT_METHODS = [
   { value: 'GCash', label: 'GCash' },
-  { value: 'Card', label: 'Credit / Debit Card' },
   { value: 'Cash', label: 'Cash on-site' },
 ];
 
@@ -431,7 +430,6 @@ function MemberMembership({
     <>
       <section className="member-current-plan card" aria-labelledby="member-plan-heading">
         <div className="member-current-plan-main">
-          <div className="eyebrow">Current membership</div>
           <h2 id="member-plan-heading">{me?.plan || 'No plan selected'}</h2>
           <p>{validitySummary}{expiryDate && !Number.isNaN(expiryDate.getTime()) ? ` · valid through ${formatPromotionDate(me.membershipValidUntil)}` : ''}</p>
           {currentPlan?.description && <p className="member-current-plan-desc">{currentPlan.description}</p>}
@@ -477,9 +475,9 @@ function MemberMembership({
         </div>
       )}
 
-      <TabbedCard label="Plans" title="Available plans">
+      <TabbedCard title="Available plans">
         <p className="muted" style={{margin:'0 0 14px', fontSize:13.5}}>Choose a plan to compare against your current coverage. All prices and benefits are loaded from the plans database.</p>
-        <div className="grid grid-3" role="list">
+        <div className="grid grid-4" role="list">
           {plans.map((p) => {
             const isCurrent = p.name === me?.plan;
             const discount = bestDiscountFor(p.name, p.price);

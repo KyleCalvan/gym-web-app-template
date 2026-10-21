@@ -171,7 +171,6 @@ function MemberActivity({
       </div>
 
       <TabbedCard
-        label="Progress"
         title="Body Metrics & Goals"
         right={<button className="btn btn-outline btn-sm" onClick={()=>{setMetricDraft(metrics); setEditingMetrics(true);}}>Update Metrics</button>}
       >
@@ -205,7 +204,7 @@ function MemberActivity({
       </TabbedCard>
 
       {isFrozen && (
-        <TabbedCard label="Notice" title="">
+        <TabbedCard title="">
           <div style={{display:'flex', alignItems:'center', gap:12}}>
             <Badge status="Frozen" />
             <div style={{fontSize:14.3, color:'var(--steel)'}}>
@@ -217,7 +216,6 @@ function MemberActivity({
       {isFrozen && <div style={{height:18}}></div>}
 
       <TabbedCard
-        label="Activity"
         title="Check-in Calendar"
         right={
           <button
@@ -279,10 +277,10 @@ function MemberActivity({
       <div style={{height:18}}></div>
 
       <div className="grid grid-2">
-        <TabbedCard label="Activity" title="Weekly Check-ins">
+        <TabbedCard title="Weekly Check-ins">
           <BarChart data={weeklyData} valueKey="v" labelKey="d" />
         </TabbedCard>
-        <TabbedCard label="Coaching" title="Coaching Session Log">
+        <TabbedCard title="Coaching Session Log">
           {mySessions.length === 0 ? (
             <div style={{fontSize:14.3, color:'var(--steel)', padding:'10px 0'}}>
               No coaching sessions yet. Book one from the Sessions tab.

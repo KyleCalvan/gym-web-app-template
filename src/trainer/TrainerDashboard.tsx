@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { StatTile, TabbedCard, Table, Badge } from '../shared';
+import { formatTime12h } from './availability.ts';
 
 function TrainerDashboard({ sessions, today: todayLabel }) {
   const todayDate = new Date();
@@ -56,13 +57,13 @@ function TrainerDashboard({ sessions, today: todayLabel }) {
         <StatTile label="Upcoming" value={upcomingCount} tone="steel" />
       </div>
 
-      <TabbedCard label="Today" title={`YOUR SESSIONS — ${todayLong}`}>
+      <TabbedCard title={`YOUR SESSIONS — ${todayLong}`}>
         <Table
           columns={['TIME', 'MEMBER', 'TYPE', 'STATUS']}
           rows={todays}
           renderRow={(s) => (
             <tr key={s.id}>
-              <td className="mono">{s.time}</td>
+              <td className="mono">{formatTime12h(s.time)}</td>
               <td>{s.member}</td>
               <td>{s.type}</td>
               <td><Badge status={s.status} /></td>

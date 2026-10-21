@@ -5,7 +5,7 @@ import { peso } from '../data.ts';
 
 function StaffTransactions({ transactions, members = [] }) {
   const today = new Date().toLocaleDateString('en-US', {month:'short', day:'2-digit', year:'numeric'});
-  const todays = transactions.filter(t => t.date === today);
+  const todays = (transactions || []).filter(t => t.date === today && !t.isSimulated);
   const todayTotal = todays.filter(t=>t.status==='Paid').reduce((a,t)=>a+t.amount,0);
   const refunds = transactions.filter(t => t.status==='Refunded').length;
   const [viewTxn, setViewTxn] = useState(null);
@@ -18,7 +18,7 @@ function StaffTransactions({ transactions, members = [] }) {
         <StatTile label="Today's Sales" value={peso(todayTotal)} tone="court"/>
         <StatTile label="Refunds" value={refunds} tone="steel"/>
       </div>
-      <TabbedCard label="Finance" title={"My Transactions — Today, " + today}>
+      <TabbedCard title={"My Transactions — Today, " + today}>
         {todays.length === 0 ? (
           <div style={{fontSize:14.3, color:'var(--steel)', padding:'10px 0'}}>No transactions yet today. Use the Point of Sale to record one.</div>
         ) : (

@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { useState, useMemo } from 'react';
-import { Badge, Table, Modal, Field, TextInput, Select, TabbedCard, Avatar } from '../shared';
+import { Badge, Table, Modal, Field, TextInput, Select, TabbedCard, Avatar, StatTile } from '../shared';
 import { INITIALS } from '../data.ts';
 
 // Normalized user shape used in the unified table.
@@ -38,9 +38,6 @@ function SuperAdminUsers({
 
   const [confirmAdd, setConfirmAdd] = useState(false);
   const [pendingAddForm, setPendingAddForm] = useState(null);
-
-  const [selectedIds, setSelectedIds] = useState(new Set());
-  const [pendingRestore, setPendingRestore] = useState(false);
 
   const users = useMemo(() => buildUsers({ admins, members, trainers, staff }), [admins, members, trainers, staff]);
   const filtered = users.filter((u) =>
@@ -133,49 +130,23 @@ function SuperAdminUsers({
     setAddForm({ name: '', email: '', phone: '', plan: 'Premium', specialty: 'General', certs: '', sessionPrice: '900', role: 'Front Desk', shift: 'Morning', status: 'Active' });
   };
 
-  const toggleSelect = (id) => {
-    const next = new Set(selectedIds);
-    if (next.has(id)) next.delete(id); else next.add(id);
-    setSelectedIds(next);
-  };
-
-  const toggleSelectAll = () => {
-    if (selectedIds.size === filtered.length) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(filtered.map(u => u.id)));
-    }
-  };
-
-  const doBulkRestore = () => {
-    const ids = Array.from(selectedIds);
-    // Mocking API call for restoration.
-    // In a real scenario, we would look for these IDs in the archived lists and remove deletedAt.
-    addAudit?.('info', 'Bulk Restore', `Restored ${ids.length} users: ${ids.join(', ')}`);
-    toast(`Successfully restored ${ids.length} users`);
-    setSelectedIds(new Set());
-    setPendingRestore(false);
-  };
-
   return (
     <>
       <div className="grid grid-4" style={{ marginBottom: 18 }}>
-        <div className="stat-tile"><div className="eyebrow">Admins</div><div className="num">{counts.admin}</div></div>
-        <div className="stat-tile"><div className="eyebrow">Members</div><div className="num">{counts.member}</div></div>
-        <div className="stat-tile"><div className="eyebrow">Active Trainers</div><div className="num">{counts.trainer}</div></div>
-        <div className="stat-tile"><div className="eyebrow">Staff</div><div className="num">{counts.staff}</div></div>
+        <StatTile label="Admins" value={counts.admin} />
+        <StatTile label="Members" value={counts.member} />
+        <StatTile label="Active Trainers" value={counts.trainer} />
+        <StatTile label="Staff" value={counts.staff} />
       </div>
 
       <TabbedCard
-        label="System"
         title="All Users"
         right={
           <div style={{ display: 'flex', gap: 6 }}>
-            <button className="btn btn-outline btn-sm" disabled={selectedIds.size === 0} onClick={() => setPendingRestore(true)}>Bulk Restore</button>
             <button className="btn btn-outline btn-sm" onClick={() => { setAddKind('admin'); setAdding(true); }}>+ Add Admin</button>
-            <button className="btn btn-signal btn-sm" onClick={() => { setAddKind('member'); setAdding(true); }}>+ Register Member</button>
             <button className="btn btn-outline btn-sm" onClick={() => { setAddKind('trainer'); setAdding(true); }}>+ Add Trainer</button>
             <button className="btn btn-outline btn-sm" onClick={() => { setAddKind('staff'); setAdding(true); }}>+ Add Staff</button>
+            <button className="btn btn-signal btn-sm" onClick={() => { setAddKind('member'); setAdding(true); }}>+ Register Member</button>
           </div>
         }
       >
@@ -194,13 +165,10 @@ function SuperAdminUsers({
         </div>
 
         <Table
-          columns={['', 'User','Email / Phone','Role / Plan','Status','']}
+          columns={['User','Email / Phone','Role / Plan','Status','']}
           rows={filtered}
           renderRow={(u) => (
             <tr key={u.kind + '-' + u.id}>
-              <td>
-                <input type="checkbox" checked={selectedIds.has(u.id)} onChange={() => toggleSelect(u.id)} style={{ cursor: 'pointer' }} />
-              </td>
               <td>
                 <Avatar src={null} name={u.name} />
                 {u.name}
@@ -221,16 +189,6 @@ function SuperAdminUsers({
                 </div>
               </td>
             </tr>
-          )}
-          renderHeader={(cols) => (
-            <thead>
-              <tr>
-                <th style={{ width: 40 }}>
-                  <input type="checkbox" onChange={toggleSelectAll} checked={filtered.length > 0 && selectedIds.size === filtered.length} style={{ cursor: 'pointer' }} />
-                </th>
-                {cols.slice(1).map((c, i) => <th key={i}>{c}</th>)}
-              </tr>
-            </thead>
           )}
         />
       </TabbedCard>
@@ -454,26 +412,6 @@ function SuperAdminUsers({
             </div>
             <button className="btn btn-signal btn-block" type="submit">Save Changes</button>
           </form>
-        </Modal>
-      )}
-
-      {/* ===== Bulk Restore confirmation ===== */}
-      {pendingRestore && (
-        <Modal
-          title="Bulk Restore Users"
-          showCloseButton={false}
-          onClose={() => setPendingRestore(false)}
-        >
-          <p style={{ fontSize: 14.3, color: 'var(--steel)', marginBottom: 14 }}>
-            Are you sure you want to restore <b style={{ color: 'var(--text)' }}>{selectedIds.size}</b> selected users?
-            This will move them from the archive back to the active system users list.
-          </p>
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-            <button className="btn btn-outline" type="button" onClick={() => setPendingRestore(false)}>Cancel</button>
-            <button className="btn btn-signal" type="button" onClick={doBulkRestore}>
-              Restore Selected
-            </button>
-          </div>
         </Modal>
       )}
     </>

@@ -3,7 +3,7 @@ import { CalendarDays, ChevronLeft, ChevronRight, Pencil, Plus, Trash2 } from 'l
 import { getBookingCurrentTime, getBookingToday } from '../member/bookingDates.ts';
 import { Badge, Field, Modal, TabbedCard } from '../shared';
 import type { Session, TrainerAvailability, ViewProps } from '../types.ts';
-import { validateAvailabilityChange } from './availability.ts';
+import { validateAvailabilityChange, formatTime12h } from './availability.ts';
 
 type CalendarView = 'day' | 'week' | 'month';
 type AvailabilityForm = Pick<TrainerAvailability, 'date' | 'startTime' | 'endTime' | 'status'>;
@@ -163,7 +163,7 @@ function TrainerSchedule({
 
   return (
     <>
-      <TabbedCard label="Bookings" title="TRAINER CALENDAR">
+      <TabbedCard title="TRAINER CALENDAR">
         <div className="trainer-calendar-toolbar">
           <div className="trainer-calendar-navigation">
             <button className="btn btn-outline btn-sm" type="button" onClick={() => moveCalendar(-1)} aria-label="Previous date range">
@@ -236,9 +236,9 @@ function TrainerSchedule({
                           key={session.id}
                           className={`trainer-calendar-event ${cancelled ? 'event-cancelled' : 'event-booked'}`}
                           onClick={() => { setSelectedDate(date); setSelectedSession(session); }}
-                          title={`${session.member} · ${session.time} · ${session.status}`}
+                          title={`${session.member} · ${formatTime12h(session.time)} · ${session.status}`}
                         >
-                          <strong>{session.member}</strong><span>{session.time}</span>
+                          <strong>{session.member}</strong><span>{formatTime12h(session.time)}</span>
                         </button>
                       );
                     })}
@@ -287,7 +287,7 @@ function TrainerSchedule({
             <div className="trainer-selected-day-list">
               {daySessions.map((session) => (
                 <button key={session.id} className="trainer-detail-row trainer-detail-booking" type="button" onClick={() => setSelectedSession(session)}>
-                  <span className="trainer-detail-time">{session.time}</span>
+                  <span className="trainer-detail-time">{formatTime12h(session.time)}</span>
                   <span><strong>{session.member}</strong><small>{session.type} · {session.id}</small></span>
                   <Badge status={session.status} />
                 </button>
@@ -395,7 +395,7 @@ function TrainerSchedule({
             </div>
             <dl>
               <div><dt>Date</dt><dd>{formatCalendarDate(selectedSession.date, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</dd></div>
-              <div><dt>Session time</dt><dd>{selectedSession.time}</dd></div>
+              <div><dt>Session time</dt><dd>{formatTime12h(selectedSession.time)}</dd></div>
               <div><dt>Session type</dt><dd>{selectedSession.type}</dd></div>
               <div><dt>Booking reference</dt><dd>{selectedSession.id}</dd></div>
               <div><dt>Status</dt><dd><Badge status={selectedSession.status} /></dd></div>
