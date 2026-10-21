@@ -1,11 +1,26 @@
-import "dotenv/config";
 import { Pool } from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient } from "../generated/prisma/client";
+import { PrismaClient } from "../generated/prisma/client/index.js";
 
-const connectionString = `${process.env.DATABASE_URL}`;
+const globalForPrisma = globalThis as unknown as {
+  prisma?: PrismaClient;
+  pool?: Pool;
+};
 
-const adapter = new PrismaPg(new Pool({ connectionString }));
-const prisma = new PrismaClient({ adapter });
+const connectionString = process.env.DATABASE_URL;
+if (!connectionString) throw new Error("DATABASE_URL is required. See the root .env.example.");
+
+// pg does not interpret Prisma's ?schema= option. Pass it to the adapter so
+// runtime queries use the same schema as Prisma's migration CLI.
+const schema = new URL(connectionString).searchParams.get("schema") ?? "public";
+const pool = globalForPrisma.pool ?? new Pool({ connectionString });
+const prisma = globalForPrisma.prisma ?? new PrismaClient({
+  adapter: new PrismaPg(pool, { schema }),
+});
+
+if (process.env.NODE_ENV !== "production") {
+  globalForPrisma.pool = pool;
+  globalForPrisma.prisma = prisma;
+}
 
 export { prisma };

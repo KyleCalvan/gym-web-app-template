@@ -1,66 +1,73 @@
 # VinAthletics Gym — Management System
 
-A role-based gym management dashboard (Admin / Staff / Trainer / Member) built with React + Vite.
+A role-based gym management dashboard built with Next.js, React, NextAuth v4,
+Prisma, and PostgreSQL. The root Next.js application owns the `/api` routes,
+Google sign-in, database sessions, and persisted membership plans. The separate
+`backend/` Express scaffold does not own S01 authentication.
 
 ## Getting started
 
-This project was authored outside of a network-connected sandbox, so dependencies
-have not been installed here. To run it locally:
+Use Node.js 24 and npm. Install from the repository root:
 
 ```bash
-npm install
+npm ci
+```
+
+Copy the root `.env.example` to `.env.local`, configure a development PostgreSQL
+`DATABASE_URL`, `NEXTAUTH_URL`, and `NEXTAUTH_SECRET`, then run:
+
+```bash
+npm run db:migrate
 npm run dev
 ```
 
-Then open the printed local URL (usually http://localhost:5173).
+Open http://localhost:3000. Google sign-in additionally requires the credentials
+described below. For a production build, run `npm run build` and `npm start`.
 
-To build for production:
+## Database tooling and checks
+
+The sole schema and migration history live in `backend/prisma/`. Root and backend
+Prisma CLI, client, and PostgreSQL adapter are pinned to **5.22.0**. The generated
+client belongs in `backend/generated/prisma/client/` and is ignored by Git;
+`npm ci` generates it automatically. Both application entry points use the shared
+client in `backend/lib/prisma.ts`.
+
+| Command | Purpose |
+| --- | --- |
+| `npm run db:generate` | Generate the client without migrating a database |
+| `npm run db:validate` | Validate the canonical schema |
+| `npm run db:migrate` | Apply committed migrations to the configured database |
+| `npm run db:status` | Inspect the configured database's migration status |
+| `npm run db:migrate:dev -- --name <name>` | Create a migration against a development database |
+| `npm run typecheck` | Generate Next.js route types and check application types |
+| `npm run test:unit` | Run existing Node regression tests |
+| `npm run test:integration` | Build Next.js and exercise HTTP routes and migrations with disposable PostgreSQL |
+| `npm test` | Run the complete regression and integration suite |
+
+Prisma commands load the root `.env*` files through Next.js's environment loader,
+even when invoked from `backend/`. Exported variables take precedence. Commands
+use the development environment by default; set `NODE_ENV=production` when
+deliberately using production configuration. The PostgreSQL adapter honors the
+URL's `schema` parameter, matching migrations.
+
+Integration checks require no env files, Docker, PostgreSQL service, or live OAuth
+credentials. They start packaged PostgreSQL 17 binaries on a random loopback port,
+build and launch the real Next.js app, and remove the disposable cluster afterward.
+See [database checks](docs/database-checks.md) for coverage and prerequisites.
+
+The optional Express scaffold can be checked separately after the root install:
 
 ```bash
-npm run build
-npm run preview
+npm --prefix backend ci
+npm --prefix backend run typecheck
+npm --prefix backend run build
 ```
 
-## Structure
-
-```
-src/
-  main.jsx            Entry point
-  App.jsx              Shell: routing between roles/views, notification modal
-  Landing.jsx           Public marketing + role-based login/register
-  Sidebar.jsx            Nav sidebar w/ smart search + multi-select filters (admin/staff)
-  components.jsx          Shared UI primitives (Card, Table, Modal, Charts, StepTrack…)
-  data.js                  Mock data (members, trainers, plans, transactions, promos…)
-  styles.css                Design system ("Athletic Ledger")
-  views/
-    admin.jsx               Admin dashboard, members, plans, payments, reports,
-                             trainers, Promotional Management module, activity, coaching
-    staff.jsx                Staff dashboard, members, POS, transactions, trainer schedules
-    trainer.jsx                Trainer dashboard, sessions, schedule, profile
-    member.jsx                  Member dashboard, membership, coaching (with full
-                                 booking checkout flow), payments, profile, and the
-                                 Notifications overlay modal
-```
-
-## Recent changes
-
-- **Admin**: added a full Promotional Management module (create/edit, active
-  promotions table, publish/unpublish) plus a Dashboard summary widget; sidebar
-  now has a smart search box + multi-select section filters.
-- **Staff**: removed the redundant Quick Actions panel, the Available Plans
-  overview, the revenue stat tile, and the Specialty column from trainer
-  schedules; sidebar also gained smart search + filters.
-- **Member**: the receipt preview is now an overlay modal; session booking is a
-  full multi-step checkout (slot → payment → confirmation) that actually
-  processes a mock payment; the old "Cancel" button on bookings is now "Edit",
-  opening a modal with tabbed "Modify Booking" / "Cancel Booking" options; the
-  whole notification settings + inbox experience is now a single overlay modal
-  instead of a full page.
-- Rebranded from FitPro to **VinAthletics**.
+Its build emits `backend/dist/server.js`, and `npm --prefix backend start` runs it.
 
 ## Google OAuth setup
 
-1. Copy the root `.env.example` to `.env.local` and set `DATABASE_URL`, `NEXTAUTH_URL`, and a strong `NEXTAUTH_SECRET` (for example, generate one with `openssl rand -base64 32`). Local env files are Git-ignored.
+1. Use the root `.env.local` configured above. Local env files are Git-ignored.
 2. Create a Google OAuth **Web application** client in Google Cloud Console. Add these authorized redirect URIs:
    - Local: `http://localhost:3000/api/auth/callback/google`
    - Production: `https://<your-domain>/api/auth/callback/google`

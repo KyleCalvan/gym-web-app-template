@@ -123,7 +123,8 @@ async function requirePlanAdmin(request: NextRequest): Promise<NextResponse | nu
 
 async function lockedPlanTransaction<T>(action: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
   return prisma.$transaction(async (tx) => {
-    await tx.$queryRaw`SELECT pg_advisory_xact_lock(${PLAN_LOCK_ID})`;
+    // The lock returns PostgreSQL void, which Prisma cannot deserialize.
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(${PLAN_LOCK_ID})`;
     return action(tx);
   }, { isolationLevel: 'ReadCommitted' });
 }

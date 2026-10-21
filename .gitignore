@@ -14,3 +14,7 @@ next-env.d.ts
 
 # TypeScript
 tsconfig.tsbuildinfo
+
+# Generated from backend/prisma/schema.prisma by npm run db:generate.
+backend/generated/
+backend/prisma/generated/

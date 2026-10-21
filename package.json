@@ -4,18 +4,27 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
+    "postinstall": "npm run db:generate",
     "dev": "next dev",
-    "build": "prisma generate --schema=./backend/prisma/schema.prisma && next build",
+    "build": "npm run db:generate && next build",
     "start": "next start",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "next typegen && tsc --noEmit",
+    "test": "npm run test:unit && npm run test:integration",
+    "test:unit": "node --experimental-strip-types --test tests/*.test.mjs",
+    "test:integration": "node --test tests/integration/*.test.mjs",
     "test:promotions": "node --experimental-strip-types --test tests/promotion-eligibility.test.mjs tests/promotion-visibility.test.mjs tests/promotion-redemption.test.mjs tests/plan-comparison.test.mjs",
-    "db:migrate": "prisma migrate deploy --schema=./backend/prisma/schema.prisma"
+    "db:generate": "node scripts/prisma.mjs generate",
+    "db:validate": "node scripts/prisma.mjs validate",
+    "db:migrate": "node scripts/prisma.mjs migrate deploy",
+    "db:migrate:dev": "node scripts/prisma.mjs migrate dev",
+    "db:status": "node scripts/prisma.mjs migrate status"
   },
   "dependencies": {
     "@next-auth/prisma-adapter": "^1.0.7",
-    "@prisma/adapter-pg": "^5.14.0",
-    "@prisma/client": "^5.14.0",
+    "@next/env": "16.4.2",
+    "@prisma/adapter-pg": "5.22.0",
+    "@prisma/client": "5.22.0",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "cors": "^2.8.6",
@@ -38,7 +47,8 @@
     "@types/qrcode": "^1.5.6",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
-    "prisma": "^5.14.0",
+    "embedded-postgres": "17.10.0-beta.17",
+    "prisma": "5.22.0",
     "typescript": "^5.4.0"
   }
 }
