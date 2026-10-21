@@ -1,0 +1,15 @@
+.account-status {
+  max-width: 38rem;
+  margin: 4rem auto;
+  padding: 2rem;
+  color: var(--text, #16241f);
+  background: var(--surface, #fff);
+  border: 1px solid #d5ded8;
+  border-radius: 1rem;
+}
+.account-status-brand { font-weight: 700; letter-spacing: .08em; }
+.account-status li { margin: .75rem 0; }
+.account-status-actions { display: flex; gap: .75rem; margin-top: 1.5rem; }
+.account-status button { padding: .65rem 1rem; cursor: pointer; }
+.account-status [role="alert"] { color: #9b2929; }
+@media (max-width: 600px) { .account-status { margin: 1rem; padding: 1.5rem; } }

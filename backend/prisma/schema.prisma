@@ -15,6 +15,7 @@ model User {
   name  String?
   posts Post[]
   oauthIdentity AuthUser?
+  roleProfiles RoleProfile[]
 }
 
 // Auth.js identity is kept in separate tables so existing integer User IDs,
@@ -29,6 +30,60 @@ model AuthUser {
   gymUser       User?          @relation(fields: [gymUserId], references: [id], onDelete: SetNull)
   accounts      AuthAccount[]
   sessions      AuthSession[]
+  status        AccountStatus  @default(enabled)
+  establishedAt DateTime?
+  emailVerifiedProvider String?
+  emailVerifiedSubject String?
+  phone         String?
+  termsVersion  String?
+  termsAcceptedAt DateTime?
+  assignedRoles AssignedRole[]
+}
+
+enum AccountStatus {
+  enabled
+  disabled
+}
+
+enum GymRole {
+  member
+  staff
+  trainer
+  admin
+  superadmin
+}
+
+model RoleProfile {
+  id        String @id @default(cuid())
+  gymUserId Int
+  role      GymRole
+  gymUser   User @relation(fields: [gymUserId], references: [id], onDelete: Restrict)
+  assignments AssignedRole[]
+
+  @@unique([gymUserId, role])
+}
+
+model AssignedRole {
+  accountId String
+  role      GymRole
+  profileId String
+  account   AuthUser @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  profile   RoleProfile @relation(fields: [profileId], references: [id], onDelete: Restrict)
+
+  @@id([accountId, role])
+  @@index([profileId])
+}
+
+model AuditEvent {
+  id        String @id @default(cuid())
+  occurredAt DateTime @default(now())
+  actor     String?
+  action    String
+  target    String?
+  result    String
+  requestId String
+
+  @@index([target, occurredAt])
 }
 
 model AuthAccount {

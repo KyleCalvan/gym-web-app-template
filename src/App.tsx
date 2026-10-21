@@ -43,6 +43,8 @@ import type {
 } from './types.ts';
 import { DEFAULT_QR_DESTINATIONS } from './qrDestinations.ts';
 import { isTrainerAvailability } from './trainer/availability.ts';
+import AccountStatus from './auth/AccountStatus';
+import './auth/account-status.css';
 
 const NAV_BY_ROLE: Record<Role, NavSection[]> = {
   admin: ADMIN_NAV,
@@ -70,9 +72,15 @@ const toISODate = (d: Date): string => {
 };
 
 export default function App({ initialLoginTab = 'login' }: { initialLoginTab?: 'login' | 'register' } = {}) {
+  const { status } = useSession();
+  if (status === 'loading') return <main className="account-status" role="status">Loading your Account…</main>;
+  if (status === 'authenticated') return <AccountStatus />;
+  return <DemoApp initialLoginTab={initialLoginTab} />;
+}
+
+function DemoApp({ initialLoginTab = 'login' }: { initialLoginTab?: 'login' | 'register' }) {
   const pathname = usePathname();
   const { data: authSession, status: authStatus } = useSession();
-  const handledGoogleUser = useRef<string | null>(null);
   const handledDemoSession = useRef<string | null>(null);
 
   const [members, setMembers]               = useState<Member[]>(() => [...MEMBERS]);
@@ -391,56 +399,6 @@ export default function App({ initialLoginTab = 'login' }: { initialLoginTab?: '
     }
     addAudit('info', 'Role interface switched', ROLE_LABEL[nextRole], nextRole);
   };
-
-  useEffect(() => {
-    if (authStatus === 'unauthenticated') {
-      handledGoogleUser.current = null;
-      return;
-    }
-    const authUser = authSession?.user;
-    if (authStatus !== 'authenticated' || !authUser?.id || !authUser.email) return;
-    if (handledGoogleUser.current === authUser.id) return;
-
-    const sessionRoles = Array.isArray(authUser.roles)
-      ? authUser.roles.filter((assignedRole): assignedRole is Role =>
-        ['member', 'staff', 'trainer', 'admin', 'superadmin'].includes(assignedRole),
-      )
-      : [];
-    if (sessionRoles.length === 0) {
-      console.error('The authenticated account has no server-assigned application roles.');
-      return;
-    }
-    setAuthorizedRoles(sessionRoles);
-    const normalizedEmail = authUser.email.trim().toLowerCase();
-    handledGoogleUser.current = authUser.id;
-    const startRole = authUser.role && sessionRoles.includes(authUser.role)
-      ? authUser.role
-      : sessionRoles.includes('member') ? 'member' : sessionRoles[0];
-    if (sessionRoles.includes('member')) {
-      const existingMember = members.find((member) => member.email.trim().toLowerCase() === normalizedEmail);
-      const memberId = existingMember?.id ?? `GOOGLE-${authUser.id}`;
-      const googleMember: Member = existingMember || {
-        id: memberId,
-        name: authUser.name?.trim() || normalizedEmail.split('@')[0],
-        email: normalizedEmail,
-        phone: '',
-        plan: 'Basic',
-        status: 'Active',
-        joined: today(),
-      };
-      if (!existingMember) {
-        setMembers((previous) => previous.some((item) => item.email.trim().toLowerCase() === normalizedEmail)
-          ? previous
-          : [googleMember, ...previous]);
-      }
-      handleLogin(startRole, memberId, googleMember);
-    } else {
-      handleLogin(startRole);
-    }
-    if (window.location.pathname === '/login' || new URLSearchParams(window.location.search).has('auth')) {
-      window.history.replaceState({}, '', '/');
-    }
-  }, [authStatus, authSession, members]);
 
   useEffect(() => {
     if (authStatus !== 'unauthenticated') return;

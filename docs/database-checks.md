@@ -51,15 +51,25 @@ the disposable instance before cleaning it up.
   original record, including IDs and relations.
 - Run the upgrade fixture in a non-default PostgreSQL schema, checking both
   migration/runtime schema agreement and real NextAuth/plan HTTP responses.
-- Update a membership plan through an authenticated HTTP request, restart Next.js,
-  and read the committed change back through the API.
+- Reject plan mutations from incomplete legacy sessions, restart Next.js,
+  and confirm the persisted public catalog is unchanged.
 - Check the Google provider contract, persisted session identity and gym mapping,
   and CSRF-protected NextAuth sign-out followed by rejection of the revoked token.
 
-The provider configuration uses dummy credentials. These checks preserve the
-existing integration; they do not establish live Google callback acceptance or
-implement the account, MFA, authorization, or demo-boundary changes in later S01
-sub-issues. The fixtures intentionally exercise today's server role assignments.
+Google callback checks use dummy credentials and controlled external transport:
+local discovery/token/JWKS responses include signed ID tokens and enforce PKCE.
+The real application still checks OAuth state and token signatures with the
+installed NextAuth stack. Coverage includes first/repeated and concurrent Google
+callbacks, durable verification and gym links, normalized collisions, existing
+mapping preservation, audit-failure rollback, revoked roles, disabled Accounts,
+safe status projections, client-session tampering, and enabled preview demos.
+
+The reviewed cutover command is exercised against the same disposable database.
+Upgrade checks report collisions, prove atomic failure preserves records, recover
+through Prisma's migration ledger, and normalize historical email whitespace/case.
+Ongoing environment overrides are replaced by persisted role assignments. See
+[the Account cutover runbook](account-cutover.md). Live Google acceptance and the
+later S01 profile/terms/MFA flows remain separate operational/implementation work.
 
 ## Reproducing tooling checks
 

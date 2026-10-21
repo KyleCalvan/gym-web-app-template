@@ -17,6 +17,7 @@ interface RoleCred {
 
 const EMAIL_PATTERN = /^\S+@\S+\.\S+$/;
 const OAUTH_ERRORS: Record<string, string> = {
+  AccountConflict: 'Your Google identity needs review. Contact the gym to resolve the Account link before trying again.',
   OAuthAccountNotLinked: 'This Google account is not linked to that user. Sign in with the existing method first, then use Google from your account.',
   AccessDenied: 'Google sign-in was cancelled or the Google account could not be verified.',
   OAuthSignin: 'Google sign-in could not be started. Please try again.',

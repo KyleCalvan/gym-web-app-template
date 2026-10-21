@@ -1,8 +1,7 @@
 import type { NextAuthOptions } from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
 import { authAdapter } from './adapter';
-import { prisma } from './prisma';
-import { getAssignedRoles } from './roles';
+import { establishGoogleAccount, getAccountStatus, recordGoogleRejection } from './account';
 
 const googleClientId = process.env.GOOGLE_CLIENT_ID?.trim();
 const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET?.trim();
@@ -16,64 +15,39 @@ export const authOptions: NextAuthOptions = {
         clientSecret: googleClientSecret!,
         authorization: { params: { prompt: 'select_account' } },
         checks: ['pkce', 'state'],
-        // Never silently merge OAuth identities by email. Existing gym users
-        // are linked separately below, only after Google's verified-email claim.
+        // The canonical Account service owns deliberate identity establishment.
         allowDangerousEmailAccountLinking: false,
       })]
     : [],
   session: { strategy: 'database' },
+  logger: {
+    error(code) { console.error('Authentication request failed:', code); },
+    warn(code) { console.warn('Authentication configuration warning:', code); },
+  },
   pages: {
     signIn: '/login',
     error: '/login',
   },
   callbacks: {
-    async signIn({ user, account, profile }) {
+    async signIn({ account, profile }) {
       if (account?.provider !== 'google') return false;
 
-      const email = user.email?.trim().toLowerCase();
-      const emailVerified = (profile as { email_verified?: boolean } | undefined)?.email_verified === true;
-      if (!email || !emailVerified) return false;
-
-      try {
-        await prisma.$transaction(async (tx) => {
-          const authUser = await tx.authUser.findUnique({ where: { id: user.id } });
-          if (!authUser || authUser.gymUserId !== null) return;
-
-          // Link an existing gym identity only to a Google-verified email. If
-          // there is no matching record, create the member identity once.
-          let gymUser = await tx.user.findFirst({
-            where: { email: { equals: email, mode: 'insensitive' } },
-          });
-          if (!gymUser) {
-            gymUser = await tx.user.create({
-              data: { email, name: user.name?.trim() || null },
-            });
-          }
-
-          await tx.authUser.update({
-            where: { id: authUser.id },
-            data: { gymUserId: gymUser.id },
-          });
-        });
-        return true;
-      } catch (error) {
-        // Do not emit profile data, email addresses, or OAuth tokens to logs.
-        console.error('Google sign-in could not link the gym account.');
-        return false;
-      }
+      const googleProfile = profile as { sub?: string; email?: string; name?: string; email_verified?: boolean } | undefined;
+      if (typeof googleProfile?.sub !== 'string' || typeof googleProfile.email !== 'string' || googleProfile.email_verified !== true
+        || googleProfile.sub !== account.providerAccountId) return recordGoogleRejection();
+      return establishGoogleAccount({ ...googleProfile, sub: googleProfile.sub, email: googleProfile.email, email_verified: true });
     },
     async session({ session, user }) {
       if (session.user) {
-        const authUser = await prisma.authUser.findUnique({
-          where: { id: user.id },
-          select: { gymUserId: true },
-        });
-        const roles = getAssignedRoles(session.user.email);
-        if (roles.length === 0) throw new Error('The authenticated account has no assigned application roles.');
+        const status = await getAccountStatus(user.id);
+        if (!status) throw new Error('Account unavailable');
+        const roles = status.account.status === 'enabled' ? status.roles : [];
         session.user.id = user.id;
         session.user.roles = roles;
-        session.user.role = roles.includes('member') ? 'member' : roles[0];
-        session.user.gymUserId = authUser?.gymUserId ?? null;
+        session.user.role = roles.includes('member') ? 'member' : roles[0] ?? null;
+        session.user.gymUserId = status.account.gymUserId;
+        session.user.restricted = status.restricted;
+        session.user.nextSteps = status.nextSteps;
       }
       return session;
     },

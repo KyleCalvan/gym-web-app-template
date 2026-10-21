@@ -3,7 +3,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import type { Prisma } from '@/backend/generated/prisma/client';
 import { authOptions } from '@/src/auth/options';
 import { prisma } from '@/src/auth/prisma';
-import { DEMO_SESSION_COOKIE, isDemoLoginEnabled, readDemoSessionToken } from '@/src/auth/demo-session';
 import { PLANS } from '@/src/data';
 import type { Plan } from '@/src/types';
 
@@ -107,15 +106,12 @@ function isPlan(value: unknown): value is Plan {
 async function requirePlanAdmin(request: NextRequest): Promise<NextResponse | null> {
   const session = await getServerSession(authOptions);
   const nextAuthAdmin = Boolean(session?.user?.id
+    && !session.user.restricted
     && session.user.roles?.some((role) => role === 'admin' || role === 'superadmin'));
-  const demoSession = isDemoLoginEnabled()
-    ? readDemoSessionToken(request.cookies.get(DEMO_SESSION_COOKIE)?.value)
-    : null;
-  const demoAdmin = demoSession?.role === 'admin' || demoSession?.role === 'superadmin';
-  if (!session?.user?.id && !demoSession) {
+  if (!session?.user?.id) {
     return NextResponse.json({ error: 'Sign in with an authorized administrator account.' }, { status: 401 });
   }
-  if (session?.user?.id ? !nextAuthAdmin : !demoAdmin) {
+  if (!nextAuthAdmin) {
     return NextResponse.json({ error: 'You are not authorized to manage membership plans.' }, { status: 403 });
   }
   return null;
