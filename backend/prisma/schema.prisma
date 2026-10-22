@@ -9,36 +9,61 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {  
-  id    Int     @id @default(autoincrement())  
-  email String  @unique
-  name  String?
-  posts Post[]
-  oauthIdentity AuthUser?
-  roleProfiles RoleProfile[]
+// Legacy blog sample — not used by gym workflows
+model Post {
+  id        Int     @id @default(autoincrement())
+  title     String
+  content   String?
+  published Boolean @default(false)
+  author    User    @relation(fields: [authorId], references: [id])
+  authorId  Int
 }
 
-// Auth.js identity is kept in separate tables so existing integer User IDs,
-// Post relationships, and gym data remain unchanged.
-model AuthUser {
-  id            String         @id @default(cuid())
+// Core gym user — integer keys preserve existing relationships
+model User {
+  id            Int           @id @default(autoincrement())
+  email         String        @unique
   name          String?
-  email         String?        @unique
-  emailVerified DateTime?
-  image         String?
-  gymUserId     Int?           @unique
-  gymUser       User?          @relation(fields: [gymUserId], references: [id], onDelete: SetNull)
-  accounts      AuthAccount[]
-  sessions      AuthSession[]
-  status        AccountStatus  @default(enabled)
-  establishedAt DateTime?
-  emailVerifiedProvider String?
-  emailVerifiedSubject String?
-  phone         String?
-  termsVersion  String?
-  termsAcceptedAt DateTime?
-  mfaEnabledAt  DateTime?
-  assignedRoles AssignedRole[]
+  posts         Post[]
+  oauthIdentity AuthUser?
+  roleProfiles  RoleProfile[]
+  memberProfile MemberProfile?
+  trainerProfile TrainerProfile?
+  staffProfile  StaffProfile?
+  memberships   Membership[]
+  orders        Order[]
+  checkIns      CheckIn[]
+  bookingsAsMember Booking[]  @relation("MemberBookings")
+  notifications Notification[]
+  notificationPreferences NotificationPreference[]
+  studentVerifications StudentVerification[]
+  promotionClaims PromotionClaim[]
+  measurements  MemberMeasurement[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  deletedAt     DateTime?
+}
+
+// Auth.js identity tables — separate from gym User to preserve integer IDs
+model AuthUser {
+  id                     String         @id @default(cuid())
+  name                   String?
+  email                  String?        @unique
+  emailVerified          DateTime?
+  image                  String?
+  gymUserId              Int?           @unique
+  gymUser                User?          @relation(fields: [gymUserId], references: [id], onDelete: SetNull)
+  accounts               AuthAccount[]
+  sessions               AuthSession[]
+  status                 AccountStatus  @default(enabled)
+  establishedAt          DateTime?
+  emailVerifiedProvider  String?
+  emailVerifiedSubject   String?
+  phone                  String?
+  termsVersion           String?
+  termsAcceptedAt        DateTime?
+  mfaEnabledAt           DateTime?
+  assignedRoles          AssignedRole[]
 }
 
 enum AccountStatus {
@@ -55,10 +80,10 @@ enum GymRole {
 }
 
 model RoleProfile {
-  id        String @id @default(cuid())
-  gymUserId Int
-  role      GymRole
-  gymUser   User @relation(fields: [gymUserId], references: [id], onDelete: Restrict)
+  id          String          @id @default(cuid())
+  gymUserId   Int
+  role        GymRole
+  gymUser     User            @relation(fields: [gymUserId], references: [id], onDelete: Restrict)
   assignments AssignedRole[]
 
   @@unique([gymUserId, role])
@@ -68,23 +93,25 @@ model AssignedRole {
   accountId String
   role      GymRole
   profileId String
-  account   AuthUser @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  profile   RoleProfile @relation(fields: [profileId], references: [id], onDelete: Restrict)
+  account   AuthUser     @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  profile   RoleProfile  @relation(fields: [profileId], references: [id], onDelete: Restrict)
 
   @@id([accountId, role])
   @@index([profileId])
 }
 
 model AuditEvent {
-  id        String @id @default(cuid())
+  id         String   @id @default(cuid())
   occurredAt DateTime @default(now())
-  actor     String?
-  action    String
-  target    String?
-  result    String
-  requestId String
+  actor      String?
+  action     String
+  target     String?
+  result     String
+  requestId  String
 
   @@index([target, occurredAt])
+  @@index([actor, occurredAt])
+  @@index([action, occurredAt])
 }
 
 model AuthAccount {
@@ -107,15 +134,15 @@ model AuthAccount {
 }
 
 model AuthSession {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
-  createdAt    DateTime @default(now())
-  lastActiveAt DateTime @default(now())
-  primaryAuthenticatedAt DateTime?
-  mfaVerifiedAt DateTime?
-  user         AuthUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                      String     @id @default(cuid())
+  sessionToken            String     @unique
+  userId                  String
+  expires                 DateTime
+  createdAt               DateTime   @default(now())
+  lastActiveAt            DateTime   @default(now())
+  primaryAuthenticatedAt  DateTime?
+  mfaVerifiedAt           DateTime?
+  user                    AuthUser   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
@@ -128,15 +155,87 @@ model AuthVerificationToken {
   @@unique([identifier, token])
 }
 
-model Post {
-  id        Int     @id @default(autoincrement())  
-  title     String
-  content   String?
-  published Boolean @default(false)  
-  author    User    @relation(fields: [authorId], references: [id])  
-  authorId  Int
+// S02: Member profiles — linked to User, separate from Account credentials
+model MemberProfile {
+  id                      String    @id @default(cuid())
+  gymUserId               Int       @unique
+  gymUser                 User      @relation(fields: [gymUserId], references: [id], onDelete: Restrict)
+  displayNumber           String    @unique // Human-readable M-XXXX
+  phone                   String?
+  emergencyContactName    String?
+  emergencyContactPhone   String?
+  dateOfBirth             DateTime?
+  gender                  String?
+  address                 String?
+  avatarAssetId           String?
+  weightKg                Float?
+  heightCm                Float?
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+  deletedAt               DateTime?
+
+  @@index([displayNumber])
 }
 
+// S08: Trainer profiles
+model TrainerProfile {
+  id              String          @id @default(cuid())
+  gymUserId       Int             @unique
+  gymUser         User            @relation(fields: [gymUserId], references: [id], onDelete: Restrict)
+  displayNumber   String          @unique // Human-readable T-XXXX
+  specialty       String?
+  certifications  String[]
+  bio             String?         @db.Text
+  sessionRate     Int             // Stored as centavos
+  sessionPriceCurrency String     @default("PHP")
+  avatarAssetId   String?
+  status          TrainerStatus   @default(Active)
+  hireDate        DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  deletedAt       DateTime?
+  availabilities  TrainerAvailability[]
+  bookings        Booking[]       @relation("TrainerBookings")
+  reviews         TrainerReview[]
+
+  @@index([displayNumber])
+  @@index([status])
+}
+
+enum TrainerStatus {
+  Active
+  OnLeave
+  Inactive
+}
+
+// S08: Staff profiles
+model StaffProfile {
+  id              String      @id @default(cuid())
+  gymUserId       Int         @unique
+  gymUser         User        @relation(fields: [gymUserId], references: [id], onDelete: Restrict)
+  displayNumber   String      @unique // Human-readable S-XXXX
+  jobRole         String      // Front Desk, Sales, Manager
+  shift           String      // Morning, Evening, Night
+  phone           String?
+  phoneSecondary  String?
+  avatarAssetId   String?
+  status          StaffStatus @default(Active)
+  hireDate        DateTime?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  deletedAt       DateTime?
+
+  @@index([displayNumber])
+  @@index([status])
+}
+
+enum StaffStatus {
+  Active
+  OnLeave
+  Inactive
+}
+
+// S03: Membership plan catalog (already exists, extended)
 model GymPlan {
   name             String   @id
   price            Float
@@ -155,4 +254,381 @@ model GymPlan {
   terms            String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+  memberships      Membership[]
+}
+
+// S04: Membership entitlement
+model Membership {
+  id                    String             @id @default(cuid())
+  memberId              Int
+  member                User               @relation(fields: [memberId], references: [id], onDelete: Restrict)
+  planName              String
+  plan                  GymPlan            @relation(fields: [planName], references: [name], onDelete: Restrict)
+  status                MembershipStatus   @default(Active)
+  startedAt             DateTime
+  expiresAt             DateTime
+  frozenAt              DateTime?
+  frozenReason          String?
+  cancelledAt           DateTime?
+  cancellationReason    String?
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+
+  @@index([memberId])
+  @@index([status])
+  @@index([expiresAt])
+}
+
+enum MembershipStatus {
+  Active
+  Expiring
+  Frozen
+  Expired
+  Cancelled
+}
+
+// S04: Orders and payments
+model Order {
+  id                    String            @id @default(cuid())
+  memberId              Int?              // Null for walk-ins
+  member                User?             @relation(fields: [memberId], references: [id], onDelete: SetNull)
+  source                OrderSource
+  cashierId             String?           // AuthUser ID for POS orders
+  status                OrderStatus       @default(Pending)
+  totalAmount           Int               // Centavos
+  currency              String            @default("PHP")
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+  lines                 OrderLine[]
+  payments              Payment[]
+  bookings              Booking[]
+  promotionApplications OrderPromotionApplication[]
+
+  @@index([memberId])
+  @@index([cashierId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+enum OrderSource {
+  MemberCheckout
+  POS
+  AdminAssignment
+}
+
+enum OrderStatus {
+  Pending
+  Processing
+  Paid
+  PartiallyRefunded
+  Refunded
+  Cancelled
+  Failed
+}
+
+model OrderLine {
+  id              String    @id @default(cuid())
+  orderId         String
+  order           Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  itemType        String    // membership, coaching, product
+  itemName        String
+  description     String?
+  quantity        Int       @default(1)
+  unitPrice       Int       // Centavos at time of order
+  totalPrice      Int
+  fulfilledAt     DateTime?
+  refundedAt      DateTime?
+
+  @@index([orderId])
+}
+
+model Payment {
+  id                    String        @id @default(cuid())
+  orderId               String
+  order                 Order         @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  method                PaymentMethod
+  amount                Int           // Centavos
+  currency              String        @default("PHP")
+  status                PaymentStatus @default(Pending)
+  transactionReference  String?       @unique
+  receiptNumber         String?       @unique
+  providerReference     String?
+  providerEvents        String[]      @default([])
+  fees                  Int?          // Centavos
+  confirmedAt           DateTime?
+  confirmedBy           String?       // AuthUser ID for cash
+  failedAt              DateTime?
+  failureReason         String?
+  refundedAt            DateTime?
+  refundReason          String?
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  @@index([orderId])
+  @@index([status])
+  @@index([receiptNumber])
+  @@index([transactionReference])
+}
+
+enum PaymentMethod {
+  Cash
+  GCash
+  Card
+}
+
+enum PaymentStatus {
+  Pending
+  Processing
+  Successful
+  Failed
+  Refunded
+}
+
+// S06: Promotions
+model Promotion {
+  id                    String            @id @default(cuid())
+  title                 String
+  code                  String            @unique
+  description           String?          @db.Text
+  discountType          DiscountType
+  discountValue         Int               // Percentage (0-100) or centavos for fixed
+  validFrom             DateTime
+  validUntil            DateTime
+  planNames             String[]          @default([])
+  minSpendCentavos      Int?
+  maxRedemptions        Int?
+  redemptions           Int               @default(0)
+  status                PromotionStatus   @default(Draft)
+  imageUrl              String?
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+  claims                PromotionClaim[]
+  applications          OrderPromotionApplication[]
+
+  @@index([code])
+  @@index([status])
+  @@index([validFrom, validUntil])
+}
+
+enum DiscountType {
+  Percentage
+  Fixed
+  Bundle
+}
+
+enum PromotionStatus {
+  Draft
+  Published
+  Expired
+}
+
+model PromotionClaim {
+  id            String      @id @default(cuid())
+  promotionId   String
+  promotion     Promotion   @relation(fields: [promotionId], references: [id], onDelete: Cascade)
+  memberId      Int
+  member        User        @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  claimedAt     DateTime    @default(now())
+
+  @@unique([promotionId, memberId])
+  @@index([memberId])
+}
+
+model OrderPromotionApplication {
+  id            String      @id @default(cuid())
+  orderId       String
+  order         Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  promotionId   String
+  promotion     Promotion   @relation(fields: [promotionId], references: [id], onDelete: Restrict)
+  discountCentavos Int
+  appliedAt     DateTime    @default(now())
+
+  @@index([orderId])
+  @@index([promotionId])
+}
+
+// S09: Trainer availability
+model TrainerAvailability {
+  id            String        @id @default(cuid())
+  trainerId     String
+  trainer       TrainerProfile @relation(fields: [trainerId], references: [id], onDelete: Cascade)
+  date          String        // ISO date yyyy-mm-dd
+  startTime     String        // HH:MM
+  endTime       String        // HH:MM
+  status        AvailabilityStatus @default(available)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@unique([trainerId, date, startTime, endTime])
+  @@index([trainerId, date])
+}
+
+enum AvailabilityStatus {
+  available
+  unavailable
+  booked
+}
+
+// S10: Bookings/Sessions
+model Booking {
+  id              String          @id @default(cuid())
+  memberId        Int
+  member          User            @relation("MemberBookings", fields: [memberId], references: [id], onDelete: Restrict)
+  trainerId       String
+  trainer         TrainerProfile  @relation("TrainerBookings", fields: [trainerId], references: [id], onDelete: Restrict)
+  orderId         String?
+  order           Order?          @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  date            String          // ISO date yyyy-mm-dd
+  startTime       String          // HH:MM
+  endTime         String          // HH:MM
+  status          BookingStatus   @default(Pending)
+  priceCentavos   Int
+  paid            Boolean         @default(false)
+  notes           String?
+  cancelledAt     DateTime?
+  cancellationReason String?
+  completedAt     DateTime?
+  confirmedAt     DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  review          TrainerReview?
+
+  @@index([memberId, date])
+  @@index([trainerId, date])
+  @@index([status])
+}
+
+enum BookingStatus {
+  Pending
+  Confirmed
+  Cancelled
+  Completed
+  NoShow
+}
+
+// S11: Trainer reviews
+model TrainerReview {
+  id          String    @id @default(cuid())
+  bookingId   String    @unique
+  booking     Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  trainerId   String
+  trainer     TrainerProfile @relation(fields: [trainerId], references: [id], onDelete: Cascade)
+  rating      Int       // 1-5
+  comment     String?   @db.Text
+  createdAt   DateTime  @default(now())
+
+  @@index([trainerId])
+}
+
+// S12: Check-ins
+model CheckIn {
+  id          String    @id @default(cuid())
+  memberId    Int
+  member      User      @relation(fields: [memberId], references: [id], onDelete: Restrict)
+  businessDate String   // ISO date yyyy-mm-dd in gym timezone
+  checkedInAt DateTime  @default(now())
+  source      CheckInSource
+  checkedBy   String?   // AuthUser ID for staff check-ins
+  createdAt   DateTime  @default(now())
+
+  @@unique([memberId, businessDate])
+  @@index([memberId, businessDate])
+  @@index([businessDate])
+}
+
+enum CheckInSource {
+  Self
+  Staff
+}
+
+model MemberMeasurement {
+  id          String    @id @default(cuid())
+  memberId    Int
+  member      User      @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  weightKg    Float?
+  heightCm    Float?
+  measuredAt  DateTime  @default(now())
+  createdAt   DateTime  @default(now())
+
+  @@index([memberId, measuredAt])
+}
+
+// S13: Student verification
+model StudentVerification {
+  id              String              @id @default(cuid())
+  memberId        Int
+  member          User                @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  status          VerificationStatus  @default(Submitted)
+  documentAssetIds String[]           @default([])
+  submittedAt     DateTime            @default(now())
+  reviewedAt      DateTime?
+  reviewedBy      String?             // AuthUser ID
+  reviewReason    String?
+  expiresAt       DateTime?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  @@index([memberId])
+  @@index([status])
+}
+
+enum VerificationStatus {
+  Submitted
+  UnderReview
+  Approved
+  Rejected
+  Expired
+}
+
+// S14: Gym links/QR destinations
+model GymLink {
+  id          String    @id @default(cuid())
+  label       String
+  url         String
+  sortOrder   Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([sortOrder])
+}
+
+// S15: Notifications
+model Notification {
+  id              String    @id @default(cuid())
+  userId          Int
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title           String
+  body            String    @db.Text
+  actionView      String?
+  actionLabel     String?
+  readAt          DateTime?
+  createdAt       DateTime  @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model NotificationPreference {
+  id          String    @id @default(cuid())
+  userId      Int       @unique
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  email       Boolean   @default(true)
+  sms         Boolean   @default(false)
+  reminders   Boolean   @default(true)
+  promos      Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+// Shared: File assets
+model Asset {
+  id            String      @id @default(cuid())
+  filename      String
+  contentType   String
+  sizeBytes     Int
+  path          String
+  uploadedBy    String?     // AuthUser ID
+  isPublic      Boolean     @default(false)
+  createdAt     DateTime    @default(now())
+
+  @@index([uploadedBy])
 }
