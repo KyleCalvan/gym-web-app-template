@@ -24,3 +24,19 @@ See `docs/agents/triage-labels.md`.
 
 Use a single-context layout: root `GLOSSARY.md` and `docs/adr/`.
 See `docs/agents/domain.md`.
+
+## Project Guidelines
+
+### Project Features
+
+Implement backend functionality based on the existing frontend features, pages, and user flows.
+Prioritize making existing frontend features functional before introducing additional features.
+Do not create new pages or expand the project scope without informing me and obtaining approval.
+
+### Project Reminder
+
+Avoid overengineering, unnecessary abstractions, excessive dependencies, and overly complex architectures.
+
+Prefer simple, maintainable, and straightforward solutions that satisfy the project requirements.
+
+Reuse existing code, patterns, and dependencies whenever appropriate.
