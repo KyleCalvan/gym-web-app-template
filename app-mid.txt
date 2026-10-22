@@ -1,0 +1,80 @@
+201	        id: authSession.user.id,
+202	        name: authSession.user.name || user.name,
+203	        email: authSession.user.email || userEmail,
+204	        avatarUrl: authSession.user.image || user.avatarUrl,
+205	        role: ROLE_LABEL[role],
+206	      };
+207	    }
+208	    return user;
+209	  }, [role, members, trainers, staff, admins, superadmins, currentUserId, authStatus, authSession, demoIdentity]);
+210	
+211	  // Theme: dark is the default and the layout script has already applied a
+212	  // stored light preference to <html> before React mounted, so read the
+213	  // element back as the source of truth rather than re-reading storage.
+214	  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
+215	    if (typeof document === 'undefined') return 'dark';
+216	    return document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+217	  });
+218	
+219	
+220	  useEffect(() => {
+221	    document.documentElement.dataset.theme = theme;
+222	    try { localStorage.setItem('vinathletics-theme', theme); } catch { /* storage blocked — session only */ }
+223	  }, [theme]);
+224	
+225	  const toggleTheme = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'));
+226	
+227	  const [toastNode, fireToast] = useToast();
+228	
+229	  useEffect(() => {
+230	    let active = true;
+231	    fetch('/api/gym-plans')
+232	      .then(async (response) => {
+233	        const result: unknown = await response.json();
+234	        if (!response.ok) {
+235	          const message = result && typeof result === 'object' && 'error' in result && typeof result.error === 'string'
+236	            ? result.error
+237	            : 'Membership plans could not be loaded.';
+238	          throw new Error(message);
+239	        }
+240	        if (!result || typeof result !== 'object' || !('plans' in result) || !Array.isArray(result.plans)) {
+241	          throw new Error('The membership plan service returned an invalid catalog.');
+242	        }
+243	        if (active) setPlans(result.plans as Plan[]);
+244	      })
+245	      .catch((error: unknown) => {
+246	        console.error('Could not load the database membership plan catalog.', error);
+247	      });
+248	    return () => { active = false; };
+249	  }, [setPlans]);
+250	
+251	  const navigate = (r: string) => {
+252	    if (r === '/login' || r === '/login?flow=login') {
+253	      setRoute('/login');
+254	      setLoginFlow({ role: 'member', tab: 'login' });
+255	      window.scrollTo(0, 0);
+256	    } else if (r === '/login?flow=register') {
+257	      setRoute('/login');
+258	      setLoginFlow({ role: 'member', tab: 'register' });
+259	      window.scrollTo(0, 0);
+260	    } else if (r === '/admin-login') {
+261	      setRoute('/login');
+262	      setLoginFlow({ role: 'admin', tab: 'login' });
+263	      window.scrollTo(0, 0);
+264	    } else if (r === 'landing') {
+265	      setRoute('landing');
+266	      window.scrollTo(0, 0);
+267	    }
+268	  };
+269	
+270	  // Audit-log writer — caps in-memory log at 500 entries to keep memory bounded.
+271	  const addAudit = (level: AuditLevel, action: string, details?: string, actorRole: Role = role) => {
+272	    setAuditLog((prev) => {
+273	      const entry: AuditLogEntry = {
+274	        id: `LOG-${crypto.randomUUID()}`,
+275	        at: new Date().toISOString(),
+276	        level,
+277	        actor: currentUser?.name || CURRENT[role].name,
+278	        actorRole,
+279	        action,
+280	        details,

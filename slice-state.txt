@@ -1,0 +1,25 @@
+80	
+81	function DemoApp({ initialLoginTab = 'login' }: { initialLoginTab?: 'login' | 'register' }) {
+82	  const pathname = usePathname();
+83	  const { data: authSession, status: authStatus } = useSession();
+84	  const handledDemoSession = useRef<string | null>(null);
+85	
+86	  const [members, setMembers]               = useState<Member[]>(() => [...MEMBERS]);
+87	  const [trainers, setTrainers]             = useState<Trainer[]>(() => [...TRAINERS]);
+88	  const [plans, setPlans]                   = useState<Plan[]>(() => [...PLANS]);
+89	  const [transactions, setTransactions]     = useState<Transaction[]>(() => [...TRANSACTIONS]);
+90	  const [preferredPaymentMethod, setPreferredPaymentMethod] = useState('GCash');
+91	  const [qrDestinations, setQrDestinations] = useState<QrDestination[]>(DEFAULT_QR_DESTINATIONS);
+92	  const [qrDestinationsLoaded, setQrDestinationsLoaded] = useState(false);
+93	  const [sessions, setSessions]             = useState<Session[]>(() => [...SESSIONS]);
+94	  const [trainerAvailability, setTrainerAvailability] = useState<TrainerAvailability[]>([]);
+95	  const [trainerAvailabilityLoaded, setTrainerAvailabilityLoaded] = useState(false);
+96	  const [promotions, setPromotions]         = useState<Promotion[]>(() => [...PROMOTIONS]);
+97	  const [promotionRedemptions, setPromotionRedemptions] = useState<PromotionRedemption[]>([]);
+98	  const [staff, setStaff]                   = useState<Staff[]>(() => [...STAFF]);
+99	  const [admins, setAdmins]                 = useState<Admin[]>(() => [...ADMINS]);
+100	  const [superadmins, setSuperadmins]       = useState<Admin[]>(() => [...SUPERADMINS]);
+101	  const [auditLog, setAuditLog]             = useState<AuditLogEntry[]>(() => [...SEED_AUDIT_LOG]);
+102	  const [activeSessions, setActiveSessions] = useState<ActiveSession[]>(() => [...SEED_SESSIONS]);
+103	  const [notifications, setNotifications]   = useState<Notification[]>(() => NOTIFICATIONS.map((n) => ({ ...n })));
+104	  const [bookings, setBookings]             = useState<Session[]>(() => SESSIONS.filter((s) => s.member === CURRENT.member.name && s.status !== 'Cancelled'));

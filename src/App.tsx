@@ -29,6 +29,7 @@ import {
   SEED_AUDIT_LOG,
   SEED_SESSIONS,
 } from './data.ts';
+import { fetchWorkspace } from './lib/api-client.ts';
 
 import { ADMIN_NAV, ADMIN_VIEWS } from './admin';
 import { STAFF_NAV, STAFF_VIEWS } from './staff';
@@ -83,19 +84,19 @@ function DemoApp({ initialLoginTab = 'login' }: { initialLoginTab?: 'login' | 'r
   const { data: authSession, status: authStatus } = useSession();
   const handledDemoSession = useRef<string | null>(null);
 
-  const [members, setMembers]               = useState<Member[]>(() => [...MEMBERS]);
-  const [trainers, setTrainers]             = useState<Trainer[]>(() => [...TRAINERS]);
-  const [plans, setPlans]                   = useState<Plan[]>(() => [...PLANS]);
-  const [transactions, setTransactions]     = useState<Transaction[]>(() => [...TRANSACTIONS]);
+  const [members, setMembers]               = useState<Member[]>(() => []);
+  const [trainers, setTrainers]             = useState<Trainer[]>(() => []);
+  const [plans, setPlans]                   = useState<Plan[]>(() => []);
+  const [transactions, setTransactions]     = useState<Transaction[]>(() => []);
   const [preferredPaymentMethod, setPreferredPaymentMethod] = useState('GCash');
   const [qrDestinations, setQrDestinations] = useState<QrDestination[]>(DEFAULT_QR_DESTINATIONS);
   const [qrDestinationsLoaded, setQrDestinationsLoaded] = useState(false);
-  const [sessions, setSessions]             = useState<Session[]>(() => [...SESSIONS]);
+  const [sessions, setSessions]             = useState<Session[]>(() => []);
   const [trainerAvailability, setTrainerAvailability] = useState<TrainerAvailability[]>([]);
   const [trainerAvailabilityLoaded, setTrainerAvailabilityLoaded] = useState(false);
-  const [promotions, setPromotions]         = useState<Promotion[]>(() => [...PROMOTIONS]);
+  const [promotions, setPromotions]         = useState<Promotion[]>(() => []);
   const [promotionRedemptions, setPromotionRedemptions] = useState<PromotionRedemption[]>([]);
-  const [staff, setStaff]                   = useState<Staff[]>(() => [...STAFF]);
+  const [staff, setStaff]                   = useState<Staff[]>(() => []);
   const [admins, setAdmins]                 = useState<Admin[]>(() => [...ADMINS]);
   const [superadmins, setSuperadmins]       = useState<Admin[]>(() => [...SUPERADMINS]);
   const [auditLog, setAuditLog]             = useState<AuditLogEntry[]>(() => [...SEED_AUDIT_LOG]);
@@ -226,27 +227,30 @@ function DemoApp({ initialLoginTab = 'login' }: { initialLoginTab?: 'login' | 'r
 
   const [toastNode, fireToast] = useToast();
 
+  // Live data source: every admin and member surface reads the same
+  // workspace snapshot instead of the bundled mock arrays.
   useEffect(() => {
     let active = true;
-    fetch('/api/gym-plans')
-      .then(async (response) => {
-        const result: unknown = await response.json();
-        if (!response.ok) {
-          const message = result && typeof result === 'object' && 'error' in result && typeof result.error === 'string'
-            ? result.error
-            : 'Membership plans could not be loaded.';
-          throw new Error(message);
-        }
-        if (!result || typeof result !== 'object' || !('plans' in result) || !Array.isArray(result.plans)) {
-          throw new Error('The membership plan service returned an invalid catalog.');
-        }
-        if (active) setPlans(result.plans as Plan[]);
+
+    fetchWorkspace()
+      .then((snapshot) => {
+        if (!active) return;
+        if (snapshot.members) setMembers(snapshot.members);
+        if (snapshot.trainers) setTrainers(snapshot.trainers);
+        if (snapshot.plans) setPlans(snapshot.plans);
+        if (snapshot.transactions) setTransactions(snapshot.transactions);
+        if (snapshot.sessions) setSessions(snapshot.sessions);
+        if (snapshot.promotions) setPromotions(snapshot.promotions);
+        if (snapshot.staff) setStaff(snapshot.staff);
       })
       .catch((error: unknown) => {
-        console.error('Could not load the database membership plan catalog.', error);
+        console.error('Could not load the workspace from the database.', error);
       });
-    return () => { active = false; };
-  }, [setPlans]);
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const navigate = (r: string) => {
     if (r === '/login' || r === '/login?flow=login') {

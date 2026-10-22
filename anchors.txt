@@ -1,0 +1,13 @@
+app/api/members/route.ts:45: function memberToJson(profile: {
+app/api/members/route.ts:108: tx.memberProfile.findMany({
+app/api/members/route.ts:112: memberships: { orderBy: { expiresAt: 'desc' }, take: 1 },
+app/api/members/route.ts:121: return NextResponse.json({ members: profiles.map(memberToJson), total, limit, offset });
+app/api/members/route.ts:163: memberships: { orderBy: { expiresAt: 'desc' }, take: 1 },
+app/api/members/route.ts:177: return NextResponse.json({ member: memberToJson(profile) }, { status: 201 });
+app/api/members/[id]/route.ts:6: function memberToJson(profile: {
+app/api/members/[id]/route.ts:68: memberships: { orderBy: { expiresAt: 'desc' }, take: 1 },
+app/api/members/[id]/route.ts:76: return NextResponse.json({ member: memberToJson(profile) });
+app/api/members/[id]/route.ts:132: memberships: { orderBy: { expiresAt: 'desc' }, take: 1 },
+app/api/members/[id]/route.ts:146: return NextResponse.json({ member: memberToJson(profile) });
+app/api/members/[id]/route.ts:168: memberships: { orderBy: { expiresAt: 'desc' }, take: 1 },
+app/api/members/[id]/route.ts:182: return NextResponse.json({ member: memberToJson(updated) });

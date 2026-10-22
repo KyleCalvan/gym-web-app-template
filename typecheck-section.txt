@@ -1,0 +1,15 @@
+ 4: 00007FF73141ED73 
+ 5: 00007FF7314608FA 
+ 6: 00007FF73145FF26 
+ 7: 00007FF731470E82 
+ 8: 00007FF7314709AB 
+ 9: 00007FF732D424AD 
+10: 00007FF73145BFC0 
+11: 00007FF7314DFDA9 
+12: 00007FF731053232 
+13: 00000218BA7B75FA 
+Failed to type check.
+
+Turbopack build encountered 2 warnings:
+./backend/generated/prisma/client/index.js:680:20
+Warning: Dynamic filesystem access causes tracing of the whole project

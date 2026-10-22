@@ -1,0 +1,120 @@
+1	'use client';
+2	
+3	import { useEffect, useRef, useState, useMemo } from 'react';
+4	import type { ComponentType } from 'react';
+5	import { AnimatePresence, motion } from 'framer-motion';
+6	import { usePathname } from 'next/navigation';
+7	import { signOut, useSession } from 'next-auth/react';
+8	import Landing from './landing';
+9	import LoginPage from './LoginPage.tsx';
+10	import Sidebar from './shared/shell/Sidebar.tsx';
+11	import { Topbar } from './shared/shell/Topbar.tsx';
+12	import { ProfileMenu } from './shared/shell/ProfileMenu.tsx';
+13	import MemberPromotionModal from './member/MemberPromotionModal.tsx';
+14	import { chooseLoginPromotion } from './member/promotionVisibility.ts';
+15	import { useToast } from './shared/hooks/useToast.tsx';
+16	import {
+17	  CURRENT,
+18	  ROLE_LABEL,
+19	  MEMBERS,
+20	  TRAINERS,
+21	  PLANS,
+22	  TRANSACTIONS,
+23	  SESSIONS,
+24	  PROMOTIONS,
+25	  STAFF,
+26	  ADMINS,
+27	  SUPERADMINS,
+28	  NOTIFICATIONS,
+29	  SEED_AUDIT_LOG,
+30	  SEED_SESSIONS,
+31	} from './data.ts';
+32	
+33	import { ADMIN_NAV, ADMIN_VIEWS } from './admin';
+34	import { STAFF_NAV, STAFF_VIEWS } from './staff';
+35	import { TRAINER_NAV, TRAINER_VIEWS } from './trainer';
+36	import { MEMBER_NAV, MEMBER_VIEWS } from './member';
+37	import { SUPERADMIN_NAV, SUPERADMIN_VIEWS } from './superadmin';
+38	import { dur, ease } from './motion.tsx';
+39	import type {
+40	  ActiveSession, Admin, AuditLogEntry, AuditLevel, CheckInRecord, Member, NavSection,
+41	  Notification, NotifPrefs, Plan, Promotion, PromotionRedemption, Role, Session, Staff, Trainer,
+42	  Transaction, ViewProps, CheckIns, QrDestination, TrainerAvailability,
+43	} from './types.ts';
+44	import { DEFAULT_QR_DESTINATIONS } from './qrDestinations.ts';
+45	import { isTrainerAvailability } from './trainer/availability.ts';
+46	import AccountStatus from './auth/AccountStatus';
+47	import './auth/account-status.css';
+48	
+49	const NAV_BY_ROLE: Record<Role, NavSection[]> = {
+50	  admin: ADMIN_NAV,
+51	  staff: STAFF_NAV,
+52	  trainer: TRAINER_NAV,
+53	  member: MEMBER_NAV,
+54	  superadmin: SUPERADMIN_NAV,
+55	};
+56	
+57	const VIEWS: Record<Role, Record<string, ComponentType<ViewProps>>> = {
+58	  admin:      ADMIN_VIEWS      as unknown as Record<string, ComponentType<ViewProps>>,
+59	  staff:      STAFF_VIEWS      as unknown as Record<string, ComponentType<ViewProps>>,
+60	  trainer:    TRAINER_VIEWS    as unknown as Record<string, ComponentType<ViewProps>>,
+61	  member:     MEMBER_VIEWS     as unknown as Record<string, ComponentType<ViewProps>>,
+62	  superadmin: SUPERADMIN_VIEWS as unknown as Record<string, ComponentType<ViewProps>>,
+63	};
+64	
+65	const today = (): string => new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+66	
+67	const toISODate = (d: Date): string => {
+68	  const y = d.getFullYear();
+69	  const m = String(d.getMonth() + 1).padStart(2, '0');
+70	  const day = String(d.getDate()).padStart(2, '0');
+71	  return `${y}-${m}-${day}`;
+72	};
+73	
+74	export default function App({ initialLoginTab = 'login' }: { initialLoginTab?: 'login' | 'register' } = {}) {
+75	  const { status } = useSession();
+76	  if (status === 'loading') return <main className="account-status" role="status">Loading your Account…</main>;
+77	  if (status === 'authenticated') return <AccountStatus />;
+78	  return <DemoApp initialLoginTab={initialLoginTab} />;
+79	}
+80	
+81	function DemoApp({ initialLoginTab = 'login' }: { initialLoginTab?: 'login' | 'register' }) {
+82	  const pathname = usePathname();
+83	  const { data: authSession, status: authStatus } = useSession();
+84	  const handledDemoSession = useRef<string | null>(null);
+85	
+86	  const [members, setMembers]               = useState<Member[]>(() => [...MEMBERS]);
+87	  const [trainers, setTrainers]             = useState<Trainer[]>(() => [...TRAINERS]);
+88	  const [plans, setPlans]                   = useState<Plan[]>(() => [...PLANS]);
+89	  const [transactions, setTransactions]     = useState<Transaction[]>(() => [...TRANSACTIONS]);
+90	  const [preferredPaymentMethod, setPreferredPaymentMethod] = useState('GCash');
+91	  const [qrDestinations, setQrDestinations] = useState<QrDestination[]>(DEFAULT_QR_DESTINATIONS);
+92	  const [qrDestinationsLoaded, setQrDestinationsLoaded] = useState(false);
+93	  const [sessions, setSessions]             = useState<Session[]>(() => [...SESSIONS]);
+94	  const [trainerAvailability, setTrainerAvailability] = useState<TrainerAvailability[]>([]);
+95	  const [trainerAvailabilityLoaded, setTrainerAvailabilityLoaded] = useState(false);
+96	  const [promotions, setPromotions]         = useState<Promotion[]>(() => [...PROMOTIONS]);
+97	  const [promotionRedemptions, setPromotionRedemptions] = useState<PromotionRedemption[]>([]);
+98	  const [staff, setStaff]                   = useState<Staff[]>(() => [...STAFF]);
+99	  const [admins, setAdmins]                 = useState<Admin[]>(() => [...ADMINS]);
+100	  const [superadmins, setSuperadmins]       = useState<Admin[]>(() => [...SUPERADMINS]);
+101	  const [auditLog, setAuditLog]             = useState<AuditLogEntry[]>(() => [...SEED_AUDIT_LOG]);
+102	  const [activeSessions, setActiveSessions] = useState<ActiveSession[]>(() => [...SEED_SESSIONS]);
+103	  const [notifications, setNotifications]   = useState<Notification[]>(() => NOTIFICATIONS.map((n) => ({ ...n })));
+104	  const [bookings, setBookings]             = useState<Session[]>(() => SESSIONS.filter((s) => s.member === CURRENT.member.name && s.status !== 'Cancelled'));
+105	  const [currentUserId, setCurrentUserId]   = useState<string | null>(null);
+106	  const [authorizedRoles, setAuthorizedRoles] = useState<Role[]>(['member']);
+107	  const [demoIdentity, setDemoIdentity] = useState<{ email: string; name: string; role: Role } | null>(null);
+108	  const [checkIns, setCheckIns]             = useState<CheckIns>({ count: 0, today: today() });
+109	  const [checkInHistory, setCheckInHistory] = useState<CheckInRecord[]>([]);
+110	  const [notifPrefs, setNotifPrefs]         = useState<NotifPrefs>({ email: true, sms: false, reminders: true, promos: false });
+111	
+112	  useEffect(() => {
+113	    try {
+114	      const saved = window.localStorage.getItem('vinathletics.qrDestinations');
+115	      if (saved) {
+116	        const parsed: unknown = JSON.parse(saved);
+117	        if (Array.isArray(parsed)) {
+118	          setQrDestinations(parsed.filter((item): item is QrDestination =>
+119	            typeof item?.id === 'string' && typeof item?.label === 'string' && typeof item?.url === 'string',
+120	          ));

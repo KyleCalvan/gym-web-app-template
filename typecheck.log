@@ -1,0 +1,8 @@
+
+> vinathletics-gym@1.0.0 typecheck
+> next typegen && tsc --noEmit
+
+Generating route types...
+✓ Types generated successfully
+app/api/members/route.ts(95,41): error TS2339: Property 'Params' does not exist on type 'URL'.
+app/api/members/route.ts(152,30): error TS2339: Property 'gymUser' does not exist on type 'TransactionClient'.

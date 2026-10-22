@@ -1,0 +1,104 @@
+
+> vinathletics-gym@1.0.0 build
+> npm run db:generate && next build
+
+
+> vinathletics-gym@1.0.0 db:generate
+> node scripts/prisma.mjs generate
+
+Environment variables loaded from .env
+Prisma schema loaded from backend\prisma\schema.prisma
+
+✔ Generated Prisma Client (v5.22.0) to .\backend\generated\prisma\client in 708ms
+
+Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)
+
+Tip: Want to react to database changes in your app as they happen? Discover how with Pulse: https://pris.ly/tip-1-pulse
+
+▲ Next.js 16.4.2 (Turbopack)
+- Environments: .env
+✓ Running next.config.mjs took 112ms
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 34.2s
+  Running TypeScript ...
+app/api/members/route.ts(95,41): error TS2339: Property 'Params' does not exist on type 'URL'.
+Failed to type check.
+
+Turbopack build encountered 2 warnings:
+./backend/generated/prisma/client/index.js:680:20
+Warning: Dynamic filesystem access causes tracing of the whole project
+  [90m678 |[0m   }) ?? alternativePaths[[35m0[0m]
+  [90m679 |[0m
+[33m[1m>[0m [90m680 |[0m   config.dirname = path.join(process.cwd(), alternativePath)
+  [90m    |[0m                    [33m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m681 |[0m   config.isBundled = [36mtrue[0m
+  [90m682 |[0m }
+  [90m683 |[0m
+
+Static analysis determined that this filesystem access causes the whole project to be traced and included in the output.
+This is usually unintentional and leads to all source files (including the public folder) to be deployed as part of the server code.
+This can slow down deployments or lead to failures when size limits are exceeded.
+To resolve this, you can
+- make sure the path is statically scoped to some subfolder, for example path.join(process.cwd(), 'data', bar), or
+- only use them in development, or
+- opt out by adding an ignore comment to the highlighted call: path.join(/*turbopackIgnore: true*/ ...), or
+- remove them.
+
+Import traces:
+  #1 [App Route]:
+    ./backend/generated/prisma/client/index.js
+    ./backend/lib/prisma.ts
+    ./app/api/gym-plans/route.ts
+
+  #2 [Server Component]:
+    ./backend/generated/prisma/client/index.js
+    ./src/auth/sessions.ts
+    ./app/account/page.tsx
+
+  #3 [App Route]:
+    ./backend/generated/prisma/client/index.js
+    ./backend/generated/prisma/client/index.js
+    ./backend/lib/prisma.ts
+    ./app/api/auth/[...nextauth]/route.ts
+
+
+./backend/generated/prisma/client/runtime/library.js:3:357
+Warning: Dynamic filesystem access causes tracing of the whole project
+  [90m1 |[0m ...,t,r,n)=>{[36mif[0m(t&&[36mtypeof[0m t==[32m"object"[0m||[36mtypeof[0m t==[32m"function"[0m)[36mfor[0m([36mlet[0m i [36mof[0m ru(t))!iu.call(e,i...
+  [90m2 |[0m ...
+[33m[1m>[0m [90m3 |[0m ...ncoding));[36mtry[0m{[36mlet[0m o=[33mHr[0m.parse([33mZu[0m.readFileSync(t,{encoding:r}));[36mreturn[0m [33mObject[0m.keys(o).forE...
+  [90m  |[0m                                 [33m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m4 |[0m ...[32mse set `engineType = "binary"` in the "generator" block of your "schema.prisma" file (or...[0m
+  [90m5 |[0m ... ko(e){[36mlet[0m t=[35m/libssl\.so\.(\d)(\.\d)?/[0m.exec(e);[36mif[0m(t){[36mlet[0m r=[32m`[0m${t[[35m1[0m][32m}[0m${t[[35m2[0m]??[32m".0"[0m[32m}.x`[0m;[36mretu..[0m.
+  [90m6 |[0m ...==[32m"linux"[0m&&o===[32m"nixos"[0m)[36mreturn[0m[32m"linux-nixos"[0m;[36mif[0m(t===[32m"linux"[0m&&r===[32m"arm64"[0m)[36mreturn[0m[32m`[0m${o===[32m"mus..[0m.
+
+Static analysis determined that this filesystem access causes the whole project to be traced and included in the output.
+This is usually unintentional and leads to all source files (including the public folder) to be deployed as part of the server code.
+This can slow down deployments or lead to failures when size limits are exceeded.
+To resolve this, you can
+- make sure the path is statically scoped to some subfolder, for example path.join(process.cwd(), 'data', bar), or
+- only use them in development, or
+- opt out by adding an ignore comment to the highlighted call: fs.readFileSync(/*turbopackIgnore: true*/ ...), or
+- remove them.
+
+Import traces:
+  #1 [App Route]:
+    ./backend/generated/prisma/client/runtime/library.js
+    ./backend/generated/prisma/client/index.js
+    ./backend/lib/prisma.ts
+    ./app/api/auth/[...nextauth]/route.ts
+
+  #2 [App Route]:
+    ./backend/generated/prisma/client/runtime/library.js
+    ./backend/generated/prisma/client/index.js
+    ./backend/lib/prisma.ts
+    ./app/api/gym-plans/route.ts
+
+  #3 [Server Component]:
+    ./backend/generated/prisma/client/runtime/library.js
+    ./backend/generated/prisma/client/index.js
+    ./src/auth/sessions.ts
+    ./app/account/page.tsx
+
+

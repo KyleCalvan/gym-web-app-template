@@ -1,0 +1,40 @@
+1	'use client';
+2	
+3	import { useEffect, useRef, useState, useMemo } from 'react';
+4	import type { ComponentType } from 'react';
+5	import { AnimatePresence, motion } from 'framer-motion';
+6	import { usePathname } from 'next/navigation';
+7	import { signOut, useSession } from 'next-auth/react';
+8	import Landing from './landing';
+9	import LoginPage from './LoginPage.tsx';
+10	import Sidebar from './shared/shell/Sidebar.tsx';
+11	import { Topbar } from './shared/shell/Topbar.tsx';
+12	import { ProfileMenu } from './shared/shell/ProfileMenu.tsx';
+13	import MemberPromotionModal from './member/MemberPromotionModal.tsx';
+14	import { chooseLoginPromotion } from './member/promotionVisibility.ts';
+15	import { useToast } from './shared/hooks/useToast.tsx';
+16	import {
+17	  CURRENT,
+18	  ROLE_LABEL,
+19	  MEMBERS,
+20	  TRAINERS,
+21	  PLANS,
+22	  TRANSACTIONS,
+23	  SESSIONS,
+24	  PROMOTIONS,
+25	  STAFF,
+26	  ADMINS,
+27	  SUPERADMINS,
+28	  NOTIFICATIONS,
+29	  SEED_AUDIT_LOG,
+30	  SEED_SESSIONS,
+31	} from './data.ts';
+32	
+33	import { ADMIN_NAV, ADMIN_VIEWS } from './admin';
+34	import { STAFF_NAV, STAFF_VIEWS } from './staff';
+35	import { TRAINER_NAV, TRAINER_VIEWS } from './trainer';
+36	import { MEMBER_NAV, MEMBER_VIEWS } from './member';
+37	import { SUPERADMIN_NAV, SUPERADMIN_VIEWS } from './superadmin';
+38	import { dur, ease } from './motion.tsx';
+39	import type {
+40	  ActiveSession, Admin, AuditLogEntry, AuditLevel, CheckInRecord, Member, NavSection,

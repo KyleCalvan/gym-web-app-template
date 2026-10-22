@@ -1,0 +1,37 @@
+222	    try { localStorage.setItem('vinathletics-theme', theme); } catch { /* storage blocked — session only */ }
+223	  }, [theme]);
+224	
+225	  const toggleTheme = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'));
+226	
+227	  const [toastNode, fireToast] = useToast();
+228	
+229	  useEffect(() => {
+230	    let active = true;
+231	    fetch('/api/gym-plans')
+232	      .then(async (response) => {
+233	        const result: unknown = await response.json();
+234	        if (!response.ok) {
+235	          const message = result && typeof result === 'object' && 'error' in result && typeof result.error === 'string'
+236	            ? result.error
+237	            : 'Membership plans could not be loaded.';
+238	          throw new Error(message);
+239	        }
+240	        if (!result || typeof result !== 'object' || !('plans' in result) || !Array.isArray(result.plans)) {
+241	          throw new Error('The membership plan service returned an invalid catalog.');
+242	        }
+243	        if (active) setPlans(result.plans as Plan[]);
+244	      })
+245	      .catch((error: unknown) => {
+246	        console.error('Could not load the database membership plan catalog.', error);
+247	      });
+248	    return () => { active = false; };
+249	  }, [setPlans]);
+250	
+251	  const navigate = (r: string) => {
+252	    if (r === '/login' || r === '/login?flow=login') {
+253	      setRoute('/login');
+254	      setLoginFlow({ role: 'member', tab: 'login' });
+255	      window.scrollTo(0, 0);
+256	    } else if (r === '/login?flow=register') {
+257	      setRoute('/login');
+258	      setLoginFlow({ role: 'member', tab: 'register' });

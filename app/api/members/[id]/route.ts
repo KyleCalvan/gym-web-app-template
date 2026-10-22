@@ -3,7 +3,14 @@ import { withBusinessAuthorization } from '@/src/auth/http';
 import type { GymRole } from '@/backend/generated/prisma/client';
 import type { Prisma } from '@/backend/generated/prisma/client';
 
-function memberToJson(profile: {
+type MembershipSummary = {
+  id: string;
+  planName: string;
+  status: string;
+  expiresAt: Date;
+};
+
+type MemberRecord = {
   id: string;
   gymUserId: number;
   displayNumber: string;
@@ -19,7 +26,9 @@ function memberToJson(profile: {
   updatedAt: Date;
   deletedAt: Date | null;
   gymUser: { id: number; email: string; name: string | null } | null;
-}) {
+};
+
+function memberToJson(profile: MemberRecord, latestMembership: MembershipSummary | null) {
   return {
     id: profile.id,
     gymUserId: profile.gymUserId,
@@ -40,17 +49,42 @@ function memberToJson(profile: {
       email: profile.gymUser.email,
       name: profile.gymUser.name,
     } : null,
+    plan: latestMembership?.planName ?? null,
+    membershipStatus: latestMembership?.status ?? null,
+    membershipExpiresAt: latestMembership?.expiresAt.toISOString() ?? null,
+    membershipId: latestMembership?.id ?? null,
   };
 }
+
+/** The UI addresses members by display number ("M-0004") or by cuid. */
+function memberIdentity(id: string): Prisma.MemberProfileWhereInput {
+  return { OR: [{ id }, { displayNumber: id }] };
+}
+
+async function latestMembership(
+  tx: Prisma.TransactionClient,
+  memberId: number,
+): Promise<MembershipSummary | null> {
+  const row = await tx.membership.findFirst({
+    where: { memberId },
+    orderBy: { expiresAt: 'desc' },
+    select: { id: true, planName: true, status: true, expiresAt: true },
+  });
+
+  return row
+    ? { id: row.id, planName: row.planName, status: row.status, expiresAt: row.expiresAt }
+    : null;
+}
+
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  return withBusinessAuthorization(request, ['admin', 'staff', 'trainer', 'member'] as GymRole[], async (tx, requestId, caller) => {
-    const profile = await tx.memberProfile.findUnique({
-      where: { id },
+  return withBusinessAuthorization(request, ['admin', 'staff', 'trainer', 'member'] as GymRole[], async (tx, requestId) => {
+    const profile = await tx.memberProfile.findFirst({
+      where: memberIdentity(id),
       include: { gymUser: { select: { id: true, email: true, name: true } } },
     });
 
@@ -58,7 +92,9 @@ export async function GET(
       return NextResponse.json({ error: 'Member profile not found.', requestId }, { status: 404 });
     }
 
-    return NextResponse.json({ member: memberToJson(profile) });
+    return NextResponse.json({
+      member: memberToJson(profile, await latestMembership(tx, profile.gymUserId)),
+    });
   });
 }
 
@@ -87,7 +123,7 @@ export async function PATCH(
     if ('emergencyContactPhone' in input) data.emergencyContactPhone = typeof input.emergencyContactPhone === 'string' ? input.emergencyContactPhone.trim() || null : null;
     if ('dateOfBirth' in input) {
       const dob = typeof input.dateOfBirth === 'string' ? new Date(input.dateOfBirth) : null;
-      if (dob && isNaN(dob.getTime())) {
+      if (dob && Number.isNaN(dob.getTime())) {
         return NextResponse.json({ error: 'Invalid dateOfBirth.', requestId }, { status: 400 });
       }
       data.dateOfBirth = dob;
@@ -101,15 +137,23 @@ export async function PATCH(
       return NextResponse.json({ error: 'No valid fields to update.', requestId }, { status: 400 });
     }
 
+    const existing = await tx.memberProfile.findFirst({
+      where: memberIdentity(id),
+      select: { id: true },
+    });
+    if (!existing) {
+      return NextResponse.json({ error: 'Member profile not found.', requestId }, { status: 404 });
+    }
+
     const profile = await tx.memberProfile.update({
-      where: { id },
+      where: { id: existing.id },
       data,
       include: { gymUser: { select: { id: true, email: true, name: true } } },
     });
 
     await tx.auditEvent.create({
       data: {
-        actor: caller.accountId,
+        actor: caller.accountId ?? undefined,
         action: 'member.updated',
         target: profile.id,
         result: 'success',
@@ -117,7 +161,9 @@ export async function PATCH(
       },
     });
 
-    return NextResponse.json({ member: memberToJson(profile) });
+    return NextResponse.json({
+      member: memberToJson(profile, await latestMembership(tx, profile.gymUserId)),
+    });
   });
 }
 
@@ -127,20 +173,23 @@ export async function DELETE(
 ) {
   const { id } = await params;
   return withBusinessAuthorization(request, ['admin'] as GymRole[], async (tx, requestId, caller) => {
-    const profile = await tx.memberProfile.findUnique({ where: { id } });
+    const profile = await tx.memberProfile.findFirst({
+      where: memberIdentity(id),
+      select: { id: true, gymUserId: true },
+    });
     if (!profile) {
       return NextResponse.json({ error: 'Member profile not found.', requestId }, { status: 404 });
     }
 
     const updated = await tx.memberProfile.update({
-      where: { id },
+      where: { id: profile.id },
       data: { deletedAt: new Date() },
       include: { gymUser: { select: { id: true, email: true, name: true } } },
     });
 
     await tx.auditEvent.create({
       data: {
-        actor: caller.accountId,
+        actor: caller.accountId ?? undefined,
         action: 'member.deleted',
         target: updated.id,
         result: 'success',
@@ -148,6 +197,8 @@ export async function DELETE(
       },
     });
 
-    return NextResponse.json({ member: memberToJson(updated) });
+    return NextResponse.json({
+      member: memberToJson(updated, await latestMembership(tx, profile.gymUserId)),
+    });
   });
 }

@@ -1,0 +1,61 @@
+540	            setShowNotifications((open) => !open);
+541	          }}
+542	          onCloseNotifications={() => setShowNotifications(false)}
+543	          toast={fireToast}
+544	          nav={NAV_BY_ROLE[role]}
+545	        />
+546	        <div className="content">
+547	          <motion.div
+548	            key={`${role}-${view}`}
+549	            initial={{ opacity: 0, y: 6 }}
+550	            animate={{ opacity: 1, y: 0 }}
+551	            transition={{ duration: dur.fast, ease: ease.out }}
+552	          >
+553	              <ViewComp
+554	                onNav={handleNav}
+555	                role={role}
+556	                currentUser={currentUser}
+557	                members={members} setMembers={setMembers}
+558	                trainers={trainers} setTrainers={setTrainers}
+559	                plans={plans} setPlans={setPlans}
+560	                transactions={transactions} setTransactions={setTransactions}
+561	                preferredPaymentMethod={preferredPaymentMethod}
+562	                setPreferredPaymentMethod={setPreferredPaymentMethod}
+563	                qrDestinations={qrDestinations}
+564	                setQrDestinations={setQrDestinations}
+565	                sessions={sessions} setSessions={setSessions}
+566	                trainerAvailability={trainerAvailability} setTrainerAvailability={setTrainerAvailability}
+567	                promotions={promotions} setPromotions={setPromotions}
+568	                staff={staff} setStaff={setStaff}
+569	                admins={admins} setAdmins={setAdmins}
+570	                superadmins={superadmins} setSuperadmins={setSuperadmins}
+571	                notifications={notifications} setNotifications={setNotifications}
+572	                bookings={bookings} setBookings={setBookings}
+573	                currentUserId={currentUserId}
+574	                checkIns={checkIns} setCheckIns={setCheckIns}
+575	                checkInHistory={checkInHistory} setCheckInHistory={setCheckInHistory}
+576	                notifPrefs={notifPrefs} setNotifPrefs={setNotifPrefs}
+577	                auditLog={auditLog} setAuditLog={setAuditLog}
+578	                activeSessions={activeSessions} setActiveSessions={setActiveSessions}
+579	                currentSessionId={currentSessionId}
+580	                toast={fireToast}
+581	                today={today()}
+582	                addAudit={addAudit}
+583	                promotionRedemptions={promotionRedemptions}
+584	                setPromotionRedemptions={setPromotionRedemptions}
+585	                onDeleteAccount={handleDeleteAccount}
+586	              />
+587	          </motion.div>
+588	        </div>
+589	      </div>
+590	      {loginPromotion && (
+591	        <MemberPromotionModal
+592	          promotion={loginPromotion}
+593	          onClose={() => setLoginPromotion(null)}
+594	          onViewPromotions={() => { setLoginPromotion(null); handleNav('promotions'); }}
+595	          toast={fireToast}
+596	        />
+597	      )}
+598	      <ProfileMenu
+599	        role={role}
+600	        availableRoles={authorizedRoles}

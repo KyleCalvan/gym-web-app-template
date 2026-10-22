@@ -1,0 +1,120 @@
+401	  };
+402	
+403	  useEffect(() => {
+404	    if (authStatus !== 'unauthenticated') return;
+405	    let active = true;
+406	    fetch('/api/demo-session')
+407	      .then(async (response) => {
+408	        if (!response.ok) return;
+409	        const result: unknown = await response.json();
+410	        if (!active || !result || typeof result !== 'object' || !('demoSession' in result)) return;
+411	        const session = result.demoSession;
+412	        if (!session || typeof session !== 'object'
+413	          || !('email' in session) || typeof session.email !== 'string'
+414	          || !('name' in session) || typeof session.name !== 'string'
+415	          || !('role' in session) || typeof session.role !== 'string'
+416	          || !('roles' in session) || !Array.isArray(session.roles)
+417	          || !('expiresAt' in session) || typeof session.expiresAt !== 'number') return;
+418	        handleDemoLogin(session as { email: string; name: string; role: Role; roles: Role[]; expiresAt: number });
+419	      })
+420	      .catch((error: unknown) => {
+421	        console.error('Could not restore the development demo session.', error);
+422	      });
+423	    return () => { active = false; };
+424	  }, [authStatus]);
+425	
+426	  const handleLogout = () => {
+427	    if (demoIdentity) {
+428	      void fetch('/api/demo-session', { method: 'DELETE' })
+429	        .catch((error: unknown) => console.error('Could not end the development demo session.', error));
+430	    }
+431	    if (authStatus === 'authenticated') void signOut({ redirect: false });
+432	    const name = currentUser?.name || CURRENT[role].name;
+433	    addAudit('info', 'Logged out', name);
+434	    setActiveSessions((prev) => prev.filter((activeSession) => activeSession.id !== currentSessionId));
+435	    if (currentSessionId) setCurrentSessionId(null);
+436	    setLoggedIn(false);
+437	    setAuthorizedRoles(['member']);
+438	    setDemoIdentity(null);
+439	    handledDemoSession.current = null;
+440	    setView('dashboard');
+441	    setCurrentUserId(null);
+442	    setRoute('landing');
+443	  };
+444	
+445	  // A member permanently deletes their own account. The record is removed and
+446	  // the session ends — there's nothing left to be signed in as.
+447	  const handleDeleteAccount = (userId: string) => {
+448	    const target = members.find((m) => m.id === userId);
+449	    const name = target?.name || CURRENT[role].name;
+450	    setMembers((prev) => prev.filter((m) => m.id !== userId));
+451	    addAudit('warn', 'Account deleted', `${name} deleted their own account`);
+452	    handleLogout();
+453	    fireToast('Account deleted');
+454	  };
+455	
+456	  const handleNav = (id: string) => {
+457	    if (role === 'member' && id === 'notifications') {
+458	      setShowProfileMenu(false);
+459	      setShowNotifications(true);
+460	      return;
+461	    }
+462	    setShowNotifications(false);
+463	    setShowProfileMenu(false);
+464	    setView(id);
+465	  };
+466	
+467	  const handleProfileMenuNav = (id: string) => {
+468	    handleNav(id);
+469	    setShowProfileMenu(false);
+470	    setIsSidebarOpen(false);
+471	  };
+472	
+473	  if (route === 'landing') {
+474	    return (
+475	      <Landing
+476	        onLogin={handleLogin}
+477	        members={members}
+478	        setMembers={setMembers}
+479	        plans={plans}
+480	        promotions={promotions}
+481	        trainers={trainers}
+482	        onNavigate={navigate}
+483	      />
+484	    );
+485	  }
+486	
+487	  if (route === '/login') {
+488	    return (
+489	      <LoginPage
+490	        onLogin={handleLogin}
+491	        onDemoLogin={handleDemoLogin}
+492	        members={members}
+493	        setMembers={setMembers}
+494	        plans={plans}
+495	        defaultRole={loginFlow.role}
+496	        defaultTab={loginFlow.tab}
+497	        onBack={() => {
+498	          navigate('landing');
+499	          if (window.location.pathname === '/login') window.history.replaceState({}, '', '/');
+500	        }}
+501	      />
+502	    );
+503	  }
+504	
+505	  const roleViews = VIEWS[role];
+506	  const ViewComp: ComponentType<ViewProps> =
+507	    (roleViews && (roleViews[view] as ComponentType<ViewProps>)) ||
+508	    (() => <div className="empty-state">View not available.</div>);
+509	
+510	
+511	  return (
+512	    <div className="app-shell">
+513	      <Sidebar
+514	        role={role}
+515	        brand="VinAthletics"
+516	        nav={NAV_BY_ROLE[role]}
+517	        active={view}
+518	        onNav={(id) => { handleNav(id); setIsSidebarOpen(false); }}
+519	        isOpen={isSidebarOpen}
+520	        setIsOpen={setIsSidebarOpen}

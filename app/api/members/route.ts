@@ -1,48 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withBusinessAuthorization } from '@/src/auth/http';
-import { prisma } from '@/src/auth/prisma';
-import { randomUUID } from 'node:crypto';
-import type { Prisma } from '@/backend/generated/prisma/client';
 import type { GymRole } from '@/backend/generated/prisma/client';
+import type { Prisma } from '@/backend/generated/prisma/client';
 
-function memberDisplayNumber(id: number): string {
-  return `M-${String(id).padStart(4, '0')}`;
-}
+type MembershipSummary = {
+  id: string;
+  planName: string;
+  status: string;
+  expiresAt: Date;
+};
 
-function validateMemberInput(body: unknown): { valid: true; data: Omit<Prisma.MemberProfileCreateInput, 'displayNumber'> } | { valid: false; error: string } {
-  if (!body || typeof body !== 'object') return { valid: false, error: 'Request body must be an object.' };
-  const input = body as Record<string, unknown>;
-
-  const gymUserId = typeof input.gymUserId === 'number' ? input.gymUserId : null;
-  if (gymUserId === null) return { valid: false, error: 'gymUserId (number) is required.' };
-
-  const phone = typeof input.phone === 'string' ? input.phone.trim() || null : null;
-  const emergencyContactName = typeof input.emergencyContactName === 'string' ? input.emergencyContactName.trim() || null : null;
-  const emergencyContactPhone = typeof input.emergencyContactPhone === 'string' ? input.emergencyContactPhone.trim() || null : null;
-  const dateOfBirth = typeof input.dateOfBirth === 'string' ? new Date(input.dateOfBirth) : null;
-  if (dateOfBirth && isNaN(dateOfBirth.getTime())) return { valid: false, error: 'Invalid dateOfBirth.' };
-  const gender = typeof input.gender === 'string' ? input.gender.trim() || null : null;
-  const address = typeof input.address === 'string' ? input.address.trim() || null : null;
-  const weightKg = typeof input.weightKg === 'number' ? input.weightKg : null;
-  const heightCm = typeof input.heightCm === 'number' ? input.heightCm : null;
-
-  return {
-    valid: true,
-    data: {
-      gymUser: { connect: { id: gymUserId } },
-      phone,
-      emergencyContactName,
-      emergencyContactPhone,
-      dateOfBirth,
-      gender,
-      address,
-      weightKg,
-      heightCm,
-    },
-  };
-}
-
-function memberToJson(profile: {
+type MemberRecord = {
   id: string;
   gymUserId: number;
   displayNumber: string;
@@ -58,7 +26,13 @@ function memberToJson(profile: {
   updatedAt: Date;
   deletedAt: Date | null;
   gymUser: { id: number; email: string; name: string | null } | null;
-}) {
+};
+
+function memberDisplayNumber(id: number): string {
+  return ;
+}
+
+function memberToJson(profile: MemberRecord, latestMembership: MembershipSummary | null) {
   return {
     id: profile.id,
     gymUserId: profile.gymUserId,
@@ -79,20 +53,53 @@ function memberToJson(profile: {
       email: profile.gymUser.email,
       name: profile.gymUser.name,
     } : null,
+    plan: latestMembership?.planName ?? null,
+    membershipStatus: latestMembership?.status ?? null,
+    membershipExpiresAt: latestMembership?.expiresAt.toISOString() ?? null,
+    membershipId: latestMembership?.id ?? null,
   };
 }
 
+async function latestMembershipByMemberId(
+  tx: Prisma.TransactionClient,
+  memberIds: number[],
+): Promise<Map<number, MembershipSummary>> {
+  const summaries = new Map<number, MembershipSummary>();
+  if (memberIds.length === 0) return summaries;
+
+  const rows = await tx.membership.findMany({
+    where: { memberId: { in: memberIds } },
+    orderBy: { expiresAt: 'desc' },
+    select: { id: true, memberId: true, planName: true, status: true, expiresAt: true },
+  });
+
+  for (const row of rows) {
+    if (summaries.has(row.memberId)) continue;
+    summaries.set(row.memberId, {
+      id: row.id,
+      planName: row.planName,
+      status: row.status,
+      expiresAt: row.expiresAt,
+    });
+  }
+
+  return summaries;
+}
+
 export async function GET(request: NextRequest) {
-  return withBusinessAuthorization(request, ['admin', 'staff', 'trainer'] as GymRole[], async (tx, requestId, caller) => {
-    const { searchParams } = new URL(request.url);
-    const status = searchParams.get('status');
-    const limit = Math.min(Math.max(Number(searchParams.get('limit')) || 100, 1), 500);
-    const offset = Math.max(Number(searchParams.get('offset')) || 0, 0);
+  return withBusinessAuthorization(request, ['admin', 'staff', 'trainer'] as GymRole[], async (tx) => {
+    const search = new URL(request.url).searchParams;
+    const status = search.get('status');
 
     const where: Prisma.MemberProfileWhereInput = {};
     if (status === 'active') where.deletedAt = null;
 
-    const [profiles, total] = await Promise.all([
+    const requestedLimit = Number(search.get('limit'));
+    const requestedOffset = Number(search.get('offset'));
+    const limit = Math.min(Math.max(Number.isFinite(requestedLimit) && requestedLimit > 0 ? requestedLimit : 100, 1), 500);
+    const offset = Math.max(Number.isFinite(requestedOffset) && requestedOffset > 0 ? requestedOffset : 0, 0);
+
+    const [members, total] = await Promise.all([
       tx.memberProfile.findMany({
         where,
         include: { gymUser: { select: { id: true, email: true, name: true } } },
@@ -103,7 +110,14 @@ export async function GET(request: NextRequest) {
       tx.memberProfile.count({ where }),
     ]);
 
-    return NextResponse.json({ members: profiles.map(memberToJson), total, limit, offset });
+    const memberships = await latestMembershipByMemberId(tx, members.map((member) => member.gymUserId));
+
+    return NextResponse.json({
+      members: members.map((member) => memberToJson(member, memberships.get(member.gymUserId) ?? null)),
+      total,
+      limit,
+      offset,
+    });
   });
 }
 
@@ -116,39 +130,55 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid JSON.', requestId }, { status: 400 });
     }
 
-    const validation = validateMemberInput(body);
-    if (!validation.valid) {
-      return NextResponse.json({ error: validation.error, requestId }, { status: 400 });
+    if (!body || typeof body !== 'object') {
+      return NextResponse.json({ error: 'Request body must be an object.', requestId }, { status: 400 });
     }
 
-    const existing = await tx.memberProfile.findUnique({
-      where: { gymUserId: validation.data.gymUser?.connect?.id ?? 0 },
-    });
+    const input = body as Record<string, unknown>;
+    const gymUserId = typeof input.gymUserId === 'number' ? input.gymUserId : Number(input.gymUserId);
+    if (!Number.isInteger(gymUserId) || gymUserId <= 0) {
+      return NextResponse.json({ error: 'A numeric gymUserId is required.', requestId }, { status: 400 });
+    }
+
+    const existing = await tx.memberProfile.findUnique({ where: { gymUserId } });
     if (existing) {
-      return NextResponse.json({ error: 'Member profile already exists for this user.', requestId }, { status: 409 });
+      return NextResponse.json({ error: 'A member profile already exists for this account.', requestId }, { status: 409 });
     }
 
-    const gymUser = await tx.user.findUnique({
-      where: { id: validation.data.gymUser?.connect?.id ?? 0 },
-      select: { id: true },
-    });
+    const gymUser = await tx.user.findUnique({ where: { id: gymUserId }, select: { id: true } });
     if (!gymUser) {
-      return NextResponse.json({ error: 'User not found.', requestId }, { status: 404 });
+      return NextResponse.json({ error: 'Gym user not found.', requestId }, { status: 404 });
     }
 
-    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${'member:' + gymUser.id}, 0))`;
+    let dateOfBirth: Date | null = null;
+    if (typeof input.dateOfBirth === 'string' && input.dateOfBirth.trim()) {
+      dateOfBirth = new Date(input.dateOfBirth);
+      if (Number.isNaN(dateOfBirth.getTime())) {
+        return NextResponse.json({ error: 'Invalid dateOfBirth.', requestId }, { status: 400 });
+      }
+    }
+
+    await tx.\;
 
     const profile = await tx.memberProfile.create({
       data: {
-        ...validation.data,
-        displayNumber: memberDisplayNumber(gymUser.id),
+        gymUserId,
+        displayNumber: memberDisplayNumber(gymUserId),
+        phone: typeof input.phone === 'string' ? input.phone.trim() || null : null,
+        emergencyContactName: typeof input.emergencyContactName === 'string' ? input.emergencyContactName.trim() || null : null,
+        emergencyContactPhone: typeof input.emergencyContactPhone === 'string' ? input.emergencyContactPhone.trim() || null : null,
+        dateOfBirth,
+        gender: typeof input.gender === 'string' ? input.gender.trim() || null : null,
+        address: typeof input.address === 'string' ? input.address.trim() || null : null,
+        weightKg: typeof input.weightKg === 'number' ? input.weightKg : null,
+        heightCm: typeof input.heightCm === 'number' ? input.heightCm : null,
       },
       include: { gymUser: { select: { id: true, email: true, name: true } } },
     });
 
     await tx.auditEvent.create({
       data: {
-        actor: caller.accountId,
+        actor: caller.accountId ?? undefined,
         action: 'member.created',
         target: profile.id,
         result: 'success',
@@ -156,6 +186,11 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return NextResponse.json({ member: memberToJson(profile) }, { status: 201 });
+    const memberships = await latestMembershipByMemberId(tx, [profile.gymUserId]);
+
+    return NextResponse.json(
+      { member: memberToJson(profile, memberships.get(profile.gymUserId) ?? null) },
+      { status: 201 },
+    );
   });
 }
