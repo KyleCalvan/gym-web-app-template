@@ -4,8 +4,9 @@ import { writeAudit } from './audit';
 import { authRequestContext } from './request-context';
 import type { AccountNextStep } from './account-contract';
 import type { Prisma } from '@/backend/generated/prisma/client';
+import { CURRENT_TERMS_VERSION } from './terms';
 
-export const CURRENT_TERMS_VERSION = '2026-10-21';
+export { CURRENT_TERMS_VERSION } from './terms';
 
 export function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
@@ -120,6 +121,7 @@ export async function getAccountStatus(id: string, session?: { mfaVerifiedAt: Da
     || session.mfaVerifiedAt > new Date())) nextSteps.push('complete-two-step-verification');
   return {
     account: { id: account.id, gymUserId: account.gymUserId, name: account.name, email: account.email,
+      phone: account.phone, termsVersion: account.termsVersion, termsAcceptedAt: account.termsAcceptedAt?.toISOString() ?? null,
       status: account.status, emailVerified: Boolean(account.emailVerified && account.emailVerifiedProvider) },
     roles, profiles: account.assignedRoles.filter(({ role }) => roles.includes(role)).map(({ role, profileId }) => ({ role, profileId })),
     restricted: nextSteps.length > 0, nextSteps: [...new Set(nextSteps)],

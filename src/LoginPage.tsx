@@ -5,6 +5,7 @@ import { Field, TextInput, Modal } from './shared';
 import { dur, ease } from './motion.tsx';
 import type { Member, Plan, Role, Setter } from './types.ts';
 import { ROLE_LABEL } from './data.ts';
+import TermsOfUse from './auth/TermsOfUse';
 
 // Development demo credentials are fetched from a non-production server route.
 
@@ -248,6 +249,7 @@ export default function LoginPage({
 
   const handleMemberRegister = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!demoAccountsEnabled) return;
     const errors: Record<string, string> = {};
     if (!regName.trim()) errors['register-name'] = 'Enter your full name.';
     if (!EMAIL_PATTERN.test(regEmail.trim())) errors['register-email'] = 'Enter a valid email address.';
@@ -351,7 +353,7 @@ export default function LoginPage({
             </>
           )}
 <h2 style={{ fontSize: 22, textTransform: 'uppercase', marginBottom: 4 }}>
-            {role === 'member' && memberTab === 'register' ? 'Create Account' : `${creds.label} Sign In`}
+            {role === 'member' && memberTab === 'register' ? 'Create Account with Google' : `${creds.label} Sign In`}
           </h2>
           <p style={{ color: 'var(--steel)', fontSize: 14.3, margin: '4px 0 14px' }}>
             {role === 'member'
@@ -369,6 +371,8 @@ export default function LoginPage({
 
           {role === 'member' && memberTab === 'register' ? (
             <>
+            {demoAccountsEnabled && <>
+            <p className="demo-account-notice">Demo registration only. This sample Account and Membership are not saved to gym records.</p>
             <form onSubmit={handleMemberRegister} noValidate>
               <Field label="Full Name" htmlFor="register-name">
                 <input id="register-name" className="form-control" required placeholder="Your full name"
@@ -438,6 +442,7 @@ export default function LoginPage({
                 <p className="terms-hint">Tick the agreement box above to continue.</p>
               ) : null}
             </form>
+            </>}
             <div className="auth-google-block">
               <div className="auth-divider"><span>or continue with</span></div>
               <button
@@ -489,10 +494,12 @@ export default function LoginPage({
                   className="btn-link-sm"
                   style={{ fontSize: 12.1, fontWeight: 'bold', color:'var(--signal-ink)', textTransform: 'uppercase', cursor: 'pointer', border: 'none', background: 'none', padding: 0 }}
                   onClick={() => setForgotPasswordOpen(true)}
+                  disabled={!demoAccountsEnabled}
                 >
                   Forgot Password
                 </button>
               </div>
+              {!demoAccountsEnabled && <p className="auth-provider-note">Password recovery is unavailable while email sign-in is being completed.</p>}
               {formErrors.auth && <p className="field-error" role="alert">{formErrors.auth}</p>}
               <button type="submit" className="btn btn-signal btn-block" disabled={!demoAccountsEnabled || demoPending}>
                 {demoPending ? 'Signing in…' : `Sign In to ${creds.label} Dashboard`}
@@ -608,65 +615,7 @@ export default function LoginPage({
               aria-label="Membership agreement"
               tabIndex={0}
             >
-              <p className="terms-updated">Last updated: 17 October 2026</p>
-
-              <p><strong>Who can use VinAthletics</strong></p>
-              <p>
-                VinAthletics provides tools for gym members to manage their membership, training
-                sessions, bookings, and progress, and for authorized staff and trainers to support
-                those services. When you create an account, provide accurate information and keep
-                your sign-in details private. You are responsible for activity under your account;
-                contact us if you believe someone else has accessed it.
-              </p>
-
-              <p><strong>Using gym and fitness information</strong></p>
-              <p>
-                Plans, prices, trainer availability, schedules, and account information shown on the
-                site are provided to help you manage your gym experience. Details and availability
-                can change, and information may not always be current. Confirm important details
-                with the gym before relying on them.
-              </p>
-              <p>
-                The site is not medical advice and does not replace advice from a qualified health
-                professional. Consider your health and fitness level before exercising, use
-                equipment safely, and follow applicable instructions from gym staff and trainers.
-                Stop exercising and seek appropriate help if you feel unwell or injured.
-              </p>
-
-              <p><strong>Memberships, bookings &amp; payments</strong></p>
-              <p>
-                Review the plan, session, and price shown before confirming a purchase or booking.
-                Prices and availability may change. For questions about charges, changing or
-                cancelling a booking or membership, or refund eligibility, contact the gym directly;
-                any applicable terms provided at the time of purchase also apply.
-              </p>
-
-              <p><strong>Fair use</strong></p>
-              <p>
-                Use the site only for its intended gym and account-management purposes. Do not
-                misuse the service, interfere with its operation, attempt unauthorized access, or
-                access or change another person’s information. We may restrict or suspend access
-                where necessary to protect members, the gym, or the service.
-              </p>
-
-              <p><strong>Availability</strong></p>
-              <p>
-                We work to keep VinAthletics available, but cannot guarantee uninterrupted or
-                error-free access. Features may be unavailable during maintenance or due to
-                technical issues, and the site may change over time.
-              </p>
-
-              <p><strong>Changes</strong></p>
-              <p>
-                We may update these terms as the service changes. The date above shows when they
-                were last updated. By continuing to use VinAthletics after an update, you accept
-                the revised terms.
-              </p>
-
-              <p style={{ marginBottom: 0 }}>
-                Questions? Contact us at <a href="mailto:hello@vinathletics.gym">hello@vinathletics.gym</a> or
-                <a href="tel:+639175550142"> +63 917 555 0142</a>.
-              </p>
+              <TermsOfUse />
             </div>
 
             <div className="terms-foot">

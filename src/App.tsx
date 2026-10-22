@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useMemo } from 'react';
 import type { ComponentType } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { usePathname } from 'next/navigation';
-import { signOut, useSession } from 'next-auth/react';
+import { useSession } from 'next-auth/react';
 import Landing from './landing';
 import LoginPage from './LoginPage.tsx';
 import Sidebar from './shared/shell/Sidebar.tsx';
@@ -44,6 +44,7 @@ import type {
 import { DEFAULT_QR_DESTINATIONS } from './qrDestinations.ts';
 import { isTrainerAvailability } from './trainer/availability.ts';
 import AccountStatus from './auth/AccountStatus';
+import { clearFormerAccountBrowserState } from './auth/browser-state';
 import './auth/account-status.css';
 
 const NAV_BY_ROLE: Record<Role, NavSection[]> = {
@@ -72,15 +73,26 @@ const toISODate = (d: Date): string => {
 };
 
 export default function App({ initialLoginTab = 'login' }: { initialLoginTab?: 'login' | 'register' } = {}) {
-  const { status } = useSession();
+  const { status, data: session } = useSession();
   if (status === 'loading') return <main className="account-status" role="status">Loading your Account…</main>;
-  if (status === 'authenticated') return <AccountStatus />;
+  if (status === 'authenticated') return <AccountStatus key={session?.user.id} />;
+  return <PublicApp initialLoginTab={initialLoginTab} />;
+}
+
+function PublicApp({ initialLoginTab }: { initialLoginTab: 'login' | 'register' }) {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    let active = true;
+    void clearFormerAccountBrowserState().then(() => { if (active) setReady(true); });
+    return () => { active = false; };
+  }, []);
+  if (!ready) return <main className="account-status" role="status">Loading your Account…</main>;
   return <DemoApp initialLoginTab={initialLoginTab} />;
 }
 
 function DemoApp({ initialLoginTab = 'login' }: { initialLoginTab?: 'login' | 'register' }) {
   const pathname = usePathname();
-  const { data: authSession, status: authStatus } = useSession();
+  const { status: authStatus } = useSession();
   const handledDemoSession = useRef<string | null>(null);
 
   const [members, setMembers]               = useState<Member[]>(() => [...MEMBERS]);
@@ -184,8 +196,6 @@ function DemoApp({ initialLoginTab = 'login' }: { initialLoginTab?: 'login' | 'r
     else if (role === 'admin') user = admins.find(a => a.id === currentUserId) || CURRENT.admin;
     else if (role === 'superadmin') user = superadmins.find(s => s.id === currentUserId) || CURRENT.superadmin;
     else user = CURRENT[role];
-    const userEmail = 'email' in user ? user.email : undefined;
-
     if (demoIdentity?.role === role) {
       return {
         ...user,
@@ -195,18 +205,8 @@ function DemoApp({ initialLoginTab = 'login' }: { initialLoginTab?: 'login' | 'r
         role: ROLE_LABEL[role],
       };
     }
-    if (authStatus === 'authenticated' && authSession?.user) {
-      return {
-        ...user,
-        id: authSession.user.id,
-        name: authSession.user.name || user.name,
-        email: authSession.user.email || userEmail,
-        avatarUrl: authSession.user.image || user.avatarUrl,
-        role: ROLE_LABEL[role],
-      };
-    }
     return user;
-  }, [role, members, trainers, staff, admins, superadmins, currentUserId, authStatus, authSession, demoIdentity]);
+  }, [role, members, trainers, staff, admins, superadmins, currentUserId, demoIdentity]);
 
   // Theme: dark is the default and the layout script has already applied a
   // stored light preference to <html> before React mounted, so read the
@@ -285,9 +285,7 @@ function DemoApp({ initialLoginTab = 'login' }: { initialLoginTab?: 'login' | 'r
   };
 
   const handleLogin = (r: Role, userId?: string, signedInMember?: Member) => {
-    const roleIsAssigned = authStatus === 'authenticated'
-      ? Boolean(authSession?.user?.roles?.includes(r))
-      : r === 'member';
+    const roleIsAssigned = r === 'member';
     if (!roleIsAssigned) {
       fireToast('This account is not assigned to that interface.');
       return;
@@ -375,7 +373,7 @@ function DemoApp({ initialLoginTab = 'login' }: { initialLoginTab?: 'login' | 'r
     }
     if (nextRole === role) return;
 
-    const email = authSession?.user?.email?.trim().toLowerCase();
+    const email = demoIdentity?.email.trim().toLowerCase();
     const roleUserId = nextRole === 'member'
       ? members.find((member) => member.email.trim().toLowerCase() === email)?.id
       : nextRole === 'staff'
@@ -428,7 +426,6 @@ function DemoApp({ initialLoginTab = 'login' }: { initialLoginTab?: 'login' | 'r
       void fetch('/api/demo-session', { method: 'DELETE' })
         .catch((error: unknown) => console.error('Could not end the development demo session.', error));
     }
-    if (authStatus === 'authenticated') void signOut({ redirect: false });
     const name = currentUser?.name || CURRENT[role].name;
     addAudit('info', 'Logged out', name);
     setActiveSessions((prev) => prev.filter((activeSession) => activeSession.id !== currentSessionId));

@@ -11,5 +11,14 @@
 .account-status li { margin: .75rem 0; }
 .account-status-actions { display: flex; gap: .75rem; margin-top: 1.5rem; }
 .account-status button { padding: .65rem 1rem; cursor: pointer; }
+.account-status button:disabled { cursor: not-allowed; opacity: .55; }
+.account-status form, .account-status section { margin-top: 1.5rem; }
+.account-status form label { display: block; margin: .75rem 0 .25rem; font-weight: 600; }
+.account-status form input { display: block; width: 100%; padding: .65rem; border: 1px solid #9eada4; border-radius: .4rem; }
+.account-terms { max-height: 18rem; overflow: auto; padding: 1rem; border: 1px solid #d5ded8; border-radius: .5rem; }
+.account-agree { display: flex; gap: .5rem; align-items: baseline; margin: 1rem 0; }
+.account-role-selector { display: flex; flex-wrap: wrap; gap: .5rem; }
+.account-role-selector [aria-pressed="true"] { background: #183b2b; color: white; }
+.account-interface { margin-top: 1rem; padding: 1rem; border: 1px solid #d5ded8; border-radius: .5rem; }
 .account-status [role="alert"] { color: #9b2929; }
 @media (max-width: 600px) { .account-status { margin: 1rem; padding: 1.5rem; } }

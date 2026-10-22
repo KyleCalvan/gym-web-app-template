@@ -120,7 +120,76 @@ test('first Google callback establishes a durable verified Account without a sec
   assert.match(page, /Next steps/);
   assert.match(page, /Email verified/);
   assert.match(page, /Complete your full name and contact phone/);
+  assert.match(page, /Save profile/);
+  assert.match(page.replaceAll('<!-- -->', ''), /Terms of Use, version 2026-10-21/);
   assert.doesNotMatch(page, /Basic Membership|Current Membership/);
+});
+
+test('Google Account holder completes profile and explicitly accepts current terms through HTTP', async () => {
+  const signedIn = await google.signIn(application, {
+    sub: 'onboarding-subject', email: 'onboarding@example.test', email_verified: true, name: 'Google Name',
+  });
+  const request = (route, method, body, cookie = signedIn.cookie) => fetch(`${application.url}${route}`, {
+    method, headers: { cookie, origin: application.url, 'content-type': 'application/json' }, body: JSON.stringify(body),
+  });
+  assert.equal((await request('/api/me', 'PATCH', { name: 'A', phone: '09123456789' })).status, 400);
+  assert.equal((await request('/api/me', 'PATCH', { name: 'Real Member', phone: '09123456789', email: 'forged@example.test' })).status, 400);
+  const profile = await request('/api/me', 'PATCH', { name: '  Real Member  ', phone: ' 09123456789 ' });
+  assert.equal(profile.status, 200, application.logs());
+  const afterProfile = await profile.json();
+  assert.equal(afterProfile.account.name, 'Real Member');
+  assert.equal(afterProfile.account.phone, '09123456789');
+  assert.equal(afterProfile.account.email, 'onboarding@example.test');
+  assert.deepEqual(afterProfile.nextSteps, ['accept-terms']);
+  assert.equal(afterProfile.roles, undefined);
+  assert.equal((await request('/api/me/terms', 'POST', { version: 'old', accepted: true })).status, 409);
+  assert.equal((await request('/api/me/terms', 'POST', { version: '2026-10-21', accepted: false })).status, 400);
+  const accepted = await request('/api/me/terms', 'POST', { version: '2026-10-21', accepted: true });
+  assert.equal(accepted.status, 200, application.logs());
+  const ready = await accepted.json();
+  assert.equal(ready.restricted, false);
+  assert.deepEqual(ready.roles, ['member']);
+  assert.equal(ready.profiles.length, 1);
+  assert.equal(ready.account.termsVersion, '2026-10-21');
+  assert.ok(Date.parse(ready.account.termsAcceptedAt));
+  assert.equal(ready.membership, undefined);
+  const reloaded = await fetch(`${application.url}/api/me`, { headers: { cookie: signedIn.cookie } }).then((r) => r.json());
+  assert.deepEqual(reloaded, ready);
+  const pageResponse = await fetch(`${application.url}/account`, { headers: { cookie: signedIn.cookie } });
+  assert.equal(pageResponse.status, 200, application.logs());
+  const page = await pageResponse.text();
+  assert.match(page, /Your Assigned Roles/);
+  assert.match(page, /Membership information is unavailable here/);
+  assert.doesNotMatch(page, /Maria Santos|Basic Membership|Premium Membership/);
+});
+
+test('mandatory terms renewal keeps every other Account gate in force', async () => {
+  const accountId = await seedSessionAccount();
+  const { cookie } = await issueSession(accountId);
+  const submit = (body) => fetch(`${application.url}/api/me/terms`, {
+    method: 'POST', headers: { cookie, origin: application.url, 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  await withDatabaseClient(database.env, (client) => client.query(
+    'UPDATE "AuthUser" SET "termsVersion" = $1, "phone" = NULL WHERE "id" = $2', ['obsolete', accountId],
+  ));
+  const restricted = await fetch(`${application.url}/api/me?role=admin`, { headers: { cookie } }).then((r) => r.json());
+  assert.deepEqual(restricted.nextSteps, ['complete-profile', 'accept-terms']);
+  assert.equal(restricted.roles, undefined);
+  const renewed = await submit({ version: '2026-10-21', accepted: true });
+  assert.equal(renewed.status, 200);
+  assert.deepEqual((await renewed.json()).nextSteps, ['complete-profile']);
+  assert.equal((await fetch(`${application.url}/api/me`, { headers: { cookie } }).then((r) => r.json())).roles, undefined);
+  const forged = await fetch(`${application.url}/api/me`, {
+    method: 'PATCH', headers: { cookie, origin: application.url, 'content-type': 'application/json' },
+    body: JSON.stringify({ name: 'Real Member', phone: '09123456789', role: 'admin' }),
+  });
+  assert.equal(forged.status, 400);
+  await withDatabaseClient(database.env, (client) => client.query(
+    'UPDATE "AuthUser" SET "status" = $1 WHERE "id" = $2', ['disabled', accountId],
+  ));
+  assert.equal((await submit({ version: '2026-10-21', accepted: true })).status, 401);
+  assert.equal((await fetch(`${application.url}/api/me`, { headers: { cookie } })).status, 401);
 });
 
 test('concurrent Google callbacks keep one Account and never merge a different subject by normalized email', async () => {
@@ -613,17 +682,20 @@ test('every privileged Assigned Role uses thirty-minute idle and twelve-hour abs
       assert.equal((await fetch(`${application.url}/api/me`, { headers: { cookie } })).status, 401, role);
     }
     const accountId = await seedSessionAccount({ roles: ['member', 'trainer'], mfa: true });
-    await writeFile(database.env.INTEGRATION_CLOCK_FILE, String(now));
+    // This Account was enrolled after the earlier role loop; its test clock
+    // must begin after that enrollment for session MFA assurance to be valid.
+    const activeNow = Date.now() + 1000;
+    await writeFile(database.env.INTEGRATION_CLOCK_FILE, String(activeNow));
     const initial = await issueSession(accountId);
     const rotated = await sessionCommand('rotate', { accountId, cookie: initial.cookie, mfaVerified: true });
     const cookie = responseCookieHeader(rotated);
     for (let minute = 29; minute < 720; minute += 29) {
-      await writeFile(database.env.INTEGRATION_CLOCK_FILE, String(now + minute * 60_000));
+      await writeFile(database.env.INTEGRATION_CLOCK_FILE, String(activeNow + minute * 60_000));
       assert.equal((await sessionCommand('business', { cookie })).status, 200);
     }
-    await writeFile(database.env.INTEGRATION_CLOCK_FILE, String(now + 12 * 60 * 60_000 - 1));
+    await writeFile(database.env.INTEGRATION_CLOCK_FILE, String(activeNow + 12 * 60 * 60_000 - 1));
     assert.equal((await sessionCommand('business', { cookie })).status, 200);
-    await writeFile(database.env.INTEGRATION_CLOCK_FILE, String(now + 12 * 60 * 60_000));
+    await writeFile(database.env.INTEGRATION_CLOCK_FILE, String(activeNow + 12 * 60 * 60_000));
     assert.equal((await sessionCommand('business', { cookie })).status, 401);
   } finally { await writeFile(database.env.INTEGRATION_CLOCK_FILE, ''); }
 });
