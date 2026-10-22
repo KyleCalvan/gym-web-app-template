@@ -38,9 +38,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  return withBusinessAuthorization(request, ['admin', 'staff'] as GymRole[], async (tx, requestId) => {
-    const authHeader = request.headers.get('authorization');
-    const accountId = authHeader?.replace(/^Bearer\s+/i, '');
+  return withBusinessAuthorization(request, ['admin', 'staff'] as GymRole[], async (tx, requestId, caller) => {
 
     const verification = await tx.studentVerification.findUnique({
       where: { id },
@@ -70,7 +68,7 @@ export async function PATCH(
     const data: Prisma.StudentVerificationUpdateInput = {
       status: action === 'approve' ? 'Approved' : 'Rejected',
       reviewedAt: new Date(),
-      reviewedBy: accountId || null,
+      reviewedBy: caller.accountId,
       reviewReason: reason,
     };
 
@@ -89,7 +87,7 @@ export async function PATCH(
 
     await tx.auditEvent.create({
       data: {
-        actor: accountId || requestId,
+        actor: caller.accountId,
         action: action === 'approve' ? 'student-verification.approved' : 'student-verification.rejected',
         target: id,
         result: 'success',

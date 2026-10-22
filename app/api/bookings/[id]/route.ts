@@ -51,7 +51,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  return withBusinessAuthorization(request, ['admin', 'staff', 'trainer'] as GymRole[], async (tx, requestId) => {
+  return withBusinessAuthorization(request, ['admin', 'staff', 'trainer'] as GymRole[], async (tx, requestId, caller) => {
     const booking = await tx.booking.findUnique({
       where: { id },
       include: {
@@ -91,7 +91,7 @@ export async function PATCH(
         },
       });
       await tx.auditEvent.create({
-        data: { actor: requestId, action: 'booking.confirmed', target: id, result: 'success', requestId },
+        data: { actor: caller.accountId, action: 'booking.confirmed', target: id, result: 'success', requestId },
       });
       return NextResponse.json({ booking: bookingToJson(updated) });
     }
@@ -109,7 +109,7 @@ export async function PATCH(
         },
       });
       await tx.auditEvent.create({
-        data: { actor: requestId, action: 'booking.completed', target: id, result: 'success', requestId },
+        data: { actor: caller.accountId, action: 'booking.completed', target: id, result: 'success', requestId },
       });
       return NextResponse.json({ booking: bookingToJson(updated) });
     }
@@ -135,7 +135,7 @@ export async function PATCH(
       });
 
       await tx.auditEvent.create({
-        data: { actor: requestId, action: 'booking.cancelled', target: id, result: 'success', requestId },
+        data: { actor: caller.accountId, action: 'booking.cancelled', target: id, result: 'success', requestId },
       });
       return NextResponse.json({ booking: bookingToJson(updated) });
     }
@@ -153,7 +153,7 @@ export async function PATCH(
         },
       });
       await tx.auditEvent.create({
-        data: { actor: requestId, action: 'booking.noshow', target: id, result: 'success', requestId },
+        data: { actor: caller.accountId, action: 'booking.noshow', target: id, result: 'success', requestId },
       });
       return NextResponse.json({ booking: bookingToJson(updated) });
     }

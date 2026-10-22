@@ -1,0 +1,3 @@
+  0 stubs.txt
+ 24 reals.txt
+ 24 total

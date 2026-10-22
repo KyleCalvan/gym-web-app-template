@@ -1,0 +1,15 @@
+/c/Users/ruzel/AppData/Local/Temp/claude/
+/c/Users/ruzel/AppData/Local/Temp/vscode-typescript/
+/c/Users/ruzel/AppData/Local/Temp/vscode-stable-user-x64/
+/c/Users/ruzel/AppData/Local/Temp/TCD5B2F.tmp/
+/c/Users/ruzel/AppData/Local/Temp/TCD5B30.tmp/
+/c/Users/ruzel/AppData/Local/Temp/TCD5B31.tmp/
+/c/Users/ruzel/AppData/Local/Temp/TCD5B32.tmp/
+/c/Users/ruzel/AppData/Local/Temp/TCD5B44.tmp/
+/c/Users/ruzel/AppData/Local/Temp/TCD5B45.tmp/
+/c/Users/ruzel/AppData/Local/Temp/TCD5B75.tmp/
+/c/Users/ruzel/AppData/Local/Temp/TCD5B76.tmp/
+/c/Users/ruzel/AppData/Local/Temp/TCD5BA5.tmp/
+/c/Users/ruzel/AppData/Local/Temp/TCD5BA6.tmp/
+/c/Users/ruzel/AppData/Local/Temp/TCD5BC7.tmp/
+/c/Users/ruzel/AppData/Local/Temp/TCD5BE7.tmp/

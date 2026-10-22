@@ -41,12 +41,19 @@ function promotionToJson(p: {
   };
 }
 
+// Accept either the promotion id or its public code in the same segment.
+async function resolvePromotion(tx: Prisma.TransactionClient, value: string) {
+  return tx.promotion.findFirst({
+    where: { OR: [{ id: value }, { code: value.trim().toUpperCase() }] },
+  });
+}
+
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  return withBusinessAuthorization(request, ['admin', 'staff'] as GymRole[], async (tx, requestId) => {
+  return withBusinessAuthorization(request, ['admin', 'staff'] as GymRole[], async (tx, requestId, caller) => {
     let body: unknown;
     try {
       body = await request.json();
@@ -56,6 +63,11 @@ export async function PATCH(
 
     if (!body || typeof body !== 'object') {
       return NextResponse.json({ error: 'Request body must be an object.', requestId }, { status: 400 });
+    }
+
+    const existing = await resolvePromotion(tx, id);
+    if (!existing) {
+      return NextResponse.json({ error: 'Promotion not found.', requestId }, { status: 404 });
     }
 
     const input = body as Record<string, unknown>;
@@ -90,13 +102,13 @@ export async function PATCH(
     }
 
     const promotion = await tx.promotion.update({
-      where: { id },
+      where: { id: existing.id },
       data,
     });
 
     await tx.auditEvent.create({
       data: {
-        actor: requestId,
+        actor: caller.accountId,
         action: action === 'publish' ? 'promotion.published' : 'promotion.updated',
         target: promotion.id,
         result: 'success',
@@ -113,8 +125,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  return withBusinessAuthorization(request, ['admin'] as GymRole[], async (tx, requestId) => {
-    const promotion = await tx.promotion.findUnique({ where: { id } });
+  return withBusinessAuthorization(request, ['admin'] as GymRole[], async (tx, requestId, caller) => {
+    const promotion = await resolvePromotion(tx, id);
     if (!promotion) {
       return NextResponse.json({ error: 'Promotion not found.', requestId }, { status: 404 });
     }
@@ -123,13 +135,13 @@ export async function DELETE(
       return NextResponse.json({ error: 'Cannot delete a published promotion.', requestId }, { status: 400 });
     }
 
-    await tx.promotion.delete({ where: { id } });
+    await tx.promotion.delete({ where: { id: promotion.id } });
 
     await tx.auditEvent.create({
       data: {
-        actor: requestId,
+        actor: caller.accountId,
         action: 'promotion.deleted',
-        target: id,
+        target: promotion.id,
         result: 'success',
         requestId,
       },

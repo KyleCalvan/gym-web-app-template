@@ -40,7 +40,7 @@ model User {
   promotionClaims PromotionClaim[]
   measurements  MemberMeasurement[]
   createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  updatedAt     DateTime      @default(now()) @updatedAt
   deletedAt     DateTime?
 }
 
@@ -171,7 +171,7 @@ model MemberProfile {
   weightKg                Float?
   heightCm                Float?
   createdAt               DateTime  @default(now())
-  updatedAt               DateTime  @updatedAt
+  updatedAt               DateTime  @default(now()) @updatedAt
   deletedAt               DateTime?
 
   @@index([displayNumber])
@@ -192,7 +192,7 @@ model TrainerProfile {
   status          TrainerStatus   @default(Active)
   hireDate        DateTime?
   createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  updatedAt       DateTime        @default(now()) @updatedAt
   deletedAt       DateTime?
   availabilities  TrainerAvailability[]
   bookings        Booking[]       @relation("TrainerBookings")
@@ -222,7 +222,7 @@ model StaffProfile {
   status          StaffStatus @default(Active)
   hireDate        DateTime?
   createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  updatedAt       DateTime    @default(now()) @updatedAt
   deletedAt       DateTime?
 
   @@index([displayNumber])
@@ -253,7 +253,7 @@ model GymPlan {
   excludedBenefits String[] @default([])
   terms            String?
   createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  updatedAt        DateTime @default(now()) @updatedAt
   memberships      Membership[]
 }
 
@@ -272,7 +272,7 @@ model Membership {
   cancelledAt           DateTime?
   cancellationReason    String?
   createdAt             DateTime           @default(now())
-  updatedAt             DateTime           @updatedAt
+  updatedAt             DateTime           @default(now()) @updatedAt
 
   @@index([memberId])
   @@index([status])
@@ -298,7 +298,7 @@ model Order {
   totalAmount           Int               // Centavos
   currency              String            @default("PHP")
   createdAt             DateTime          @default(now())
-  updatedAt             DateTime          @updatedAt
+  updatedAt             DateTime          @default(now()) @updatedAt
   lines                 OrderLine[]
   payments              Payment[]
   bookings              Booking[]
@@ -362,7 +362,7 @@ model Payment {
   refundedAt            DateTime?
   refundReason          String?
   createdAt             DateTime      @default(now())
-  updatedAt             DateTime      @updatedAt
+  updatedAt             DateTime      @default(now()) @updatedAt
 
   @@index([orderId])
   @@index([status])
@@ -401,7 +401,7 @@ model Promotion {
   status                PromotionStatus   @default(Draft)
   imageUrl              String?
   createdAt             DateTime          @default(now())
-  updatedAt             DateTime          @updatedAt
+  updatedAt             DateTime          @default(now()) @updatedAt
   claims                PromotionClaim[]
   applications          OrderPromotionApplication[]
 
@@ -457,7 +457,7 @@ model TrainerAvailability {
   endTime       String        // HH:MM
   status        AvailabilityStatus @default(available)
   createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  updatedAt     DateTime      @default(now()) @updatedAt
 
   @@unique([trainerId, date, startTime, endTime])
   @@index([trainerId, date])
@@ -490,7 +490,7 @@ model Booking {
   completedAt     DateTime?
   confirmedAt     DateTime?
   createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  updatedAt       DateTime        @default(now()) @updatedAt
   review          TrainerReview?
 
   @@index([memberId, date])
@@ -566,7 +566,7 @@ model StudentVerification {
   reviewReason    String?
   expiresAt       DateTime?
   createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
+  updatedAt       DateTime            @default(now()) @updatedAt
 
   @@index([memberId])
   @@index([status])
@@ -587,7 +587,7 @@ model GymLink {
   url         String
   sortOrder   Int       @default(0)
   createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  updatedAt   DateTime  @default(now()) @updatedAt
 
   @@index([sortOrder])
 }
@@ -616,7 +616,7 @@ model NotificationPreference {
   reminders   Boolean   @default(true)
   promos      Boolean   @default(true)
   createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  updatedAt   DateTime  @default(now()) @updatedAt
 }
 
 // Shared: File assets

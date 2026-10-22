@@ -1,0 +1,60 @@
+✖ gym domain member profiles are readable, patchable, and admin-deletable over HTTP (293.8364ms)
+✖ check-ins enforce one per member per business day and audit the write (167.9649ms)
+✖ bookings require a real active trainer and a free slot, then consume the slot (315.4163ms)
+✖ promotion publish is admin-only and claiming is idempotent per member (278.41ms)
+ℹ tests 26
+ℹ suites 0
+ℹ pass 22
+ℹ fail 4
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 89606.7989
+
+
+test at tests\integration\application.test.mjs:802:1
+✖ gym domain member profiles are readable, patchable, and admin-deletable over HTTP (293.8364ms)
+  error: cannot insert multiple commands into a prepared statement
+      at C:\Users\ruzel\gym-web-app-template\node_modules\pg\lib\client.js:694:17
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async withDatabaseClient (file:///C:/Users/ruzel/gym-web-app-template/tests/integration/harness.mjs:123:12)
+      at async seedGymDomain (file:///C:/Users/ruzel/gym-web-app-template/tests/integration/application.test.mjs:782:3)
+      at async TestContext.<anonymous> (file:///C:/Users/ruzel/gym-web-app-template/tests/integration/application.test.mjs:805:3)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    length: 123,
+    severity: 'ERROR',
+    code: '42601',
+    detail: undefined,
+    hint: undefined,
+    position: undefined,
+    internalPosition: undefined,
+    internalQuery: undefined,
+    where: undefined,
+    schema: undefined,
+    table: undefined,
+    column: undefined,
+    dataType: undefined,
+    constraint: undefined,
+    file: 'postgres.c',
+    line: '1481',
+    routine: 'exec_parse_message'
+  }
+
+test at tests\integration\application.test.mjs:835:1
+✖ check-ins enforce one per member per business day and audit the write (167.9649ms)
+  error: cannot insert multiple commands into a prepared statement
+      at C:\Users\ruzel\gym-web-app-template\node_modules\pg\lib\client.js:694:17
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async withDatabaseClient (file:///C:/Users/ruzel/gym-web-app-template/tests/integration/harness.mjs:123:12)
+      at async seedGymDomain (file:///C:/Users/ruzel/gym-web-app-template/tests/integration/application.test.mjs:782:3)
+      at async TestContext.<anonymous> (file:///C:/Users/ruzel/gym-web-app-template/tests/integration/application.test.mjs:837:3)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    length: 123,
+    severity: 'ERROR',
+    code: '42601',
+    detail: undefined,
+    hint: undefined,
+    position: undefined,
+    internalPosition: undefined,

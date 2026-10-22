@@ -41,7 +41,7 @@ function staffToJson(s: {
 }
 
 export async function GET(request: NextRequest) {
-  return withBusinessAuthorization(request, ['admin'] as GymRole[], async (tx, requestId) => {
+  return withBusinessAuthorization(request, ['admin'] as GymRole[], async (tx, requestId, caller) => {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
     const limit = Math.min(Math.max(Number(searchParams.get('limit')) || 100, 1), 500);
@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  return withBusinessAuthorization(request, ['admin'] as GymRole[], async (tx, requestId) => {
+  return withBusinessAuthorization(request, ['admin'] as GymRole[], async (tx, requestId, caller) => {
     let body: unknown;
     try {
       body = await request.json();
@@ -146,7 +146,7 @@ export async function POST(request: NextRequest) {
 
     await tx.auditEvent.create({
       data: {
-        actor: requestId,
+        actor: caller.accountId,
         action: 'staff.created',
         target: updated.id,
         result: 'success',

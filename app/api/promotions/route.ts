@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withBusinessAuthorization } from '@/src/auth/http';
-import type { GymRole } from '@/backend/generated/prisma/client';
+import type { GymRole, DiscountType } from '@/backend/generated/prisma/client';
 import type { Prisma } from '@/backend/generated/prisma/client';
 
 function promotionToJson(p: {
@@ -42,7 +42,7 @@ function promotionToJson(p: {
 }
 
 export async function GET(request: NextRequest) {
-  return withBusinessAuthorization(request, ['admin', 'staff', 'member'] as GymRole[], async (tx, requestId) => {
+  return withBusinessAuthorization(request, ['admin', 'staff', 'member'] as GymRole[], async (tx, requestId, caller) => {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
     const code = searchParams.get('code');
@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  return withBusinessAuthorization(request, ['admin', 'staff'] as GymRole[], async (tx, requestId) => {
+  return withBusinessAuthorization(request, ['admin', 'staff'] as GymRole[], async (tx, requestId, caller) => {
     let body: unknown;
     try {
       body = await request.json();
@@ -122,7 +122,7 @@ export async function POST(request: NextRequest) {
         title,
         code,
         description,
-        discountType: discountType as Prisma.DiscountType,
+        discountType: discountType as DiscountType,
         discountValue,
         validFrom,
         validUntil,
@@ -136,7 +136,7 @@ export async function POST(request: NextRequest) {
 
     await tx.auditEvent.create({
       data: {
-        actor: requestId,
+        actor: caller.accountId,
         action: 'promotion.created',
         target: promotion.id,
         result: 'success',

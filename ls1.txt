@@ -1,0 +1,4 @@
+app/api/promotions/[id]/claim/route.ts
+app/api/promotions/[id]/route.ts
+app/api/promotions/route.ts
+done

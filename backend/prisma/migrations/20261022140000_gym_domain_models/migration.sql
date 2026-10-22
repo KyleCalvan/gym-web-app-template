@@ -40,7 +40,9 @@ CREATE TYPE "VerificationStatus" AS ENUM ('Submitted', 'UnderReview', 'Approved'
 -- AlterTable
 ALTER TABLE "User" ADD COLUMN     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 ADD COLUMN     "deletedAt" TIMESTAMP(3),
-ADD COLUMN     "updatedAt" TIMESTAMP(3) NOT NULL;
+-- Existing rows need a value: add the column with a default so upgrades from
+-- the historical schema do not fail with 23502 on populated tables.
+ADD COLUMN     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
 
 -- CreateTable
 CREATE TABLE "MemberProfile" (

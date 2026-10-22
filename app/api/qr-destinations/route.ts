@@ -22,7 +22,7 @@ function linkToJson(l: {
 }
 
 export async function GET(request: NextRequest) {
-  return withBusinessAuthorization(request, ['admin', 'staff'] as GymRole[], async (tx, requestId) => {
+  return withBusinessAuthorization(request, ['admin', 'staff'] as GymRole[], async (tx, requestId, caller) => {
     const links = await tx.gymLink.findMany({
       orderBy: { sortOrder: 'asc' },
     });
@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  return withBusinessAuthorization(request, ['admin'] as GymRole[], async (tx, requestId) => {
+  return withBusinessAuthorization(request, ['admin'] as GymRole[], async (tx, requestId, caller) => {
     let body: unknown;
     try {
       body = await request.json();
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
 
     await tx.auditEvent.create({
       data: {
-        actor: requestId,
+        actor: caller.accountId,
         action: 'qr-link.created',
         target: link.id,
         result: 'success',
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
-  return withBusinessAuthorization(request, ['admin'] as GymRole[], async (tx, requestId) => {
+  return withBusinessAuthorization(request, ['admin'] as GymRole[], async (tx, requestId, caller) => {
     let body: unknown;
     try {
       body = await request.json();
@@ -113,7 +113,7 @@ export async function PATCH(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  return withBusinessAuthorization(request, ['admin'] as GymRole[], async (tx, requestId) => {
+  return withBusinessAuthorization(request, ['admin'] as GymRole[], async (tx, requestId, caller) => {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 
@@ -130,7 +130,7 @@ export async function DELETE(request: NextRequest) {
 
     await tx.auditEvent.create({
       data: {
-        actor: requestId,
+        actor: caller.accountId,
         action: 'qr-link.deleted',
         target: id,
         result: 'success',

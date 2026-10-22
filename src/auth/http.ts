@@ -22,8 +22,14 @@ export function hasSameOrigin(request: Request) {
 // A restricted identity is allowed to read its own limited status and log out.
 // Completion/security routes must opt into their specific state when added;
 // no generic restricted-session bypass exists for business operations.
+export type BusinessCaller = {
+  accountId: string;
+  gymUserId: number | null;
+  roles: GymRole[];
+};
+
 export async function withBusinessAuthorization(request: NextRequest, roles: GymRole[],
-  action: (tx: Prisma.TransactionClient, requestId: string) => Promise<NextResponse>) {
+  action: (tx: Prisma.TransactionClient, requestId: string, caller: BusinessCaller) => Promise<NextResponse>) {
   const requestId = randomUUID();
   return authRequestContext.run({ requestId, accountId: null }, async () => {
     try {
@@ -44,7 +50,11 @@ export async function withBusinessAuthorization(request: NextRequest, roles: Gym
           result: 'success', requestId });
         // Only deliberate, authorized business requests extend idle lifetime.
         await tx.authSession.update({ where: { id: record.session.id }, data: { lastActiveAt: new Date() } });
-        return action(tx, requestId);
+        return action(tx, requestId, {
+          accountId: record.user.id,
+          gymUserId: record.user.gymUserId,
+          roles: record.status.roles,
+        });
       });
       response.headers.set('x-request-id', requestId);
       response.headers.set('cache-control', 'private, no-store');

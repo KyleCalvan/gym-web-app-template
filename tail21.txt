@@ -1,0 +1,46 @@
+﻿  (node:18244) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+  (Use `node --trace-deprecation ...` to show where the warning was created)
+  
+  
+  409 !== 200
+  
+      at seedGymAccount (file:///C:/Users/ruzel/gym-web-app-template/tests/integration/application.test.mjs:784:10)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async TestContext.<anonymous> (file:///C:/Users/ruzel/gym-web-app-template/tests/integration/application.test.mjs:885:20)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 409,
+    expected: 200,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\integration\application.test.mjs:918:1
+✖ promotion publish is admin-only and claiming is idempotent per member (150.4185ms)
+  AssertionError [ERR_ASSERTION]: ▲ Next.js 16.4.2
+  - Local:         http://127.0.0.1:2621
+  - Network:       http://127.0.0.1:2621
+  ✓ Ready in 428ms
+  ✓ Running next.config.mjs took 109ms
+  (node:18244) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+  (Use `node --trace-deprecation ...` to show where the warning was created)
+  
+  
+  409 !== 200
+  
+      at seedGymAccount (file:///C:/Users/ruzel/gym-web-app-template/tests/integration/application.test.mjs:784:10)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async TestContext.<anonymous> (file:///C:/Users/ruzel/gym-web-app-template/tests/integration/application.test.mjs:919:20)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 409,
+    expected: 200,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+EXIT=1
+PROBE=no

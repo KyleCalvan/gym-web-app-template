@@ -48,7 +48,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  return withBusinessAuthorization(request, ['admin', 'staff', 'trainer', 'member'] as GymRole[], async (tx, requestId) => {
+  return withBusinessAuthorization(request, ['admin', 'staff', 'trainer', 'member'] as GymRole[], async (tx, requestId, caller) => {
     const profile = await tx.memberProfile.findUnique({
       where: { id },
       include: { gymUser: { select: { id: true, email: true, name: true } } },
@@ -67,7 +67,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  return withBusinessAuthorization(request, ['admin', 'staff'] as GymRole[], async (tx, requestId) => {
+  return withBusinessAuthorization(request, ['admin', 'staff'] as GymRole[], async (tx, requestId, caller) => {
     let body: unknown;
     try {
       body = await request.json();
@@ -109,7 +109,7 @@ export async function PATCH(
 
     await tx.auditEvent.create({
       data: {
-        actor: requestId,
+        actor: caller.accountId,
         action: 'member.updated',
         target: profile.id,
         result: 'success',
@@ -126,7 +126,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  return withBusinessAuthorization(request, ['admin'] as GymRole[], async (tx, requestId) => {
+  return withBusinessAuthorization(request, ['admin'] as GymRole[], async (tx, requestId, caller) => {
     const profile = await tx.memberProfile.findUnique({ where: { id } });
     if (!profile) {
       return NextResponse.json({ error: 'Member profile not found.', requestId }, { status: 404 });
@@ -140,7 +140,7 @@ export async function DELETE(
 
     await tx.auditEvent.create({
       data: {
-        actor: requestId,
+        actor: caller.accountId,
         action: 'member.deleted',
         target: updated.id,
         result: 'success',

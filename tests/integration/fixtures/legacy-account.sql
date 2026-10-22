@@ -1,5 +1,7 @@
 -- State present before the membership-plan migration: integer gym IDs, posts,
 -- linked Google identities, and opaque database sessions must survive upgrades.
+-- updatedAt is omitted because the historical migrations don't include it;
+-- the later migration adds the column with a default.
 INSERT INTO "User" ("id", "email", "name") VALUES
   (41, 'operator@example.test', 'Fixture Operator'),
   (42, 'member@example.test', 'Fixture Member');

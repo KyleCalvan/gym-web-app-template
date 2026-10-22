@@ -48,7 +48,7 @@ function bookingToJson(b: {
 }
 
 export async function GET(request: NextRequest) {
-  return withBusinessAuthorization(request, ['admin', 'staff', 'trainer', 'member'] as GymRole[], async (tx, requestId) => {
+  return withBusinessAuthorization(request, ['admin', 'staff', 'trainer', 'member'] as GymRole[], async (tx, requestId, caller) => {
     const { searchParams } = new URL(request.url);
     const memberId = searchParams.get('memberId');
     const trainerId = searchParams.get('trainerId');
@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  return withBusinessAuthorization(request, ['admin', 'staff', 'member'] as GymRole[], async (tx, requestId) => {
+  return withBusinessAuthorization(request, ['admin', 'staff', 'member'] as GymRole[], async (tx, requestId, caller) => {
     let body: unknown;
     try {
       body = await request.json();
@@ -155,7 +155,7 @@ export async function POST(request: NextRequest) {
 
     await tx.auditEvent.create({
       data: {
-        actor: requestId,
+        actor: caller.accountId,
         action: 'booking.created',
         target: booking.id,
         result: 'success',

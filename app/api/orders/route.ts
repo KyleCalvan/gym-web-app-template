@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withBusinessAuthorization } from '@/src/auth/http';
-import type { GymRole } from '@/backend/generated/prisma/client';
+import type { GymRole, OrderSource } from '@/backend/generated/prisma/client';
 import type { Prisma } from '@/backend/generated/prisma/client';
 
 function orderToJson(order: {
@@ -34,7 +34,7 @@ function orderToJson(order: {
 }
 
 export async function GET(request: NextRequest) {
-  return withBusinessAuthorization(request, ['admin', 'staff'] as GymRole[], async (tx, requestId) => {
+  return withBusinessAuthorization(request, ['admin', 'staff'] as GymRole[], async (tx, requestId, caller) => {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
     const memberId = searchParams.get('memberId');
@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  return withBusinessAuthorization(request, ['admin', 'staff'] as GymRole[], async (tx, requestId) => {
+  return withBusinessAuthorization(request, ['admin', 'staff'] as GymRole[], async (tx, requestId, caller) => {
     let body: unknown;
     try {
       body = await request.json();
@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
     const order = await tx.order.create({
       data: {
         memberId,
-        source: source as Prisma.OrderSource,
+        source: source as OrderSource,
         status: 'Pending',
         totalAmount,
         lines: { create: orderLines },
@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
 
     await tx.auditEvent.create({
       data: {
-        actor: requestId,
+        actor: caller.accountId,
         action: 'order.created',
         target: order.id,
         result: 'success',

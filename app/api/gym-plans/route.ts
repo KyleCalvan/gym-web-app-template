@@ -138,7 +138,7 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  return withBusinessAuthorization(request, ['admin', 'superadmin'], async (tx, requestId) => {
+  return withBusinessAuthorization(request, ['admin', 'superadmin'], async (tx, requestId, caller) => {
 
     let body: unknown;
     try {
@@ -174,7 +174,7 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
-  return withBusinessAuthorization(request, ['admin', 'superadmin'], async (tx, requestId) => {
+  return withBusinessAuthorization(request, ['admin', 'superadmin'], async (tx, requestId, caller) => {
 
     let body: unknown;
     try {

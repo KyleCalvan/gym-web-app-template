@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withBusinessAuthorization } from '@/src/auth/http';
-import type { GymRole } from '@/backend/generated/prisma/client';
-import type { Prisma } from '@/backend/generated/prisma/client';
+import type { GymRole, PaymentMethod } from '@/backend/generated/prisma/client';
 
 function paymentToJson(p: {
   id: string;
@@ -50,7 +49,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  return withBusinessAuthorization(request, ['admin', 'staff'] as GymRole[], async (tx, requestId) => {
+  return withBusinessAuthorization(request, ['admin', 'staff'] as GymRole[], async (tx, requestId, caller) => {
     const payments = await tx.payment.findMany({
       where: { orderId: id },
       orderBy: { createdAt: 'desc' },
@@ -64,7 +63,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  return withBusinessAuthorization(request, ['admin', 'staff'] as GymRole[], async (tx, requestId) => {
+  return withBusinessAuthorization(request, ['admin', 'staff'] as GymRole[], async (tx, requestId, caller) => {
     const order = await tx.order.findUnique({
       where: { id },
       include: { payments: true },
@@ -111,7 +110,7 @@ export async function POST(
     const payment = await tx.payment.create({
       data: {
         orderId: order.id,
-        method: method as Prisma.PaymentMethod,
+        method: method as PaymentMethod,
         amount,
         status: method === 'Cash' ? 'Successful' : 'Pending',
         receiptNumber,
@@ -135,7 +134,7 @@ export async function POST(
 
     await tx.auditEvent.create({
       data: {
-        actor: requestId,
+        actor: caller.accountId,
         action: 'payment.created',
         target: payment.id,
         result: 'success',

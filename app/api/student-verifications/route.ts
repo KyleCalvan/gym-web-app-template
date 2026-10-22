@@ -34,7 +34,7 @@ function verificationToJson(v: {
 }
 
 export async function GET(request: NextRequest) {
-  return withBusinessAuthorization(request, ['admin', 'staff'] as GymRole[], async (tx, requestId) => {
+  return withBusinessAuthorization(request, ['admin', 'staff'] as GymRole[], async (tx, requestId, caller) => {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
     const limit = Math.min(Math.max(Number(searchParams.get('limit')) || 100, 1), 500);
@@ -59,20 +59,8 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  return withBusinessAuthorization(request, ['member'] as GymRole[], async (tx, requestId) => {
-    const authHeader = request.headers.get('authorization');
-    const accountId = authHeader?.replace(/^Bearer\s+/i, '');
-
-    if (!accountId) {
-      return NextResponse.json({ error: 'Authorization required.', requestId }, { status: 401 });
-    }
-
-    const account = await tx.authUser.findUnique({
-      where: { id: accountId },
-      select: { gymUserId: true },
-    });
-
-    if (!account?.gymUserId) {
+  return withBusinessAuthorization(request, ['member'] as GymRole[], async (tx, requestId, caller) => {
+    if (!caller.gymUserId) {
       return NextResponse.json({ error: 'Account not linked to gym user.', requestId }, { status: 404 });
     }
 
@@ -97,7 +85,7 @@ export async function POST(request: NextRequest) {
     }
 
     const existing = await tx.studentVerification.findFirst({
-      where: { memberId: account.gymUserId, status: { in: ['Submitted', 'UnderReview', 'Approved'] } },
+      where: { memberId: caller.gymUserId, status: { in: ['Submitted', 'UnderReview', 'Approved'] } },
     });
 
     if (existing) {
@@ -106,7 +94,7 @@ export async function POST(request: NextRequest) {
 
     const verification = await tx.studentVerification.create({
       data: {
-        memberId: account.gymUserId,
+        memberId: caller.gymUserId,
         status: 'Submitted',
         documentAssetIds,
       },
@@ -115,7 +103,7 @@ export async function POST(request: NextRequest) {
 
     await tx.auditEvent.create({
       data: {
-        actor: accountId,
+        actor: caller.accountId,
         action: 'student-verification.submitted',
         target: verification.id,
         result: 'success',

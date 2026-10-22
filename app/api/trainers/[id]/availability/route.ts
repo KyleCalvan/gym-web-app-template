@@ -30,14 +30,18 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  return withBusinessAuthorization(request, ['admin', 'staff', 'trainer', 'member'] as GymRole[], async (tx, requestId) => {
+  return withBusinessAuthorization(request, ['admin', 'staff', 'trainer', 'member'] as GymRole[], async (tx, requestId, caller) => {
     const { searchParams } = new URL(request.url);
     const from = searchParams.get('from');
     const to = searchParams.get('to');
 
     const where: Prisma.TrainerAvailabilityWhereInput = { trainerId: id };
-    if (from) where.date = { gte: from };
-    if (to) where.date = { ...where.date, lte: to };
+    if (from || to) {
+      const dateFilter: { gte?: string; lte?: string } = {};
+      if (from) dateFilter.gte = from;
+      if (to) dateFilter.lte = to;
+      where.date = dateFilter;
+    }
 
     const slots = await tx.trainerAvailability.findMany({
       where,
@@ -53,7 +57,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  return withBusinessAuthorization(request, ['admin', 'trainer'] as GymRole[], async (tx, requestId) => {
+  return withBusinessAuthorization(request, ['admin', 'trainer'] as GymRole[], async (tx, requestId, caller) => {
     const trainer = await tx.trainerProfile.findUnique({ where: { id } });
     if (!trainer) {
       return NextResponse.json({ error: 'Trainer not found.', requestId }, { status: 404 });
@@ -105,7 +109,7 @@ export async function POST(
 
     await tx.auditEvent.create({
       data: {
-        actor: requestId,
+        actor: caller.accountId,
         action: 'trainer.availability.created',
         target: id,
         result: 'success',
@@ -122,7 +126,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  return withBusinessAuthorization(request, ['admin', 'trainer'] as GymRole[], async (tx, requestId) => {
+  return withBusinessAuthorization(request, ['admin', 'trainer'] as GymRole[], async (tx, requestId, caller) => {
     const { searchParams } = new URL(request.url);
     const slotId = searchParams.get('slotId');
 
@@ -146,7 +150,7 @@ export async function DELETE(
 
     await tx.auditEvent.create({
       data: {
-        actor: requestId,
+        actor: caller.accountId,
         action: 'trainer.availability.deleted',
         target: slotId,
         result: 'success',

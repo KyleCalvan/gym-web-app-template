@@ -38,25 +38,13 @@ function memberToJson(profile: {
 }
 
 export async function GET(request: NextRequest) {
-  return withBusinessAuthorization(request, ['member', 'admin', 'staff', 'trainer'] as GymRole[], async (tx, requestId) => {
-    const authHeader = request.headers.get('authorization');
-    const accountId = authHeader?.replace(/^Bearer\s+/i, '');
-
-    if (!accountId) {
-      return NextResponse.json({ error: 'Authorization required.', requestId }, { status: 401 });
-    }
-
-    const account = await tx.authUser.findUnique({
-      where: { id: accountId },
-      select: { gymUserId: true },
-    });
-
-    if (!account?.gymUserId) {
+  return withBusinessAuthorization(request, ['member', 'admin', 'staff', 'trainer'] as GymRole[], async (tx, requestId, caller) => {
+    if (!caller.gymUserId) {
       return NextResponse.json({ error: 'Account not linked to gym user.', requestId }, { status: 404 });
     }
 
     const profile = await tx.memberProfile.findUnique({
-      where: { gymUserId: account.gymUserId },
+      where: { gymUserId: caller.gymUserId },
     });
 
     if (!profile) {
@@ -68,25 +56,13 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
-  return withBusinessAuthorization(request, ['member'] as GymRole[], async (tx, requestId) => {
-    const authHeader = request.headers.get('authorization');
-    const accountId = authHeader?.replace(/^Bearer\s+/i, '');
-
-    if (!accountId) {
-      return NextResponse.json({ error: 'Authorization required.', requestId }, { status: 401 });
-    }
-
-    const account = await tx.authUser.findUnique({
-      where: { id: accountId },
-      select: { gymUserId: true },
-    });
-
-    if (!account?.gymUserId) {
+  return withBusinessAuthorization(request, ['member'] as GymRole[], async (tx, requestId, caller) => {
+    if (!caller.gymUserId) {
       return NextResponse.json({ error: 'Account not linked to gym user.', requestId }, { status: 404 });
     }
 
     const profile = await tx.memberProfile.findUnique({
-      where: { gymUserId: account.gymUserId },
+      where: { gymUserId: caller.gymUserId },
     });
 
     if (!profile) {
@@ -134,7 +110,7 @@ export async function PATCH(request: NextRequest) {
 
     await tx.auditEvent.create({
       data: {
-        actor: accountId,
+        actor: caller.accountId,
         action: 'member.profile.updated',
         target: updated.id,
         result: 'success',

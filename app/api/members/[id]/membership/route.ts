@@ -40,7 +40,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  return withBusinessAuthorization(request, ['admin', 'staff', 'trainer', 'member'] as GymRole[], async (tx, requestId) => {
+  return withBusinessAuthorization(request, ['admin', 'staff', 'trainer', 'member'] as GymRole[], async (tx, requestId, caller) => {
     const profile = await tx.memberProfile.findUnique({ where: { id } });
     if (!profile) {
       return NextResponse.json({ error: 'Member profile not found.', requestId }, { status: 404 });
@@ -61,7 +61,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  return withBusinessAuthorization(request, ['admin', 'staff'] as GymRole[], async (tx, requestId) => {
+  return withBusinessAuthorization(request, ['admin', 'staff'] as GymRole[], async (tx, requestId, caller) => {
     const profile = await tx.memberProfile.findUnique({ where: { id } });
     if (!profile) {
       return NextResponse.json({ error: 'Member profile not found.', requestId }, { status: 404 });
@@ -129,7 +129,7 @@ export async function POST(
 
     await tx.auditEvent.create({
       data: {
-        actor: requestId,
+        actor: caller.accountId,
         action: 'membership.created',
         target: membership.id,
         result: 'success',

@@ -1,0 +1,16 @@
+test at tests\integration\application.test.mjs:812:1
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    code: 'ERR_ASSERTION',
+test at tests\integration\application.test.mjs:845:1
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    code: 'ERR_ASSERTION',
+test at tests\integration\application.test.mjs:871:1
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    code: 'ERR_ASSERTION',
+test at tests\integration\application.test.mjs:905:1
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    code: 'ERR_ASSERTION',

@@ -1,0 +1,16 @@
+2:import { withBusinessAuthorization } from '@/src/auth/http';
+51:  return withBusinessAuthorization(request, ['admin', 'staff', 'trainer', 'member'] as GymRole[], async (tx, requestId, caller) => {
+85:  return withBusinessAuthorization(request, ['admin', 'staff', 'member'] as GymRole[], async (tx, requestId, caller) => {
+90:      return NextResponse.json({ error: 'Invalid JSON.', requestId }, { status: 400 });
+94:      return NextResponse.json({ error: 'Request body must be an object.', requestId }, { status: 400 });
+98:    const memberId = typeof input.memberId === 'number' ? input.memberId : null;
+99:    const trainerId = typeof input.trainerId === 'string' ? input.trainerId : '';
+100:    const date = typeof input.date === 'string' ? input.date : '';
+101:    const startTime = typeof input.startTime === 'string' ? input.startTime : '';
+102:    const endTime = typeof input.endTime === 'string' ? input.endTime : '';
+103:    const notes = typeof input.notes === 'string' ? input.notes.trim() || null : null;
+106:      return NextResponse.json({ error: 'memberId, trainerId, date, startTime, and endTime are required.', requestId }, { status: 400 });
+114:      return NextResponse.json({ error: 'Trainer not found.', requestId }, { status: 404 });
+118:      return NextResponse.json({ error: 'Trainer is not available for booking.', requestId }, { status: 400 });
+127:      return NextResponse.json({ error: 'Time slot not available.', requestId }, { status: 400 });
+166:    return NextResponse.json({ booking: bookingToJson(booking) }, { status: 201 });

@@ -1,0 +1,10 @@
+2:import { withBusinessAuthorization } from '@/src/auth/http';
+42:  return withBusinessAuthorization(request, ['admin', 'staff', 'trainer'] as GymRole[], async (tx, requestId, caller) => {
+83:  return withBusinessAuthorization(request, ['admin', 'staff', 'member'] as GymRole[], async (tx, requestId, caller) => {
+88:      return NextResponse.json({ error: 'Invalid JSON.', requestId }, { status: 400 });
+92:      return NextResponse.json({ error: 'Request body must be an object.', requestId }, { status: 400 });
+96:    const memberId = typeof input.memberId === 'number' ? input.memberId : null;
+99:      return NextResponse.json({ error: 'memberId is required.', requestId }, { status: 400 });
+108:      return NextResponse.json({ error: 'Member not found.', requestId }, { status: 404 });
+124:      }, { status: 409 });
+151:    return NextResponse.json({ checkIn: checkInToJson(checkIn) }, { status: 201 });

@@ -26,20 +26,8 @@ function notificationToJson(n: {
 }
 
 export async function GET(request: NextRequest) {
-  return withBusinessAuthorization(request, ['member', 'admin', 'staff', 'trainer'] as GymRole[], async (tx, requestId) => {
-    const authHeader = request.headers.get('authorization');
-    const accountId = authHeader?.replace(/^Bearer\s+/i, '');
-
-    if (!accountId) {
-      return NextResponse.json({ error: 'Authorization required.', requestId }, { status: 401 });
-    }
-
-    const account = await tx.authUser.findUnique({
-      where: { id: accountId },
-      select: { gymUserId: true },
-    });
-
-    if (!account?.gymUserId) {
+  return withBusinessAuthorization(request, ['member', 'admin', 'staff', 'trainer'] as GymRole[], async (tx, requestId, caller) => {
+    if (!caller.gymUserId) {
       return NextResponse.json({ error: 'Account not linked to gym user.', requestId }, { status: 404 });
     }
 
@@ -48,7 +36,7 @@ export async function GET(request: NextRequest) {
     const limit = Math.min(Math.max(Number(searchParams.get('limit')) || 50, 1), 200);
     const offset = Math.max(Number(searchParams.get('offset')) || 0, 0);
 
-    const where: Prisma.NotificationWhereInput = { userId: account.gymUserId };
+    const where: Prisma.NotificationWhereInput = { userId: caller.gymUserId };
     if (unreadOnly) where.readAt = null;
 
     const [notifications, total, unreadCount] = await Promise.all([
@@ -59,7 +47,7 @@ export async function GET(request: NextRequest) {
         skip: offset,
       }),
       tx.notification.count({ where }),
-      tx.notification.count({ where: { userId: account.gymUserId, readAt: null } }),
+      tx.notification.count({ where: { userId: caller.gymUserId, readAt: null } }),
     ]);
 
     return NextResponse.json({
@@ -73,7 +61,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  return withBusinessAuthorization(request, ['admin', 'staff'] as GymRole[], async (tx, requestId) => {
+  return withBusinessAuthorization(request, ['admin', 'staff'] as GymRole[], async (tx, requestId, caller) => {
     let body: unknown;
     try {
       body = await request.json();
@@ -102,7 +90,7 @@ export async function POST(request: NextRequest) {
 
     await tx.auditEvent.create({
       data: {
-        actor: requestId,
+        actor: caller.accountId,
         action: 'notification.created',
         target: notification.id,
         result: 'success',
@@ -115,20 +103,8 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
-  return withBusinessAuthorization(request, ['member', 'admin', 'staff', 'trainer'] as GymRole[], async (tx, requestId) => {
-    const authHeader = request.headers.get('authorization');
-    const accountId = authHeader?.replace(/^Bearer\s+/i, '');
-
-    if (!accountId) {
-      return NextResponse.json({ error: 'Authorization required.', requestId }, { status: 401 });
-    }
-
-    const account = await tx.authUser.findUnique({
-      where: { id: accountId },
-      select: { gymUserId: true },
-    });
-
-    if (!account?.gymUserId) {
+  return withBusinessAuthorization(request, ['member', 'admin', 'staff', 'trainer'] as GymRole[], async (tx, requestId, caller) => {
+    if (!caller.gymUserId) {
       return NextResponse.json({ error: 'Account not linked to gym user.', requestId }, { status: 404 });
     }
 
@@ -144,7 +120,7 @@ export async function PATCH(request: NextRequest) {
 
     if (action === 'mark-all-read') {
       await tx.notification.updateMany({
-        where: { userId: account.gymUserId, readAt: null },
+        where: { userId: caller.gymUserId, readAt: null },
         data: { readAt: new Date() },
       });
 
@@ -160,7 +136,7 @@ export async function PATCH(request: NextRequest) {
       where: { id: notificationId },
     });
 
-    if (!notification || notification.userId !== account.gymUserId) {
+    if (!notification || notification.userId !== caller.gymUserId) {
       return NextResponse.json({ error: 'Notification not found.', requestId }, { status: 404 });
     }
 

@@ -4,28 +4,18 @@ import type { GymRole } from '@/backend/generated/prisma/client';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ code: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const { code } = await params;
-  return withBusinessAuthorization(request, ['member'] as GymRole[], async (tx, requestId) => {
-    const authHeader = request.headers.get('authorization');
-    const accountId = authHeader?.replace(/^Bearer\s+/i, '');
-
-    if (!accountId) {
-      return NextResponse.json({ error: 'Authorization required.', requestId }, { status: 401 });
-    }
-
-    const account = await tx.authUser.findUnique({
-      where: { id: accountId },
-      select: { gymUserId: true },
-    });
-
-    if (!account?.gymUserId) {
+  const { id } = await params;
+  return withBusinessAuthorization(request, ['member'] as GymRole[], async (tx, requestId, caller) => {
+    if (!caller.gymUserId) {
       return NextResponse.json({ error: 'Account not linked to gym user.', requestId }, { status: 404 });
     }
 
-    const promotion = await tx.promotion.findUnique({
-      where: { code: code.toUpperCase() },
+    // The segment accepts a promotion id or its public code; both share the [id]
+    // slug because Next.js rejects sibling dynamic dirs with different names.
+    const promotion = await tx.promotion.findFirst({
+      where: { OR: [{ id }, { code: id.trim().toUpperCase() }] },
     });
 
     if (!promotion) {
@@ -46,7 +36,7 @@ export async function POST(
     }
 
     const existingClaim = await tx.promotionClaim.findUnique({
-      where: { promotionId_memberId: { promotionId: promotion.id, memberId: account.gymUserId } },
+      where: { promotionId_memberId: { promotionId: promotion.id, memberId: caller.gymUserId } },
     });
 
     if (existingClaim) {
@@ -58,7 +48,7 @@ export async function POST(
     const claim = await tx.promotionClaim.create({
       data: {
         promotionId: promotion.id,
-        memberId: account.gymUserId,
+        memberId: caller.gymUserId,
       },
     });
 
@@ -69,7 +59,7 @@ export async function POST(
 
     await tx.auditEvent.create({
       data: {
-        actor: accountId,
+        actor: caller.accountId,
         action: 'promotion.claimed',
         target: claim.id,
         result: 'success',
@@ -81,7 +71,7 @@ export async function POST(
       claim: {
         id: claim.id,
         promotionId: promotion.id,
-        memberId: account.gymUserId,
+        memberId: caller.gymUserId,
         claimedAt: claim.claimedAt.toISOString(),
       },
       promotion: {

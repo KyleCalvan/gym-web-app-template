@@ -9,7 +9,7 @@ function memberDisplayNumber(id: number): string {
   return `M-${String(id).padStart(4, '0')}`;
 }
 
-function validateMemberInput(body: unknown): { valid: true; data: Prisma.MemberProfileCreateInput } | { valid: false; error: string } {
+function validateMemberInput(body: unknown): { valid: true; data: Omit<Prisma.MemberProfileCreateInput, 'displayNumber'> } | { valid: false; error: string } {
   if (!body || typeof body !== 'object') return { valid: false, error: 'Request body must be an object.' };
   const input = body as Record<string, unknown>;
 
@@ -83,7 +83,7 @@ function memberToJson(profile: {
 }
 
 export async function GET(request: NextRequest) {
-  return withBusinessAuthorization(request, ['admin', 'staff', 'trainer'] as GymRole[], async (tx, requestId) => {
+  return withBusinessAuthorization(request, ['admin', 'staff', 'trainer'] as GymRole[], async (tx, requestId, caller) => {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
     const limit = Math.min(Math.max(Number(searchParams.get('limit')) || 100, 1), 500);
@@ -108,7 +108,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  return withBusinessAuthorization(request, ['admin', 'staff'] as GymRole[], async (tx, requestId) => {
+  return withBusinessAuthorization(request, ['admin', 'staff'] as GymRole[], async (tx, requestId, caller) => {
     let body: unknown;
     try {
       body = await request.json();
@@ -148,7 +148,7 @@ export async function POST(request: NextRequest) {
 
     await tx.auditEvent.create({
       data: {
-        actor: requestId,
+        actor: caller.accountId,
         action: 'member.created',
         target: profile.id,
         result: 'success',

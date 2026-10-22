@@ -25,7 +25,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  return withBusinessAuthorization(request, ['admin', 'staff', 'trainer', 'member'] as GymRole[], async (tx, requestId) => {
+  return withBusinessAuthorization(request, ['admin', 'staff', 'trainer', 'member'] as GymRole[], async (tx, requestId, caller) => {
     const { searchParams } = new URL(request.url);
     const limit = Math.min(Math.max(Number(searchParams.get('limit')) || 50, 1), 200);
     const offset = Math.max(Number(searchParams.get('offset')) || 0, 0);
@@ -49,13 +49,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  return withBusinessAuthorization(request, ['member'] as GymRole[], async (tx, requestId) => {
-    const authHeader = request.headers.get('authorization');
-    const accountId = authHeader?.replace(/^Bearer\s+/i, '');
-
-    if (!accountId) {
-      return NextResponse.json({ error: 'Authorization required.', requestId }, { status: 401 });
-    }
+  return withBusinessAuthorization(request, ['member'] as GymRole[], async (tx, requestId, caller) => {
 
     let body: unknown;
     try {
@@ -113,7 +107,7 @@ export async function POST(
 
     await tx.auditEvent.create({
       data: {
-        actor: accountId,
+        actor: caller.accountId,
         action: 'trainer-review.created',
         target: review.id,
         result: 'success',

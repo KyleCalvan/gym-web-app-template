@@ -1,0 +1,72 @@
+test at tests\integration\application.test.mjs:812:1
+✖ gym domain member profiles are readable, patchable, and admin-deletable over HTTP (391.305ms)
+  AssertionError [ERR_ASSERTION]: {"code":"ACCOUNT_RESTRICTED","message":"Complete the required Account steps before continuing.","requestId":"2c78b5c8-6e55-41e7-921f-448d9cae8c22"}
+  
+  403 !== 200
+  
+      at TestContext.<anonymous> (file:///C:/Users/ruzel/gym-web-app-template/tests/integration/application.test.mjs:822:10)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 403,
+    expected: 200,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\integration\application.test.mjs:845:1
+✖ check-ins enforce one per member per business day and audit the write (188.9396ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  403 !== 400
+  
+      at TestContext.<anonymous> (file:///C:/Users/ruzel/gym-web-app-template/tests/integration/application.test.mjs:853:10)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 403,
+    expected: 400,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\integration\application.test.mjs:871:1
+✖ bookings require a real active trainer and a free slot, then consume the slot (376.2429ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  403 !== 404
+  
+      at TestContext.<anonymous> (file:///C:/Users/ruzel/gym-web-app-template/tests/integration/application.test.mjs:880:10)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 403,
+    expected: 404,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\integration\application.test.mjs:905:1
+✖ promotion publish is admin-only and claiming is idempotent per member (302.8871ms)
+  AssertionError [ERR_ASSERTION]: {"code":"ACCOUNT_RESTRICTED","message":"Complete the required Account steps before continuing.","requestId":"1c713dc2-409e-4e96-92aa-27ffd8accc7e"}
+  
+  403 !== 200
+  
+      at TestContext.<anonymous> (file:///C:/Users/ruzel/gym-web-app-template/tests/integration/application.test.mjs:914:10)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 403,
+    expected: 200,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+EXIT=1

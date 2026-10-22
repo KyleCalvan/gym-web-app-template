@@ -39,7 +39,7 @@ function checkInToJson(c: {
 }
 
 export async function GET(request: NextRequest) {
-  return withBusinessAuthorization(request, ['admin', 'staff', 'trainer'] as GymRole[], async (tx, requestId) => {
+  return withBusinessAuthorization(request, ['admin', 'staff', 'trainer'] as GymRole[], async (tx, requestId, caller) => {
     const { searchParams } = new URL(request.url);
     const date = searchParams.get('date');
     const memberId = searchParams.get('memberId');
@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  return withBusinessAuthorization(request, ['admin', 'staff', 'member'] as GymRole[], async (tx, requestId) => {
+  return withBusinessAuthorization(request, ['admin', 'staff', 'member'] as GymRole[], async (tx, requestId, caller) => {
     let body: unknown;
     try {
       body = await request.json();
@@ -125,23 +125,22 @@ export async function POST(request: NextRequest) {
     }
 
     // Determine source based on auth role
-    const authHeader = request.headers.get('authorization');
-    const accountId = authHeader?.replace(/^Bearer\s+/i, '');
-    const source = accountId ? 'Staff' : 'Self';
+    const isStaff = caller.roles.some(r => r === 'admin' || r === 'staff');
+    const source = isStaff ? 'Staff' : 'Self';
 
     const checkIn = await tx.checkIn.create({
       data: {
         memberId,
         businessDate,
         source: source as CheckInSource,
-        checkedBy: source === 'Staff' ? accountId : null,
+        checkedBy: source === 'Staff' ? caller.accountId : null,
       },
       include: { member: { select: { id: true, email: true, name: true } } },
     });
 
     await tx.auditEvent.create({
       data: {
-        actor: accountId || requestId,
+        actor: caller.accountId,
         action: 'checkin.created',
         target: checkIn.id,
         result: 'success',
