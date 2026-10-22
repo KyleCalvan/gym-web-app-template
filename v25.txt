@@ -1,7 +1,0 @@
-ℹ tests 26
-ℹ pass 25
-ℹ fail 1
-✖ check-ins enforce one per member per business day and audit the write (240.5661ms)
-✖ failing tests:
-✖ check-ins enforce one per member per business day and audit the write (240.5661ms)
-EXIT=1

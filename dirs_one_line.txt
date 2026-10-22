@@ -1,1 +1,0 @@
-      1 auth       2 bookings       1 checkins       1 demo-session       1 gym-plans       2 me       3 members       1 notifications       2 orders       3 promotions       1 qr-destinations       1 staff       2 student-verifications       3 trainers 

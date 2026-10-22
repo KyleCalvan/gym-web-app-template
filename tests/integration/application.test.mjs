@@ -790,22 +790,42 @@ async function seedGymAccount(roles = ['member', 'admin']) {
 async function seedGymDomain(memberGymUserId, trainerGymUserId) {
   // pg uses the extended protocol whenever parameters are bound, and that
   // protocol accepts exactly one statement per call — so these run separately.
+  // Every row is a true upsert, not DO NOTHING: the suite shares one database,
+  // so a fixed fixture id re-seeded for a new account must also clear state a
+  // previous test left behind (e.g. the soft-deleted gm-member from the members
+  // test, or the booked availability from the bookings test).
   await withDatabaseClient(database.env, async (client) => {
     await client.query(`
       INSERT INTO "MemberProfile" ("id", "gymUserId", "displayNumber", "updatedAt")
-        VALUES ('gm-member', $1, 'M-00042', NOW()) ON CONFLICT DO NOTHING
+        VALUES ('gm-member', $1, 'M-00042', NOW())
+      ON CONFLICT ("id") DO UPDATE SET
+        "gymUserId" = EXCLUDED."gymUserId", "displayNumber" = EXCLUDED."displayNumber",
+        "deletedAt" = NULL, "updatedAt" = NOW()
     `, [memberGymUserId]);
     await client.query(`
-      INSERT INTO "TrainerProfile" ("id", "gymUserId", "displayNumber", "sessionRate", "updatedAt")
-        VALUES ('gm-trainer', $1, 'T-00041', 50000, NOW()) ON CONFLICT DO NOTHING
+      INSERT INTO "TrainerProfile" ("id", "gymUserId", "displayNumber", "sessionRate", "status", "updatedAt")
+        VALUES ('gm-trainer', $1, 'T-00041', 50000, 'Active', NOW())
+      ON CONFLICT ("id") DO UPDATE SET
+        "gymUserId" = EXCLUDED."gymUserId", "displayNumber" = EXCLUDED."displayNumber",
+        "sessionRate" = EXCLUDED."sessionRate", "status" = EXCLUDED."status",
+        "deletedAt" = NULL, "updatedAt" = NOW()
     `, [trainerGymUserId]);
     await client.query(`
       INSERT INTO "TrainerAvailability" ("id", "trainerId", "date", "startTime", "endTime", "status", "updatedAt")
-        VALUES ('gm-avail-1', 'gm-trainer', '2026-11-02', '09:00', '10:00', 'available', NOW()) ON CONFLICT DO NOTHING
+        VALUES ('gm-avail-1', 'gm-trainer', '2026-11-02', '09:00', '10:00', 'available', NOW())
+      ON CONFLICT ("id") DO UPDATE SET
+        "trainerId" = EXCLUDED."trainerId", "date" = EXCLUDED."date",
+        "startTime" = EXCLUDED."startTime", "endTime" = EXCLUDED."endTime",
+        "status" = 'available', "updatedAt" = NOW()
     `);
     await client.query(`
       INSERT INTO "Promotion" ("id", "title", "code", "discountType", "discountValue", "validFrom", "validUntil", "status", "updatedAt")
-        VALUES ('gm-promo-1', 'Grand Opening', 'GRANDOPEN', 'Percentage', 10, '2026-01-01', '2099-01-01', 'Draft', NOW()) ON CONFLICT DO NOTHING
+        VALUES ('gm-promo-1', 'Grand Opening', 'GRANDOPEN', 'Percentage', 10, '2026-01-01', '2099-01-01', 'Draft', NOW())
+      ON CONFLICT ("id") DO UPDATE SET
+        "title" = EXCLUDED."title", "code" = EXCLUDED."code",
+        "discountType" = EXCLUDED."discountType", "discountValue" = EXCLUDED."discountValue",
+        "validFrom" = EXCLUDED."validFrom", "validUntil" = EXCLUDED."validUntil",
+        "status" = 'Draft', "redemptions" = 0, "updatedAt" = NOW()
     `);
   });
 }

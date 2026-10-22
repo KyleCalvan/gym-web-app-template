@@ -1,1 +1,0 @@
-tests/integration/application.test.mjs:562:  assert.equal((await foreign.json()).code, 'ORIGIN_REJECTED');
