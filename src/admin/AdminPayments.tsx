@@ -10,13 +10,20 @@ function AdminPayments({ transactions, setTransactions, members = [], today, toa
   const [viewTxn, setViewTxn] = useState(null);
   const [documentType, setDocumentType] = useState('Receipt');
 
-  const confirmRefund = () => {
+  const confirmRefund = async () => {
     if (!showRefund) return;
-    setTransactions(prev => prev.map(t => t.id===showRefund.id ? {...t, status:'Refunded', reason} : t));
-    toast('Transaction ' + showRefund.id + ' refunded — ' + peso(showRefund.amount));
-    addAudit?.('warn', 'Transaction refunded', showRefund.id + ' — ' + showRefund.member + ' (' + peso(showRefund.amount) + ')');
-    setReason('');
-    setShowRefund(null);
+    if (!reason.trim()) { toast('A refund reason is required.'); return; }
+    try {
+      // Persist first — the ledger is the source of truth, local state follows.
+      await refundTransaction(showRefund.id, reason.trim());
+      setTransactions(prev => prev.map(t => t.id===showRefund.id ? {...t, status:'Refunded', reason} : t));
+      toast('Transaction ' + showRefund.id + ' refunded — ' + peso(showRefund.amount));
+      addAudit?.('warn', 'Transaction refunded', showRefund.id + ' — ' + showRefund.member + ' (' + peso(showRefund.amount) + ')');
+      setReason('');
+      setShowRefund(null);
+    } catch (error) {
+      toast('Refund failed — ' + (error instanceof Error ? error.message : 'unknown error'));
+    }
   };
 
   const paid = transactions.filter(t=>t.status==='Paid');

@@ -3,11 +3,6 @@ import { withBusinessAuthorization } from '@/src/auth/http';
 import type { GymRole } from '@/backend/generated/prisma/client';
 import type { Prisma } from '@/backend/generated/prisma/client';
 
-function trainerDisplayNumber(id: string): string {
-  const num = parseInt(id.slice(-4), 16) % 10000;
-  return `T-${String(num).padStart(4, '0')}`;
-}
-
 function trainerToJson(t: {
   id: string;
   gymUserId: number;
@@ -37,7 +32,7 @@ function trainerToJson(t: {
     bio: t.bio,
     sessionRate: t.sessionRate,
     sessionPriceCurrency: t.sessionPriceCurrency,
-    status: t.status,
+    status: t.status === 'OnLeave' ? 'On Leave' : t.status,
     hireDate: t.hireDate?.toISOString() ?? null,
     createdAt: t.createdAt.toISOString(),
     updatedAt: t.updatedAt.toISOString(),
@@ -57,6 +52,7 @@ export async function GET(request: NextRequest) {
 
     const where: Prisma.TrainerProfileWhereInput = {};
     if (status === 'active') where.status = 'Active';
+    else if (status === 'On Leave') where.status = 'OnLeave';
     else if (status) where.status = status as Prisma.EnumTrainerStatusFilter;
 
     const [trainers, total] = await Promise.all([
@@ -126,12 +122,25 @@ export async function POST(request: NextRequest) {
       : [];
     const bio = typeof input.bio === 'string' ? input.bio.trim() || null : null;
 
-    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${'trainer:' + gymUserId}, 0))`;
+    // Serialize display-number allocation across concurrent creates.
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${'trainer:display'}, 0))`;
+
+    // Ask Postgres for the true numeric maximum. Ordering the column as text is
+    // wrong twice over: legacy rows can carry a non-numeric suffix (the old
+    // CUID-derived allocator wrote "T-0NaN", which sorts above "T-0001"), and
+    // text order puts "T-0010" before "T-0009". A collision on the unique
+    // displayNumber surfaces to the client as a 503, so parse numerically.
+    const [{ max }] = await tx.$queryRaw<{ max: number | null }[]>`
+      SELECT MAX(CAST(SUBSTRING("displayNumber" FROM 3) AS INTEGER)) AS max
+      FROM "TrainerProfile"
+      WHERE "displayNumber" ~ '^T-[0-9]+$'
+    `;
+    const displayNumber = `T-${String((max ?? 0) + 1).padStart(4, '0')}`;
 
     const trainer = await tx.trainerProfile.create({
       data: {
         gymUserId,
-        displayNumber: '', // Will be updated
+        displayNumber,
         specialty,
         certifications,
         bio,
@@ -144,14 +153,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    const updated = await tx.trainerProfile.update({
-      where: { id: trainer.id },
-      data: { displayNumber: trainerDisplayNumber(trainer.id) },
-      include: {
-        gymUser: { select: { id: true, email: true, name: true } },
-        reviews: { select: { rating: true } },
-      },
-    });
+    const updated = trainer;
 
     // Ensure trainer role
     const profile = await tx.roleProfile.upsert({

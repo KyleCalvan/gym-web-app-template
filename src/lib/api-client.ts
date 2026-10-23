@@ -646,6 +646,42 @@ export async function fetchTransactions(): Promise<Transaction[]> {
   return toTransactions(await apiFetch('/api/orders?limit=200'));
 }
 
+export interface AuditEntry {
+  id: string;
+  at: string;
+  level: 'info' | 'warn' | 'error';
+  actor: string;
+  actorRole?: string;
+  action: string;
+  details?: string;
+}
+
+/** Reads the persisted AuditEvent ledger that backs the Activity Logs screen. */
+export async function fetchAuditLog(): Promise<AuditEntry[]> {
+  const payload = record(await apiFetch('/api/audit?limit=500'));
+  return arr(payload.entries).map((raw) => {
+    const e = record(raw);
+    return {
+      id: firstString(e.id) ?? '',
+      at: firstString(e.at) ?? '',
+      level: (firstString(e.level) ?? 'info') as AuditEntry['level'],
+      actor: firstString(e.actor) ?? 'system',
+      actorRole: firstString(e.actorRole) ?? undefined,
+      action: firstString(e.action) ?? '',
+      details: firstString(e.details) ?? undefined,
+    };
+  });
+}
+
+/** Refunds the order's most recent successful payment. */
+export async function refundTransaction(orderId: string, reason: string): Promise<void> {
+  await apiFetch(`/api/orders/${encodeURIComponent(orderId)}/refund`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ reason }),
+  });
+}
+
 export async function fetchPromotions(): Promise<Promotion[]> {
   return toPromotions(await apiFetch('/api/promotions?limit=200'));
 }
@@ -923,6 +959,7 @@ export interface WorkspaceSnapshot {
   staff: Staff[] | null;
   checkIns: CheckInRecord[] | null;
   qrDestinations: QrDestination[] | null;
+  auditLog: AuditEntry[] | null;
 }
 
 /**
@@ -942,6 +979,7 @@ export async function fetchWorkspace(): Promise<WorkspaceSnapshot> {
     staff,
     checkIns,
     qrDestinations,
+    auditLog,
   ] = await Promise.all([
     optional(fetchMembers),
     optional(fetchTrainers),
@@ -953,6 +991,7 @@ export async function fetchWorkspace(): Promise<WorkspaceSnapshot> {
     optional(fetchStaff),
     optional(fetchCheckIns),
     optional(fetchQrDestinations),
+    optional(fetchAuditLog),
   ]);
 
   return {
@@ -966,5 +1005,6 @@ export async function fetchWorkspace(): Promise<WorkspaceSnapshot> {
     staff,
     checkIns,
     qrDestinations,
+    auditLog,
   };
 }

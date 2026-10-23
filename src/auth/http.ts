@@ -59,8 +59,11 @@ export async function withBusinessAuthorization(request: NextRequest, roles: Gym
       response.headers.set('x-request-id', requestId);
       response.headers.set('cache-control', 'private, no-store');
       return response;
-    } catch {
+    } catch (error) {
       // Rejected/failed outcomes must survive the rolled-back business write.
+      // The caller gets a generic 503, so without this line the real cause
+      // (enum drift, constraint violation, bad cast) is unrecoverable.
+      console.error(`[${requestId}] business request failed:`, error);
       try {
         await writeAudit(prisma, { actor: authRequestContext.getStore()?.accountId ?? null,
           action: 'business.authorization', target: null, result: 'failed', requestId });

@@ -1,5 +1,0 @@
-OK=false
-REASON=session did not authorize
-STATUS=403
-PAYLOAD={"code":"ACCOUNT_RESTRICTED","message":"Complete the required Account steps before continuing.","requestId":"7a7c04af-cafc-4a0f-bb00-5c69796b40c3"}
-STEPS=1

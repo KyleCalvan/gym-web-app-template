@@ -26,7 +26,7 @@ function staffToJson(s: {
     shift: s.shift,
     phone: s.phone,
     phoneSecondary: s.phoneSecondary,
-    status: s.status,
+    status: s.status === 'OnLeave' ? 'On Leave' : s.status,
     hireDate: s.hireDate?.toISOString() ?? null,
     createdAt: s.createdAt.toISOString(),
     updatedAt: s.updatedAt.toISOString(),
@@ -79,10 +79,12 @@ export async function PATCH(
       data.shift = input.shift;
     }
     if ('status' in input && typeof input.status === 'string') {
-      if (!['Active', 'On Leave', 'Inactive'].includes(input.status)) {
+      // The UI speaks "On Leave"; the StaffStatus enum stores OnLeave.
+      const status = input.status === 'On Leave' ? 'OnLeave' : input.status;
+      if (!['Active', 'OnLeave', 'Inactive'].includes(status)) {
         return NextResponse.json({ error: 'Invalid status. Use Active, On Leave, or Inactive.', requestId }, { status: 400 });
       }
-      data.status = input.status as Prisma.StaffProfileUpdateInput['status'];
+      data.status = status as Prisma.StaffProfileUpdateInput['status'];
     }
     if ('phone' in input) data.phone = typeof input.phone === 'string' ? input.phone.trim() || null : null;
     if ('phoneSecondary' in input) data.phoneSecondary = typeof input.phoneSecondary === 'string' ? input.phoneSecondary.trim() || null : null;

@@ -3,11 +3,6 @@ import { withBusinessAuthorization } from '@/src/auth/http';
 import type { GymRole } from '@/backend/generated/prisma/client';
 import type { Prisma } from '@/backend/generated/prisma/client';
 
-function staffDisplayNumber(id: string): string {
-  const num = parseInt(id.slice(-4), 16) % 10000;
-  return `S-${String(num).padStart(4, '0')}`;
-}
-
 function staffToJson(s: {
   id: string;
   gymUserId: number;
@@ -31,7 +26,7 @@ function staffToJson(s: {
     shift: s.shift,
     phone: s.phone,
     phoneSecondary: s.phoneSecondary,
-    status: s.status,
+    status: s.status === 'OnLeave' ? 'On Leave' : s.status,
     hireDate: s.hireDate?.toISOString() ?? null,
     createdAt: s.createdAt.toISOString(),
     updatedAt: s.updatedAt.toISOString(),
@@ -49,6 +44,7 @@ export async function GET(request: NextRequest) {
 
     const where: Prisma.StaffProfileWhereInput = {};
     if (status === 'active') where.status = 'Active';
+    else if (status === 'On Leave') where.status = 'OnLeave';
     else if (status) where.status = status as Prisma.EnumStaffStatusFilter;
 
     const [staff, total] = await Promise.all([
@@ -117,12 +113,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Staff profile already exists for this user.', requestId }, { status: 409 });
     }
 
-    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${'staff:' + gymUserId}, 0))`;
+    // Serialize display-number allocation across concurrent creates.
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${'staff:display'}, 0))`;
+
+    // Ask Postgres for the true numeric maximum — see the matching note in
+    // app/api/trainers/route.ts. Legacy "S-0NaN" rows sort above "S-0001" in
+    // text order and would hand us an already-taken number (unique violation
+    // surfaces to the client as a 503).
+    const [{ max }] = await tx.$queryRaw<{ max: number | null }[]>`
+      SELECT MAX(CAST(SUBSTRING("displayNumber" FROM 3) AS INTEGER)) AS max
+      FROM "StaffProfile"
+      WHERE "displayNumber" ~ '^S-[0-9]+$'
+    `;
+    const displayNumber = `S-${String((max ?? 0) + 1).padStart(4, '0')}`;
 
     const staff = await tx.staffProfile.create({
       data: {
         gymUserId,
-        displayNumber: '', // Will be updated
+        displayNumber,
         jobRole,
         shift,
         phone: typeof input.phone === 'string' ? input.phone.trim() || null : null,
@@ -133,11 +141,7 @@ export async function POST(request: NextRequest) {
       include: { gymUser: { select: { id: true, email: true, name: true } } },
     });
 
-    const updated = await tx.staffProfile.update({
-      where: { id: staff.id },
-      data: { displayNumber: staffDisplayNumber(staff.id) },
-      include: { gymUser: { select: { id: true, email: true, name: true } } },
-    });
+    const updated = staff;
 
     // Ensure staff role
     const profile = await tx.roleProfile.upsert({

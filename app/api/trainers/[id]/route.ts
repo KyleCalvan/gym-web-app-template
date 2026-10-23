@@ -3,7 +3,7 @@ import { withBusinessAuthorization } from '@/src/auth/http';
 import type { GymRole } from '@/backend/generated/prisma/client';
 import type { Prisma } from '@/backend/generated/prisma/client';
 
-const TRAINER_STATUSES = ['Active', 'On Leave', 'Inactive'] as const;
+const TRAINER_STATUSES = ['Active', 'OnLeave', 'Inactive'] as const;
 
 function trainerToJson(t: {
   id: string;
@@ -34,7 +34,7 @@ function trainerToJson(t: {
     bio: t.bio,
     sessionRate: t.sessionRate,
     sessionPriceCurrency: t.sessionPriceCurrency,
-    status: t.status,
+    status: t.status === 'OnLeave' ? 'On Leave' : t.status,
     hireDate: t.hireDate?.toISOString() ?? null,
     createdAt: t.createdAt.toISOString(),
     updatedAt: t.updatedAt.toISOString(),
@@ -91,13 +91,15 @@ export async function PATCH(
         : [];
     }
     if ('status' in input && typeof input.status === 'string') {
-      if (!TRAINER_STATUSES.includes(input.status as (typeof TRAINER_STATUSES)[number])) {
+      // The UI speaks "On Leave"; the TrainerStatus enum stores OnLeave.
+      const status = input.status === 'On Leave' ? 'OnLeave' : input.status;
+      if (!TRAINER_STATUSES.includes(status as (typeof TRAINER_STATUSES)[number])) {
         return NextResponse.json(
           { error: 'Invalid status. Use Active, On Leave, or Inactive.', requestId },
           { status: 400 },
         );
       }
-      data.status = input.status as Prisma.TrainerProfileUpdateInput['status'];
+      data.status = status as Prisma.TrainerProfileUpdateInput['status'];
     }
 
     // The trainer's display name lives on the canonical User account.
