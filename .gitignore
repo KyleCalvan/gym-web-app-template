@@ -18,3 +18,6 @@ tsconfig.tsbuildinfo
 # Generated from backend/prisma/schema.prisma by npm run db:generate.
 backend/generated/
 backend/prisma/generated/
+
+# Scratch artifacts from verification runs (may contain live session cookies).
+tmp-*
