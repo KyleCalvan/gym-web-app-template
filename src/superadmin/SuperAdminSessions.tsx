@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { useState, useMemo } from 'react';
 import { Table, Modal, Badge, TabbedCard, StatTile } from '../shared';
+import { terminateSession } from '../lib/api-client.ts';
 
 const fmt = (iso) =>
   new Date(iso).toLocaleString('en-US', { month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' });
@@ -20,16 +21,35 @@ function SuperAdminSessions({ activeSessions, setActiveSessions, currentSessionI
     : 'Active'
   );
 
-  const terminateOne = (s) => {
+  const terminateOne = async (s) => {
+    try {
+      // Persist first: deleting the AuthSession row is what actually signs the
+      // device out, so the local list must not pretend otherwise on failure.
+      await terminateSession(s.id);
+    } catch (error) {
+      toast(`Could not terminate — ${s.userName}`);
+      setPendingTerminate(null);
+      return;
+    }
     setActiveSessions((prev) => prev.filter((x) => x.id !== s.id));
     addAudit?.('warn', 'Session terminated', `${s.userName} (${s.role})`);
     toast(`Session terminated — ${s.userName}`);
     setPendingTerminate(null);
   };
 
-  const terminateAllOthers = () => {
-    const count = others.length;
-    setActiveSessions((prev) => prev.filter((x) => x.id === currentSessionId || !x.id));
+  const terminateAllOthers = async () => {
+    const targets = others.filter((s) => Boolean(s.id));
+    const results = await Promise.allSettled(targets.map((s) => terminateSession(s.id)));
+    const revoked = new Set(
+      targets.filter((_, index) => results[index].status === 'fulfilled').map((s) => s.id),
+    );
+    if (revoked.size === 0) {
+      toast('Could not terminate any session');
+      setConfirmAll(false);
+      return;
+    }
+    const count = revoked.size;
+    setActiveSessions((prev) => prev.filter((x) => !revoked.has(x.id)));
     addAudit?.('warn', 'Bulk session termination', `${count} other session(s) terminated`);
     toast(`Terminated ${count} other session${count === 1 ? '' : 's'}`);
     setConfirmAll(false);

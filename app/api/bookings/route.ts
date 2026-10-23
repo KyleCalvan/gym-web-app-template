@@ -119,10 +119,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Trainer is not available for booking.', requestId }, { status: 400 });
     }
 
-    // Admins can assign sessions directly; others need an available slot.
-    const callerRoles = caller.roles;
+    // Admins may assign a session on another member's behalf without a slot,
+    // but booking for themselves is a member action and consumes a real slot.
+    const assigningForOther = caller.roles.includes('admin') && memberId !== caller.gymUserId;
     let availability: { id: string; status: 'available' | 'unavailable' | 'booked' } | null = null;
-    if (!callerRoles.includes('admin')) {
+    if (!assigningForOther) {
       availability = await tx.trainerAvailability.findUnique({
         where: { trainerId_date_startTime_endTime: { trainerId: trainer.id, date, startTime, endTime } },
       });

@@ -11,6 +11,9 @@
  */
 
 import type {
+  ActiveSession,
+  Admin,
+  AdminStatus,
   CheckInRecord,
   Member,
   MemberStatus,
@@ -19,6 +22,7 @@ import type {
   Promotion,
   PromoStatus,
   QrDestination,
+  Role,
   Session,
   SessionStatus,
   Staff,
@@ -520,6 +524,51 @@ export function toCheckIns(payload: unknown): CheckInRecord[] {
   return source.map(toCheckIn);
 }
 
+const ADMIN_STATUSES: AdminStatus[] = ['Active', 'Inactive'];
+const UI_ROLES: Role[] = ['member', 'staff', 'trainer', 'admin', 'superadmin'];
+
+/**
+ * Administrators come from `AssignedRole` rows, not a table of their own, so
+ * the wire shape is flat and already UI-shaped. Normalizing here anyway keeps
+ * the same boundary rule as every other collection.
+ */
+export function toAdmin(payload: unknown): Admin {
+  const wire = record(payload);
+
+  return {
+    id: firstString(wire.id) ?? '',
+    name: firstString(wire.name, wire.email) ?? 'Unnamed administrator',
+    email: firstString(wire.email) ?? '',
+    phone: str(wire.phone) ?? undefined,
+    phoneSecondary: str(wire.phoneSecondary) ?? undefined,
+    status: oneOf(ADMIN_STATUSES, str(wire.status), 'Active'),
+    createdAt: dateOnly(wire.createdAt),
+    avatarUrl: str(wire.avatarUrl) ?? undefined,
+    deletedAt: str(wire.deletedAt),
+  };
+}
+
+export function toAdmins(payload: unknown, key: 'admins' | 'superadmins'): Admin[] {
+  return arr(record(payload)[key]).map(toAdmin);
+}
+
+export function toActiveSession(payload: unknown): ActiveSession {
+  const wire = record(payload);
+
+  return {
+    id: firstString(wire.id) ?? '',
+    userId: firstString(wire.userId) ?? '',
+    userName: firstString(wire.userName, wire.userId) ?? 'Unknown user',
+    role: oneOf(UI_ROLES, str(wire.role), 'member'),
+    loginAt: firstString(wire.loginAt) ?? '',
+    lastActiveAt: firstString(wire.lastActiveAt) ?? '',
+  };
+}
+
+export function toActiveSessions(payload: unknown): ActiveSession[] {
+  return arr(record(payload).sessions).map(toActiveSession);
+}
+
 /* ------------------------------------------------------------------ *
  * Endpoint wrappers
  * ------------------------------------------------------------------ */
@@ -929,6 +978,31 @@ export async function fetchPlans(): Promise<Plan[]> {
 }
 
 /* ------------------------------------------------------------------ *
+ * Accounts and live sessions
+ * ------------------------------------------------------------------ */
+
+export async function fetchAdmins(): Promise<Admin[]> {
+  return toAdmins(await apiFetch('/api/admins'), 'admins');
+}
+
+export async function fetchSuperadmins(): Promise<Admin[]> {
+  return toAdmins(await apiFetch('/api/superadmins'), 'superadmins');
+}
+
+export async function fetchActiveSessions(): Promise<ActiveSession[]> {
+  return toActiveSessions(await apiFetch('/api/sessions'));
+}
+
+/**
+ * Revokes a live session. The row is deleted server-side, so the affected
+ * device is signed out on its next request rather than merely hidden here.
+ * The server refuses to revoke the caller's own session (409).
+ */
+export async function terminateSession(sessionId: string): Promise<void> {
+  await apiFetch(`/api/sessions?id=${encodeURIComponent(sessionId)}`, { method: 'DELETE' });
+}
+
+/* ------------------------------------------------------------------ *
  * Workspace bootstrap
  * ------------------------------------------------------------------ */
 
@@ -960,6 +1034,9 @@ export interface WorkspaceSnapshot {
   checkIns: CheckInRecord[] | null;
   qrDestinations: QrDestination[] | null;
   auditLog: AuditEntry[] | null;
+  admins: Admin[] | null;
+  superadmins: Admin[] | null;
+  activeSessions: ActiveSession[] | null;
 }
 
 /**
@@ -980,6 +1057,9 @@ export async function fetchWorkspace(): Promise<WorkspaceSnapshot> {
     checkIns,
     qrDestinations,
     auditLog,
+    admins,
+    superadmins,
+    activeSessions,
   ] = await Promise.all([
     optional(fetchMembers),
     optional(fetchTrainers),
@@ -992,6 +1072,9 @@ export async function fetchWorkspace(): Promise<WorkspaceSnapshot> {
     optional(fetchCheckIns),
     optional(fetchQrDestinations),
     optional(fetchAuditLog),
+    optional(fetchAdmins),
+    optional(fetchSuperadmins),
+    optional(fetchActiveSessions),
   ]);
 
   return {
@@ -1006,5 +1089,8 @@ export async function fetchWorkspace(): Promise<WorkspaceSnapshot> {
     checkIns,
     qrDestinations,
     auditLog,
+    admins,
+    superadmins,
+    activeSessions,
   };
 }

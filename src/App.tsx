@@ -216,6 +216,9 @@ function DemoApp({ initialLoginTab = 'login' }: { initialLoginTab?: 'login' | 'r
         if (snapshot.staff) setStaff(snapshot.staff);
         if (snapshot.qrDestinations) setQrDestinations(snapshot.qrDestinations);
         if (snapshot.auditLog) setAuditLog(snapshot.auditLog as unknown as AuditLogEntry[]);
+        if (snapshot.admins) setAdmins(snapshot.admins);
+        if (snapshot.superadmins) setSuperadmins(snapshot.superadmins);
+        if (snapshot.activeSessions) setActiveSessions(snapshot.activeSessions);
       })
       .catch((error: unknown) => {
         console.error('Could not load the workspace from the database.', error);
