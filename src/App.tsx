@@ -213,9 +213,15 @@ function DemoApp({ initialLoginTab = 'login' }: { initialLoginTab?: 'login' | 'r
         if (snapshot.transactions) setTransactions(snapshot.transactions);
         if (snapshot.sessions) setSessions(snapshot.sessions);
         if (snapshot.promotions) setPromotions(snapshot.promotions);
+        if (snapshot.notifications) setNotifications(snapshot.notifications);
         if (snapshot.staff) setStaff(snapshot.staff);
         if (snapshot.qrDestinations) setQrDestinations(snapshot.qrDestinations);
         if (snapshot.auditLog) setAuditLog(snapshot.auditLog as unknown as AuditLogEntry[]);
+        if (snapshot.checkIns) {
+          setCheckInHistory(snapshot.checkIns);
+          const todayStr = today();
+          setCheckIns(c => ({ ...c, count: snapshot.checkIns!.filter(ci => ci.date === todayStr).length }));
+        }
         if (snapshot.admins) setAdmins(snapshot.admins);
         if (snapshot.superadmins) setSuperadmins(snapshot.superadmins);
         if (snapshot.activeSessions) setActiveSessions(snapshot.activeSessions);

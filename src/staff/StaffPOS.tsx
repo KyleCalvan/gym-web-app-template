@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react';
 import { Search, ShoppingCart, Trash2, UserRound } from 'lucide-react';
 import { TabbedCard, Field, Select, PaymentSimulationModal } from '../shared';
 import { peso } from '../data.ts';
-import { createSimulatedTransaction, getConfiguredPaymentFee, updateSimulatedTransaction } from '../payments.ts';
+import { getConfiguredPaymentFee } from '../payments.ts';
+import { createOrder, payOrder, resolveGymUserId, type OrderLineInput } from '../lib/api-client.ts';
 import type { Member, PaymentState, Plan, Setter, Transaction } from '../types.ts';
 
 interface StaffPOSProps {
@@ -34,6 +35,7 @@ function StaffPOS({ setTransactions, members, plans, toast, preferredPaymentMeth
   const [memberSearch, setMemberSearch] = useState('');
   const [memberStatus, setMemberStatus] = useState('All');
   const [payment, setPayment] = useState<POSPayment | null>(null);
+  const [charging, setCharging] = useState(false);
 
   const items = useMemo(
     () => (plans || [])
@@ -81,7 +83,7 @@ const addPlan = (item: POSCartItem) => {
     setCart((previous) => [...previous, item]);
   };
 
-  const charge = () => {
+  const charge = async () => {
     if (cart.length === 0) { toast('Cart is empty'); return; }
     if (!cart.every((item) => items.some((available) => available.id === item.id && available.price === item.price))) {
       toast('A plan in the cart is no longer available. Review the cart before checkout.');
@@ -89,27 +91,65 @@ const addPlan = (item: POSCartItem) => {
     }
     if (memberId && !member) { toast('Select an active member or choose walk-in customer.'); return; }
     if (feeError) { toast(feeError); return; }
+    if (charging) return;
+    setCharging(true);
 
-    const memberName = member?.name || 'Walk-in';
-    const today = new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
-    const type = `Membership: ${cart.map((item) => item.planName).join(', ')}`;
-    const transaction = createSimulatedTransaction({ member: memberName, type, amount: total, method, date: today, fees });
-    setTransactions((previous) => [transaction, ...previous]);
-    setPayment({ transactionId: transaction.id, method, amount: total, fees });
+    try {
+      const gymUserId = memberId ? await resolveGymUserId(memberId) : null;
+
+      const lines: OrderLineInput[] = cart.map((item) => ({
+        itemType: isPtItem(item) ? 'PTSession' : 'Membership',
+        itemName: item.name,
+        description: item.planName,
+        quantity: 1,
+        unitPrice: Math.round(item.price * 100),
+      }));
+      if (fees > 0) {
+        lines.push({
+          itemType: 'Other',
+          itemName: 'Payment processing fee',
+          quantity: 1,
+          unitPrice: Math.round(fees * 100),
+        });
+      }
+
+      const order = await createOrder({ source: 'POS', memberId: gymUserId, lines });
+      const paid = await payOrder(order.id, {
+        method: method as 'Cash' | 'GCash' | 'Card',
+        amount: Math.round((total + fees) * 100),
+      });
+
+      const transaction: Transaction = {
+        ...order,
+        method,
+        fees,
+        paymentState: paid.status as PaymentState,
+        status: paid.status === 'Successful' ? 'Paid' : 'Pending',
+        receiptNumber: paid.receiptNumber ?? order.receiptNumber,
+        isSimulated: false,
+      };
+      setTransactions((previous) => [transaction, ...previous]);
+      setPayment({ transactionId: order.id, method, amount: total, fees });
+      toast('Charge recorded — ' + (paid.receiptNumber ?? paid.status));
+    } catch (error) {
+      toast('Charge failed — ' + (error instanceof Error ? error.message : 'unknown error'));
+    } finally {
+      setCharging(false);
+    }
   };
 
   const updatePaymentState = (paymentState: PaymentState) => {
     setTransactions((previous) => previous.map((transaction) => transaction.id === payment?.transactionId
-      ? updateSimulatedTransaction(transaction, paymentState)
+      ? { ...transaction, paymentState }
       : transaction));
   };
 
   const completePayment = (paymentState: 'Successful' | 'Failed') => {
     if (paymentState === 'Successful') {
-      toast('Simulated test sale completed — no real payment was processed.');
+      toast('Sale recorded.');
       setCart([]);
     } else {
-      toast('Simulated payment failed. Sale was not completed.');
+      toast('Payment did not complete.');
     }
   };
 
@@ -257,7 +297,7 @@ const addPlan = (item: POSCartItem) => {
             type="button"
             className="btn btn-signal btn-block staff-pos-charge"
             onClick={charge}
-            disabled={cart.length === 0 || Boolean(feeError)}
+            disabled={cart.length === 0 || Boolean(feeError) || charging}
           >
             Charge {peso(total + fees)}
           </button>

@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { useState } from 'react';
 import { TabbedCard, Table, Badge, Modal, Field, TextInput, Select, Avatar } from '../shared';
+import { createCheckIn, createMember, createMembership, ApiError } from '../lib/api-client.ts';
 
 function StaffMembers({ members, setMembers, plans, setCheckIns, today, toast, addAudit }) {
   const [q, setQ] = useState('');
@@ -8,22 +9,46 @@ function StaffMembers({ members, setMembers, plans, setCheckIns, today, toast, a
   const [showRegister, setShowRegister] = useState(false);
   const [reg, setReg] = useState({name:'', email:'', phone:'', plan:'Premium'});
 
-  const submitRegister = (e) => {
+  const submitRegister = async (e) => {
     e.preventDefault();
     if (!reg.name.trim() || !reg.email.trim()) { toast('Name and email are required'); return; }
-    const id = 'M-' + (1042 + members.length);
-    setMembers(prev => [...prev, {...reg, id, status:'Active', joined: today}]);
-    toast('Member registered — ' + reg.name + ' (' + id + ')');
-    addAudit?.('info', 'Member registered', reg.name + ' (' + id + ')');
-    setReg({name:'', email:'', phone:'', plan:'Premium'});
-    setShowRegister(false);
+    try {
+      const created = await createMember({
+        name: reg.name.trim(),
+        email: reg.email.trim(),
+        phone: reg.phone.trim() || undefined,
+      });
+      if (reg.plan) {
+        try {
+          await createMembership(created.id, { planName: reg.plan });
+        } catch (error) {
+          toast('Member created, but membership assignment failed — ' + (error instanceof Error ? error.message : 'unknown error'));
+        }
+      }
+      setMembers(prev => [...prev, created]);
+      toast('Member registered — ' + created.name + ' (' + created.id + ')');
+      addAudit?.('info', 'Member registered', created.name + ' (' + created.id + ')');
+      setReg({name:'', email:'', phone:'', plan:'Premium'});
+      setShowRegister(false);
+    } catch (error) {
+      toast('Registration failed — ' + (error instanceof Error ? error.message : 'unknown error'));
+    }
   };
 
-  const checkIn = (m) => {
+  const checkIn = async (m) => {
     if (m.status === 'Frozen') { toast('Frozen accounts cannot check in'); return; }
-    setCheckIns(c => ({...c, count: c.count + 1}));
-    toast(m.name + ' checked in');
-    addAudit?.('info', 'Member checked in', m.name + ' (' + m.id + ')');
+    try {
+      await createCheckIn(m.id);
+      setCheckIns(c => ({...c, count: c.count + 1}));
+      toast(m.name + ' checked in');
+      addAudit?.('info', 'Member checked in', m.name + ' (' + m.id + ')');
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 409) {
+        toast(m.name + ' is already checked in today');
+        return;
+      }
+      toast('Check-in failed — ' + (error instanceof Error ? error.message : 'unknown error'));
+    }
   };
 
   const isRegisteredMember = (m) => !m.deletedAt && Number(String(m?.id || '').replace(/\D/g, '')) >= 1042;

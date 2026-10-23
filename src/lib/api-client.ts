@@ -695,6 +695,89 @@ export async function fetchTransactions(): Promise<Transaction[]> {
   return toTransactions(await apiFetch('/api/orders?limit=200'));
 }
 
+export interface OrderLineInput {
+  itemType: 'Membership' | 'PTSession' | 'Merchandise' | 'Other';
+  itemName: string;
+  description?: string;
+  quantity?: number;
+  unitPrice: number; // centavos
+}
+
+export interface CreateOrderInput {
+  source?: 'MemberCheckout' | 'POS' | 'AdminAssignment';
+  memberId?: number | null;
+  lines: OrderLineInput[];
+}
+
+/** Creates an unpaid order. Returns the order as a Transaction for UI display. */
+export async function createOrder(input: CreateOrderInput): Promise<Transaction> {
+  const payload = await apiFetch('/api/orders', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+  return toTransaction(record(payload).order);
+}
+
+export interface PayOrderInput {
+  method: 'Cash' | 'GCash' | 'Card';
+  amount: number; // centavos
+}
+
+export interface PaymentResult {
+  id: string;
+  method: string;
+  amount: number;
+  status: string;
+  receiptNumber?: string;
+  reference?: string;
+}
+
+/** Records a payment against an order. Cash succeeds immediately; GCash/Card may return Pending. */
+export async function payOrder(orderId: string, input: PayOrderInput): Promise<PaymentResult> {
+  const payload = await apiFetch(`/api/orders/${encodeURIComponent(orderId)}/payments`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+  const p = record(record(payload).payment);
+  return {
+    id: firstString(p.id) ?? '',
+    method: firstString(p.method) ?? '',
+    amount: num(p.amount) ?? 0,
+    status: firstString(p.status) ?? 'Pending',
+    receiptNumber: firstString(p.receiptNumber) ?? undefined,
+    reference: firstString(p.reference) ?? undefined,
+  };
+}
+
+/** Creates a check-in for a member. memberId is the display number (e.g., "M-1042"). */
+/** Resolves a member display number ("M-1042") to the numeric gymUserId that write endpoints expect. */
+export async function resolveGymUserId(memberId: string): Promise<number> {
+  const profile = await apiFetch<{ member?: { gymUserId?: number } }>(
+    `/api/members/${encodeURIComponent(memberId)}`,
+  );
+  const gymUserId = profile.member?.gymUserId;
+  if (!gymUserId) throw new ApiError(`Could not resolve member ${memberId}.`, 404);
+  return gymUserId;
+}
+export async function createCheckIn(memberId: string): Promise<{ id: string; date: string; time: string }> {
+  // Resolve display number → gymUserId first (same pattern as bookSession)
+  const profile = await apiFetch<{ member?: { gymUserId?: number } }>(
+    `/api/members/${encodeURIComponent(memberId)}`,
+  );
+  const gymUserId = profile.member?.gymUserId;
+  if (!gymUserId) throw new ApiError(`Could not resolve member ${memberId}.`, 404);
+  const payload = await apiFetch('/api/checkins', {
+    method: 'POST',
+    body: JSON.stringify({ memberId: gymUserId }),
+  });
+  const c = record(record(payload).checkIn);
+  return {
+    id: firstString(c.id) ?? '',
+    date: dateOnly(c.createdAt) ?? '',
+    time: clockTime(c.createdAt) ?? '',
+  };
+}
+
 export interface AuditEntry {
   id: string;
   at: string;
