@@ -16,9 +16,9 @@ import { useToast } from './shared/hooks/useToast.tsx';
 import {
   CURRENT,
   ROLE_LABEL,
-  MEMBERS,
+
   TRAINERS,
-  PLANS,
+
   TRANSACTIONS,
   SESSIONS,
   PROMOTIONS,
@@ -90,7 +90,6 @@ function DemoApp({ initialLoginTab = 'login' }: { initialLoginTab?: 'login' | 'r
   const [transactions, setTransactions]     = useState<Transaction[]>(() => []);
   const [preferredPaymentMethod, setPreferredPaymentMethod] = useState('GCash');
   const [qrDestinations, setQrDestinations] = useState<QrDestination[]>(DEFAULT_QR_DESTINATIONS);
-  const [qrDestinationsLoaded, setQrDestinationsLoaded] = useState(false);
   const [sessions, setSessions]             = useState<Session[]>(() => []);
   const [trainerAvailability, setTrainerAvailability] = useState<TrainerAvailability[]>([]);
   const [trainerAvailabilityLoaded, setTrainerAvailabilityLoaded] = useState(false);
@@ -109,33 +108,6 @@ function DemoApp({ initialLoginTab = 'login' }: { initialLoginTab?: 'login' | 'r
   const [checkIns, setCheckIns]             = useState<CheckIns>({ count: 0, today: today() });
   const [checkInHistory, setCheckInHistory] = useState<CheckInRecord[]>([]);
   const [notifPrefs, setNotifPrefs]         = useState<NotifPrefs>({ email: true, sms: false, reminders: true, promos: false });
-
-  useEffect(() => {
-    try {
-      const saved = window.localStorage.getItem('vinathletics.qrDestinations');
-      if (saved) {
-        const parsed: unknown = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          setQrDestinations(parsed.filter((item): item is QrDestination =>
-            typeof item?.id === 'string' && typeof item?.label === 'string' && typeof item?.url === 'string',
-          ));
-        }
-      }
-    } catch (error) {
-      console.error('Could not load saved gym QR destinations.', error);
-    } finally {
-      setQrDestinationsLoaded(true);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!qrDestinationsLoaded) return;
-    try {
-      window.localStorage.setItem('vinathletics.qrDestinations', JSON.stringify(qrDestinations));
-    } catch (error) {
-      console.error('Could not save gym QR destinations to this browser.', error);
-    }
-  }, [qrDestinations, qrDestinationsLoaded]);
 
   useEffect(() => {
     try {
@@ -242,6 +214,7 @@ function DemoApp({ initialLoginTab = 'login' }: { initialLoginTab?: 'login' | 'r
         if (snapshot.sessions) setSessions(snapshot.sessions);
         if (snapshot.promotions) setPromotions(snapshot.promotions);
         if (snapshot.staff) setStaff(snapshot.staff);
+        if (snapshot.qrDestinations) setQrDestinations(snapshot.qrDestinations);
       })
       .catch((error: unknown) => {
         console.error('Could not load the workspace from the database.', error);

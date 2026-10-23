@@ -2,12 +2,42 @@
 import { useState } from 'react';
 import { TabbedCard, BarChart, Donut, Field, Select } from '../shared';
 import { downloadCSV } from '../shared/utils/csv.ts';
-import { REVENUE_TREND, REVENUE_SOURCE } from '../data.ts';
+
+/** Normalises any wire date (ISO timestamp or YYYY-MM-DD) to a YYYY-MM-DD key. */
+function dayKey(value){
+  if (!value) return '';
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? String(value).slice(0, 10) : parsed.toISOString().slice(0, 10);
+}
 
 function AdminReports({ members, transactions, today, toast }){
   const [dateRange, setDateRange] = useState('Last 7 Days');
   const [category, setCategory] = useState('All');
   const [applied, setApplied] = useState(null);
+
+  // Both charts are computed from the live transaction rows rather than mocks.
+  const paidTransactions = transactions.filter(t=>t.status==='Paid');
+  const revenueTrend = Array.from({length:6}, (_, index) => {
+    const month = new Date();
+    month.setHours(0,0,0,0);
+    month.setDate(1);
+    month.setMonth(month.getMonth() - (5 - index));
+    const key = dayKey(month.toISOString()).slice(0,7);
+    return {
+      m: month.toLocaleDateString('en-US', {month:'short'}),
+      v: paidTransactions.filter(t=>dayKey(t.date).slice(0,7)===key).reduce((sum,t)=>sum+t.amount,0),
+    };
+  });
+  const revenueTrendTotal = revenueTrend.reduce((sum,d)=>sum+d.v,0);
+
+  const sourceColors = ['var(--court)', 'var(--signal)', 'var(--amber)', 'var(--steel)'];
+  const revenueSource = Object.entries(
+    paidTransactions.reduce((acc,t)=>{
+      const key = t.type || 'Other';
+      acc[key] = (acc[key] || 0) + t.amount;
+      return acc;
+    }, {})
+  ).map(([l,v], index) => ({ l, v, color: sourceColors[index % sourceColors.length] }));
 
   const exportCsv = () => {
     const rows = [
@@ -37,10 +67,14 @@ function AdminReports({ members, transactions, today, toast }){
     <>
       <div className="grid grid-2" style={{marginBottom:18}}>
         <TabbedCard title="Revenue Trend — Last 6 Months">
-          <BarChart data={REVENUE_TREND} valueKey="v" labelKey="m" prefix="₱" />
+          {revenueTrendTotal > 0
+            ? <BarChart data={revenueTrend} valueKey="v" labelKey="m" prefix="₱" />
+            : <div style={{fontSize:13.8, color:'var(--steel)', padding:'8px 0'}}>No paid transactions in the last 6 months.</div>}
         </TabbedCard>
         <TabbedCard title="Revenue by Source">
-          <Donut data={REVENUE_SOURCE} />
+          {revenueSource.length > 0
+            ? <Donut data={revenueSource} />
+            : <div style={{fontSize:13.8, color:'var(--steel)', padding:'8px 0'}}>No paid transactions yet.</div>}
         </TabbedCard>
       </div>
       <div className="grid grid-2-1">

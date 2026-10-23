@@ -1,0 +1,36 @@
+NODE_NOW=2026-10-23T11:07:53.601Z
+DB_NOW=2026-10-23T11:07:53.600Z TZ=Asia/Kuala_Lumpur
+TYPE Asset.createdAt=timestamp without time zone
+TYPE AuthSession.createdAt=timestamp without time zone
+TYPE AuthSession.expires=timestamp without time zone
+TYPE AuthSession.lastActiveAt=timestamp without time zone
+TYPE AuthSession.mfaVerifiedAt=timestamp without time zone
+TYPE AuthUser.mfaEnabledAt=timestamp without time zone
+TYPE AuthUser.termsAcceptedAt=timestamp without time zone
+TYPE AuthVerificationToken.expires=timestamp without time zone
+TYPE Booking.createdAt=timestamp without time zone
+TYPE CheckIn.createdAt=timestamp without time zone
+TYPE GymLink.createdAt=timestamp without time zone
+TYPE GymPlan.createdAt=timestamp without time zone
+TYPE MemberMeasurement.createdAt=timestamp without time zone
+TYPE MemberProfile.createdAt=timestamp without time zone
+TYPE Membership.createdAt=timestamp without time zone
+TYPE Notification.createdAt=timestamp without time zone
+TYPE NotificationPreference.createdAt=timestamp without time zone
+TYPE Order.createdAt=timestamp without time zone
+TYPE Payment.createdAt=timestamp without time zone
+TYPE Promotion.createdAt=timestamp without time zone
+TYPE StaffProfile.createdAt=timestamp without time zone
+TYPE StudentVerification.createdAt=timestamp without time zone
+TYPE TrainerAvailability.createdAt=timestamp without time zone
+TYPE TrainerProfile.createdAt=timestamp without time zone
+TYPE TrainerReview.createdAt=timestamp without time zone
+TYPE User.createdAt=timestamp without time zone
+SESS_MFA_TXT=2026-10-23 19:00:11.184
+SESS_MFA_JS=2026-10-23T11:00:11.184Z
+SESS_EXP_TXT=2026-10-24 03:00:11.184 JS=2026-10-23T19:00:11.184Z
+ACC_MFAEN_TXT=2026-10-23 18:00:11.184
+ACC_MFAEN_JS=2026-10-23T10:00:11.184Z
+MFA_GT_NOW=false
+MFA_LT_ENABLED=false
+NEXTSTEPS=[]

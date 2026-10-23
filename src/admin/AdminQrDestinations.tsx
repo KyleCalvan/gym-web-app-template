@@ -1,4 +1,10 @@
 import { useEffect, useState } from 'react';
+import {
+  createQrDestination,
+  deleteQrDestination,
+  fetchQrDestinations,
+  updateQrDestination,
+} from '../lib/api-client.ts';
 import { Field, TabbedCard, TextInput } from '../shared';
 import { DEFAULT_QR_DESTINATIONS, validateQrDestination } from '../qrDestinations.ts';
 import type { QrDestination, ViewProps } from '../types.ts';
@@ -6,8 +12,29 @@ import type { QrDestination, ViewProps } from '../types.ts';
 function AdminQrDestinations({ qrDestinations = DEFAULT_QR_DESTINATIONS, setQrDestinations, toast, addAudit }: ViewProps) {
   const [draft, setDraft] = useState(qrDestinations);
   const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
+  // Ids of rows that already exist in the database, so saving can tell an
+  // update from a create and can delete destinations the admin removed.
+  const [persistedIds, setPersistedIds] = useState<string[]>([]);
 
   useEffect(() => setDraft(qrDestinations), [qrDestinations]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchQrDestinations()
+      .then((list) => {
+        if (cancelled) return;
+        setPersistedIds(list.map((destination) => destination.id));
+        if (list.length > 0) {
+          setDraft(list);
+          setQrDestinations?.(list);
+        }
+      })
+      .catch(() => {
+        // Leave the defaults in place; saving will surface any real failure.
+      });
+    return () => { cancelled = true; };
+  }, []);
 
   const updateDestination = (id: string, url: string) => {
     setDraft((previous) => previous.map((destination) => destination.id === id ? { ...destination, url } : destination));
@@ -27,7 +54,7 @@ function AdminQrDestinations({ qrDestinations = DEFAULT_QR_DESTINATIONS, setQrDe
     setDraft((previous) => previous.filter((destination) => destination.id !== id));
   };
 
-  const save = (event: React.FormEvent) => {
+  const save = async (event: React.FormEvent) => {
     event.preventDefault();
     const configured = draft.filter((destination) => destination.url.trim());
     if (configured.length === 0) {
@@ -49,17 +76,45 @@ function AdminQrDestinations({ qrDestinations = DEFAULT_QR_DESTINATIONS, setQrDe
         return;
       }
     }
-    setQrDestinations?.(draft.map((destination) => ({ ...destination, label: destination.label.trim(), url: destination.url.trim() })));
-    setError('');
-    toast('Gym QR destinations saved in this browser.');
-    addAudit?.('info', 'Gym QR destinations updated', `${configured.length} destinations`);
+    const cleaned = draft
+      .filter((destination) => destination.url.trim())
+      .map((destination) => ({ ...destination, label: destination.label.trim(), url: destination.url.trim() }));
+
+    setSaving(true);
+    try {
+      const kept: string[] = [];
+      for (const destination of cleaned) {
+        if (persistedIds.includes(destination.id)) {
+          await updateQrDestination(destination.id, { label: destination.label, url: destination.url });
+          kept.push(destination.id);
+        } else {
+          const created = await createQrDestination({ label: destination.label, url: destination.url });
+          kept.push(created.id);
+        }
+      }
+      for (const id of persistedIds) {
+        if (!kept.includes(id)) await deleteQrDestination(id);
+      }
+
+      const fresh = await fetchQrDestinations();
+      setPersistedIds(fresh.map((destination) => destination.id));
+      setDraft(fresh);
+      setQrDestinations?.(fresh);
+      setError('');
+      toast('Gym QR destinations saved.');
+      addAudit?.('info', 'Gym QR destinations updated', `${cleaned.length} destinations`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not save the QR destinations.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
     <TabbedCard title="Gym QR Destinations">
       <p className="gym-qr-admin-intro">
         Set the gym’s official public URLs. Only HTTPS destinations are accepted; the Facebook field must point to a Facebook-owned domain.
-        These settings are stored in this browser and can be changed by an administrator.
+        These settings are stored on the gym server and can be changed by an administrator.
       </p>
       <form onSubmit={save}>
         <div className="gym-qr-admin-fields">
@@ -90,7 +145,7 @@ function AdminQrDestinations({ qrDestinations = DEFAULT_QR_DESTINATIONS, setQrDe
         </div>
         <div className="gym-qr-admin-actions">
           <button type="button" className="btn btn-outline" onClick={addDestination}>Add destination</button>
-          <button type="submit" className="btn btn-signal">Validate and Save URLs</button>
+          <button type="submit" className="btn btn-signal" disabled={saving}>{saving ? 'Saving…' : 'Validate and Save URLs'}</button>
         </div>
       </form>
       {error && <p className="gym-qr-error" role="alert">{error}</p>}

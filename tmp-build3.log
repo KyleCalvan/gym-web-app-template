@@ -1,30 +1,17 @@
-
-> vinathletics-gym@1.0.0 build
-> npm run db:generate && next build
-
-
-> vinathletics-gym@1.0.0 db:generate
-> node scripts/prisma.mjs generate
-
-Environment variables loaded from .env
-Prisma schema loaded from backend\prisma\schema.prisma
-
-✔ Generated Prisma Client (v5.22.0) to .\backend\generated\prisma\client in 708ms
-
-Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)
-
-Tip: Want to react to database changes in your app as they happen? Discover how with Pulse: https://pris.ly/tip-1-pulse
-
 ▲ Next.js 16.4.2 (Turbopack)
 - Environments: .env
-✓ Running next.config.mjs took 112ms
+✓ Running next.config.mjs took 44ms
 
   Creating an optimized production build ...
-✓ Compiled successfully in 34.2s
+✓ Compiled successfully in 6.5s
   Running TypeScript ...
-app/api/members/route.ts(95,41): error TS2339: Property 'Params' does not exist on type 'URL'.
-Failed to type check.
-
+  Finished TypeScript in 13.8s ...
+  Collecting page data using 3 workers ...
+  Generating static pages using 3 workers (0/19) ...
+  Generating static pages using 3 workers (4/19) 
+  Generating static pages using 3 workers (9/19) 
+  Generating static pages using 3 workers (14/19) 
+✓ Generating static pages using 3 workers (19/19) in 739ms
 Turbopack build encountered 2 warnings:
 ./backend/generated/prisma/client/index.js:680:20
 Warning: Dynamic filesystem access causes tracing of the whole project
@@ -101,4 +88,42 @@ Import traces:
     ./src/auth/sessions.ts
     ./app/account/page.tsx
 
+
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ƒ /account
+├ ƒ /api/auth/[...nextauth]
+├ ƒ /api/bookings
+├ ƒ /api/bookings/[id]
+├ ƒ /api/checkins
+├ ƒ /api/demo-session
+├ ƒ /api/gym-plans
+├ ƒ /api/me
+├ ƒ /api/me/profile
+├ ƒ /api/members
+├ ƒ /api/members/[id]
+├ ƒ /api/members/[id]/membership
+├ ƒ /api/notifications
+├ ƒ /api/orders
+├ ƒ /api/orders/[id]/payments
+├ ƒ /api/promotions
+├ ƒ /api/promotions/[id]
+├ ƒ /api/promotions/[id]/claim
+├ ƒ /api/qr-destinations
+├ ƒ /api/staff
+├ ƒ /api/staff/[id]
+├ ƒ /api/student-verifications
+├ ƒ /api/student-verifications/[id]
+├ ƒ /api/trainers
+├ ƒ /api/trainers/[id]
+├ ƒ /api/trainers/[id]/availability
+├ ƒ /api/trainers/[id]/reviews
+└ ○ /login
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
 

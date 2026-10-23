@@ -106,8 +106,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'memberId, trainerId, date, startTime, and endTime are required.', requestId }, { status: 400 });
     }
 
-    const trainer = await tx.trainerProfile.findUnique({
-      where: { id: trainerId },
+    // The UI addresses trainers by display number ("T-0004"); accept either.
+    const trainer = await tx.trainerProfile.findFirst({
+      where: { OR: [{ id: trainerId }, { displayNumber: trainerId }] },
       include: { gymUser: { select: { name: true } } },
     });
     if (!trainer) {
@@ -118,13 +119,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Trainer is not available for booking.', requestId }, { status: 400 });
     }
 
-    // Check availability
-    const availability = await tx.trainerAvailability.findUnique({
-      where: { trainerId_date_startTime_endTime: { trainerId, date, startTime, endTime } },
-    });
-
-    if (!availability || availability.status !== 'available') {
-      return NextResponse.json({ error: 'Time slot not available.', requestId }, { status: 400 });
+    // Admins can assign sessions directly; others need an available slot.
+    const callerRoles = caller.roles;
+    let availability: { id: string; status: 'available' | 'unavailable' | 'booked' } | null = null;
+    if (!callerRoles.includes('admin')) {
+      availability = await tx.trainerAvailability.findUnique({
+        where: { trainerId_date_startTime_endTime: { trainerId: trainer.id, date, startTime, endTime } },
+      });
+      if (!availability || availability.status !== 'available') {
+        return NextResponse.json({ error: 'Time slot not available.', requestId }, { status: 400 });
+      }
     }
 
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${'booking:' + trainerId + ':' + date}, 0))`;
@@ -132,7 +136,7 @@ export async function POST(request: NextRequest) {
     const booking = await tx.booking.create({
       data: {
         memberId,
-        trainerId,
+        trainerId: trainer.id,
         date,
         startTime,
         endTime,
@@ -147,11 +151,13 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Mark availability as booked
-    await tx.trainerAvailability.update({
-      where: { id: availability.id },
-      data: { status: 'booked' },
-    });
+    // Mark availability as booked (when a slot was required and found)
+    if (availability) {
+      await tx.trainerAvailability.update({
+        where: { id: availability.id },
+        data: { status: 'booked' },
+      });
+    }
 
     await tx.auditEvent.create({
       data: {

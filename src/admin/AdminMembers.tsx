@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { StatTile, Badge, Table, Modal, Field, TextInput, Select, TabbedCard, Avatar, PaymentSimulationModal } from '../shared';
 import { peso } from '../data.ts';
 import { createSimulatedTransaction, getConfiguredPaymentFee, updateSimulatedTransaction } from '../payments.ts';
+import { createMember, createMembership, createMembershipStatus, fetchMember, removeMember, updateMember } from '../lib/api-client.ts';
 
 function AdminMembers({ members, setMembers, plans, setTransactions, today, toast, addAudit, preferredPaymentMethod = 'GCash' }){
   const [q, setQ] = useState('');
@@ -13,15 +14,25 @@ function AdminMembers({ members, setMembers, plans, setTransactions, today, toas
   const [renewing, setRenewing] = useState(false);
 
   const [reg, setReg] = useState({name:'', email:'', phone:'', plan:'Basic'});
-  const submitRegister = (e) => {
+  const submitRegister = async (e) => {
     e.preventDefault();
     if (!reg.name.trim() || !reg.email.trim()) { toast('Name and email are required'); return; }
-    const id = 'M-' + (1042 + members.length);
-    setMembers(prev => [...prev, {...reg, id, status:'Active', joined: today}]);
-    toast('Member registered — ' + reg.name + ' (' + id + ')');
-    addAudit?.('info', 'Member registered', reg.name + ' (' + id + ')');
-    setReg({name:'', email:'', phone:'', plan:'Basic'});
-    setShowRegister(false);
+    try {
+      const created = await createMember({
+        email: reg.email.trim(),
+        name: reg.name.trim(),
+        phone: reg.phone.trim() || undefined,
+      });
+      if (reg.plan) await createMembership(created.id, { planName: reg.plan });
+      const fresh = await fetchMember(created.id);
+      setMembers(prev => [fresh, ...prev]);
+      toast('Member registered — ' + fresh.name + ' (' + fresh.id + ')');
+      addAudit?.('info', 'Member registered', fresh.name + ' (' + fresh.id + ')');
+      setReg({name:'', email:'', phone:'', plan:'Basic'});
+      setShowRegister(false);
+    } catch (error) {
+      toast('Could not register member — ' + ((error && error.message) || 'request failed'));
+    }
   };
 
   const [edit, setEdit] = useState(null);
@@ -29,13 +40,22 @@ function AdminMembers({ members, setMembers, plans, setTransactions, today, toas
     setEdit({name:selected.name, email:selected.email, phone:selected.phone, plan:selected.plan});
     setEditing(true);
   };
-  const submitEdit = (e) => {
+  const submitEdit = async (e) => {
     e.preventDefault();
-    setMembers(prev => prev.map(m => m.id===selected.id ? {...m, ...edit} : m));
-    setSelected(s => ({...s, ...edit}));
-    setEditing(false);
-    toast('Member updated — ' + edit.name);
-    addAudit?.('info', 'Member updated', edit.name + ' (' + selected.id + ')');
+    try {
+      const saved = await updateMember(selected.id, {
+        phone: edit.phone.trim() || null,
+      });
+      const fresh = await fetchMember(saved.id);
+      setMembers(prev => prev.map(m => m.id === selected.id ? fresh : m));
+      setSelected(fresh);
+      setEditing(false);
+      setEdit(null);
+      toast('Member updated — ' + fresh.name);
+      addAudit?.('info', 'Member updated', fresh.name + ' (' + fresh.id + ')');
+    } catch (error) {
+      toast('Could not update member — ' + ((error && error.message) || 'request failed'));
+    }
   };
 
   const [renewPlan, setRenewPlan] = useState(plans[0]?.name || 'Premium');
@@ -65,16 +85,21 @@ function AdminMembers({ members, setMembers, plans, setTransactions, today, toas
       : tx));
   };
 
-  const completePayment = (paymentState) => {
+  const completePayment = async (paymentState) => {
     if (paymentState !== 'Successful') {
       toast('Simulated payment failed. Membership was not changed.');
       return;
     }
-    const updatedMember = { ...selected, status: 'Active', plan: payment.plan };
-    setMembers(prev => prev.map(m => m.id === payment.memberId ? updatedMember : m));
-    setSelected(updatedMember);
-    toast('Simulated test renewal completed — no real payment was processed (' + peso(payment.amount) + ').');
-    addAudit?.('info', 'Membership renewed', payment.memberName + ' → ' + payment.plan);
+    try {
+      await createMembership(payment.memberId, { planName: payment.plan });
+      const fresh = await fetchMember(payment.memberId);
+      setMembers(prev => prev.map(m => m.id === payment.memberId ? fresh : m));
+      setSelected(fresh);
+      toast('Simulated test renewal completed — no real payment was processed (' + peso(payment.amount) + ').');
+      addAudit?.('info', 'Membership renewed', payment.memberName + ' → ' + payment.plan);
+    } catch (error) {
+      toast('Could not renew membership — ' + ((error && error.message) || 'request failed'));
+    }
   };
 
   const closePayment = () => {
@@ -84,43 +109,60 @@ function AdminMembers({ members, setMembers, plans, setTransactions, today, toas
   // Freeze / Unfreeze flow — modal-deferred so the destructive action has a confirmation step.
   const [pendingFreeze, setPendingFreeze] = useState(null);
   const [pendingUnfreeze, setPendingUnfreeze] = useState(null);
-  const applyFreeze = () => {
-    if (!pendingFreeze) return;
-    setMembers(prev => prev.map(m => m.id===pendingFreeze.id ? {...m, status:'Frozen'} : m));
-    setSelected(s => s && s.id===pendingFreeze.id ? {...s, status:'Frozen'} : s);
-    toast('Account frozen — ' + pendingFreeze.name);
-    addAudit?.('warn', 'Account frozen', pendingFreeze.name + ' (' + pendingFreeze.id + ')');
-    setPendingFreeze(null);
+  const setMembershipStatus = async (member, status) => {
+    const membershipStatus = status === 'Frozen' ? 'Frozen' : 'Active';
+    try {
+      await createMembershipStatus(member.id, membershipStatus);
+      const fresh = await fetchMember(member.id);
+      setMembers(prev => prev.map(m => m.id === member.id ? fresh : m));
+      setSelected(s => (s && s.id === member.id ? fresh : s));
+      toast('Account ' + (membershipStatus === 'Frozen' ? 'frozen' : 'unfrozen') + ' — ' + fresh.name);
+      addAudit?.(membershipStatus === 'Frozen' ? 'warn' : 'info',
+        'Account ' + (membershipStatus === 'Frozen' ? 'frozen' : 'unfrozen'),
+        fresh.name + ' (' + fresh.id + ')');
+    } catch (error) {
+      toast('Could not update account — ' + ((error && error.message) || 'request failed'));
+    }
   };
-  const applyUnfreeze = () => {
+
+  const applyFreeze = async () => {
+    if (!pendingFreeze) return;
+    const target = pendingFreeze;
+    setPendingFreeze(null);
+    await setMembershipStatus(target, 'Frozen');
+  };
+  const applyUnfreeze = async () => {
     if (!pendingUnfreeze) return;
-    setMembers(prev => prev.map(m => m.id===pendingUnfreeze.id ? {...m, status:'Active'} : m));
-    setSelected(s => s && s.id===pendingUnfreeze.id ? {...s, status:'Active'} : s);
-    toast('Account unfrozen — ' + pendingUnfreeze.name);
-    addAudit?.('info', 'Account unfrozen', pendingUnfreeze.name + ' (' + pendingUnfreeze.id + ')');
+    const target = pendingUnfreeze;
     setPendingUnfreeze(null);
+    await setMembershipStatus(target, 'Active');
   };
 
   // Soft-delete (Remove) flow — admins send the member to archive; super admin handles restore/permanent delete.
   const [pendingRemove, setPendingRemove] = useState(null);
-  const applyRemove = () => {
+  const applyRemove = async () => {
     if (!pendingRemove) return;
-    const now = new Date().toISOString();
-    setMembers(prev => prev.map(m => m.id===pendingRemove.id ? {...m, deletedAt: now} : m));
-    toast('Member removed — ' + pendingRemove.name);
-    addAudit?.('warn', 'Member removed (soft)', pendingRemove.name + ' (' + pendingRemove.id + ')');
-    setPendingRemove(null);
-    setSelected(null);
+    const target = pendingRemove;
+    try {
+      const archived = await removeMember(target.id);
+      setMembers(prev => prev.map(m => m.id === target.id ? { ...m, deletedAt: archived.deletedAt || new Date().toISOString() } : m));
+      toast('Member removed — ' + target.name);
+      addAudit?.('warn', 'Member removed (soft)', target.name + ' (' + target.id + ')');
+      setPendingRemove(null);
+      setSelected(null);
+    } catch (error) {
+      toast('Could not remove member — ' + ((error && error.message) || 'request failed'));
+    }
   };
 
   const filtered = members
-    .filter(m => !m.deletedAt && Number(String(m?.id || '').replace(/\D/g, '')) >= 1042)
+    .filter(m => !m.deletedAt)
     .filter(m =>
       (statusF==='All' || m.status===statusF) &&
       (m.name.toLowerCase().includes(q.toLowerCase()) || m.id.toLowerCase().includes(q.toLowerCase()))
     );
 
-  const liveMembers = members.filter(m => !m.deletedAt && Number(String(m?.id || '').replace(/\D/g, '')) >= 1042);
+  const liveMembers = members.filter(m => !m.deletedAt);
   const counts = {
     active: liveMembers.filter(m=>m.status==='Active').length,
     expiring: liveMembers.filter(m=>m.status==='Expiring').length,

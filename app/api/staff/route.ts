@@ -80,12 +80,23 @@ export async function POST(request: NextRequest) {
     }
 
     const input = body as Record<string, unknown>;
-    const gymUserId = typeof input.gymUserId === 'number' ? input.gymUserId : null;
+    let gymUserId = typeof input.gymUserId === 'number' ? input.gymUserId : null;
     const jobRole = typeof input.jobRole === 'string' ? input.jobRole.trim() : '';
     const shift = typeof input.shift === 'string' ? input.shift.trim() : '';
 
-    if (!gymUserId) {
-      return NextResponse.json({ error: 'gymUserId is required.', requestId }, { status: 400 });
+    // Admins may register staff by email alone, same pattern as trainers/members.
+    if (gymUserId === null) {
+      const email = typeof input.email === 'string' ? input.email.trim().toLowerCase() : '';
+      const name = typeof input.name === 'string' ? input.name.trim() : '';
+      if (!email) {
+        return NextResponse.json({ error: 'gymUserId or email is required.', requestId }, { status: 400 });
+      }
+      const user = await tx.user.upsert({
+        where: { email },
+        create: { email, name: name || null },
+        update: name ? { name } : {},
+      });
+      gymUserId = user.id;
     }
 
     if (!['Front Desk', 'Sales', 'Manager'].includes(jobRole)) {

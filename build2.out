@@ -1,51 +1,17 @@
-
-> vinathletics-gym@1.0.0 build
-> npm run db:generate && next build
-
-
-> vinathletics-gym@1.0.0 db:generate
-> node scripts/prisma.mjs generate
-
-Environment variables loaded from .env
-Prisma schema loaded from backend\prisma\schema.prisma
-
-✔ Generated Prisma Client (v5.22.0) to .\backend\generated\prisma\client in 448ms
-
-Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)
-
-Tip: Want to react to database changes in your app as they happen? Discover how with Pulse: https://pris.ly/tip-1-pulse
-
 ▲ Next.js 16.4.2 (Turbopack)
 - Environments: .env
-✓ Running next.config.mjs took 67ms
+✓ Running next.config.mjs took 37ms
 
   Creating an optimized production build ...
-✓ Compiled successfully in 19.3s
+✓ Compiled successfully in 4.8s
   Running TypeScript ...
-
-<--- Last few GCs --->
-
-[13740:00000218820CF000]     6067 ms: Scavenge (interleaved) 205.0 (270.2) -> 194.3 (294.9) MB, pooled: 0 MB, 22.68 / 0.02 ms  (average mu = 0.984, current mu = 0.984) allocation failure; 
-[13740:00000218820CF000]     6369 ms: Scavenge (interleaved) 230.4 (295.4) -> 218.2 (324.1) MB, pooled: 0 MB, 20.82 / 0.02 ms  (average mu = 0.984, current mu = 0.984) allocation failure; 
-
-FATAL ERROR: NewSpace::EnsureCurrentCapacity Allocation failed - JavaScript heap out of memory
------ Native stack trace -----
-
- 1: 00007FF732A13D9F 
- 2: 00007FF73165DCB7 
- 3: 00007FF73145E4F7 
- 4: 00007FF73141ED73 
- 5: 00007FF7314608FA 
- 6: 00007FF73145FF26 
- 7: 00007FF731470E82 
- 8: 00007FF7314709AB 
- 9: 00007FF732D424AD 
-10: 00007FF73145BFC0 
-11: 00007FF7314DFDA9 
-12: 00007FF731053232 
-13: 00000218BA7B75FA 
-Failed to type check.
-
+  Finished TypeScript in 10.9s ...
+  Collecting page data using 3 workers ...
+  Generating static pages using 3 workers (0/19) ...
+  Generating static pages using 3 workers (4/19) 
+  Generating static pages using 3 workers (9/19) 
+  Generating static pages using 3 workers (14/19) 
+✓ Generating static pages using 3 workers (19/19) in 1670ms
 Turbopack build encountered 2 warnings:
 ./backend/generated/prisma/client/index.js:680:20
 Warning: Dynamic filesystem access causes tracing of the whole project
@@ -122,4 +88,40 @@ Import traces:
     ./src/auth/sessions.ts
     ./app/account/page.tsx
 
+
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ƒ /account
+├ ƒ /api/auth/[...nextauth]
+├ ƒ /api/bookings
+├ ƒ /api/bookings/[id]
+├ ƒ /api/checkins
+├ ƒ /api/demo-session
+├ ƒ /api/gym-plans
+├ ƒ /api/me
+├ ƒ /api/me/profile
+├ ƒ /api/members
+├ ƒ /api/members/[id]
+├ ƒ /api/members/[id]/membership
+├ ƒ /api/notifications
+├ ƒ /api/orders
+├ ƒ /api/orders/[id]/payments
+├ ƒ /api/promotions
+├ ƒ /api/promotions/[id]
+├ ƒ /api/promotions/[id]/claim
+├ ƒ /api/qr-destinations
+├ ƒ /api/staff
+├ ƒ /api/student-verifications
+├ ƒ /api/student-verifications/[id]
+├ ƒ /api/trainers
+├ ƒ /api/trainers/[id]/availability
+├ ƒ /api/trainers/[id]/reviews
+└ ○ /login
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
 

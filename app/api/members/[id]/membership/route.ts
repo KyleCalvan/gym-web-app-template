@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withBusinessAuthorization } from '@/src/auth/http';
-import type { GymRole } from '@/backend/generated/prisma/client';
+import type { GymRole, MembershipStatus } from '@/backend/generated/prisma/client';
 import type { Prisma } from '@/backend/generated/prisma/client';
 
 function membershipToJson(m: {
@@ -138,5 +138,79 @@ export async function POST(
     });
 
     return NextResponse.json({ membership: membershipToJson(membership) }, { status: 201 });
+  });
+}
+
+const MEMBERSHIP_STATUSES: MembershipStatus[] = ['Active', 'Expiring', 'Frozen', 'Expired', 'Cancelled'];
+
+/**
+ * Re-status the member's current membership. Freezing stamps frozenAt (keeping
+ * any earlier timestamp) and clearing the freeze removes it again, so
+ * freeze/unfreeze round-trips without losing history.
+ */
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  return withBusinessAuthorization(request, ['admin', 'staff'] as GymRole[], async (tx, requestId, caller) => {
+    const profile = await tx.memberProfile.findUnique({ where: { id } });
+    if (!profile) {
+      return NextResponse.json({ error: 'Member profile not found.', requestId }, { status: 404 });
+    }
+
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: 'Invalid JSON.', requestId }, { status: 400 });
+    }
+
+    if (!body || typeof body !== 'object') {
+      return NextResponse.json({ error: 'Request body must be an object.', requestId }, { status: 400 });
+    }
+
+    const input = body as Record<string, unknown>;
+    const requested = typeof input.status === 'string' ? input.status.trim() : '';
+    const status = MEMBERSHIP_STATUSES.find((candidate) => candidate.toLowerCase() === requested.toLowerCase());
+    if (!status) {
+      return NextResponse.json(
+        { error: 'status must be one of ' + MEMBERSHIP_STATUSES.join(', ') + '.', requestId },
+        { status: 400 },
+      );
+    }
+
+    const latest = await tx.membership.findFirst({
+      where: { memberId: profile.gymUserId },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true, frozenAt: true, frozenReason: true },
+    });
+    if (!latest) {
+      return NextResponse.json({ error: 'This member has no membership to update.', requestId }, { status: 404 });
+    }
+
+    const frozen = status === 'Frozen';
+    const reason = typeof input.reason === 'string' ? input.reason.trim() : '';
+    const membership = await tx.membership.update({
+      where: { id: latest.id },
+      data: {
+        status,
+        frozenAt: frozen ? latest.frozenAt ?? new Date() : null,
+        frozenReason: frozen ? reason || latest.frozenReason : null,
+      },
+      include: { plan: { select: { name: true, price: true, period: true } } },
+    });
+
+    await tx.auditEvent.create({
+      data: {
+        actor: caller.accountId ?? undefined,
+        action: frozen ? 'membership.frozen' : 'membership.status_changed',
+        target: membership.id,
+        result: 'success',
+        requestId,
+      },
+    });
+
+    return NextResponse.json({ membership: membershipToJson(membership) });
   });
 }

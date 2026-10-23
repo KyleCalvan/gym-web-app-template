@@ -91,9 +91,22 @@ export async function POST(request: NextRequest) {
     }
 
     const input = body as Record<string, unknown>;
-    const gymUserId = typeof input.gymUserId === 'number' ? input.gymUserId : null;
+    let gymUserId = typeof input.gymUserId === 'number' ? input.gymUserId : null;
+
+    // Admins may register a trainer by email alone; upsert the canonical user
+    // first so every trainer profile always references a real account.
     if (gymUserId === null) {
-      return NextResponse.json({ error: 'gymUserId is required.', requestId }, { status: 400 });
+      const email = typeof input.email === 'string' ? input.email.trim().toLowerCase() : '';
+      const name = typeof input.name === 'string' ? input.name.trim() : '';
+      if (!email) {
+        return NextResponse.json({ error: 'gymUserId or email is required.', requestId }, { status: 400 });
+      }
+      const user = await tx.user.upsert({
+        where: { email },
+        create: { email, name: name || null },
+        update: name ? { name } : {},
+      });
+      gymUserId = user.id;
     }
 
     const gymUser = await tx.user.findUnique({ where: { id: gymUserId } });

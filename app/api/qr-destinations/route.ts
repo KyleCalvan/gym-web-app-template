@@ -98,15 +98,27 @@ export async function PATCH(request: NextRequest) {
     for (const link of links) {
       const l = link as Record<string, unknown>;
       const id = typeof l.id === 'string' ? l.id : '';
-      const sortOrder = typeof l.sortOrder === 'number' ? l.sortOrder : 0;
+      if (!id) continue;
 
-      if (id) {
-        await tx.gymLink.update({
-          where: { id },
-          data: { sortOrder },
-        });
-      }
+      const data: Prisma.GymLinkUpdateInput = {};
+      if (typeof l.sortOrder === 'number') data.sortOrder = l.sortOrder;
+      if (typeof l.label === 'string') data.label = l.label.trim();
+      if (typeof l.url === 'string') data.url = l.url.trim();
+
+      if (Object.keys(data).length === 0) continue;
+
+      await tx.gymLink.update({ where: { id }, data });
     }
+
+    await tx.auditEvent.create({
+      data: {
+        actor: caller.accountId,
+        action: 'qr-link.updated',
+        target: null,
+        result: 'success',
+        requestId,
+      },
+    });
 
     return NextResponse.json({ success: true });
   });

@@ -1,0 +1,14 @@
+
+> vinathletics-gym@1.0.0 build
+> npm run db:generate && next build
+
+
+> vinathletics-gym@1.0.0 db:generate
+> node scripts/prisma.mjs generate
+
+Environment variables loaded from .env
+Prisma schema loaded from backend\prisma\schema.prisma
+Error: 
+EPERM: operation not permitted, rename 'C:\Users\ruzel\gym-web-app-template\backend\generated\prisma\client\query_engine-windows.dll.node.tmp21476' -> 'C:\Users\ruzel\gym-web-app-template\backend\generated\prisma\client\query_engine-windows.dll.node'
+
+

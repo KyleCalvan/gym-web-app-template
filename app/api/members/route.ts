@@ -29,7 +29,7 @@ type MemberRecord = {
 };
 
 function memberDisplayNumber(id: number): string {
-  return ;
+  return 'M-' + String(id).padStart(4, '0');
 }
 
 function memberToJson(profile: MemberRecord, latestMembership: MembershipSummary | null) {
@@ -48,11 +48,9 @@ function memberToJson(profile: MemberRecord, latestMembership: MembershipSummary
     createdAt: profile.createdAt.toISOString(),
     updatedAt: profile.updatedAt.toISOString(),
     deletedAt: profile.deletedAt?.toISOString() ?? null,
-    user: profile.gymUser ? {
-      id: profile.gymUser.id,
-      email: profile.gymUser.email,
-      name: profile.gymUser.name,
-    } : null,
+    user: profile.gymUser
+      ? { id: profile.gymUser.id, email: profile.gymUser.email, name: profile.gymUser.name }
+      : null,
     plan: latestMembership?.planName ?? null,
     membershipStatus: latestMembership?.status ?? null,
     membershipExpiresAt: latestMembership?.expiresAt.toISOString() ?? null,
@@ -60,6 +58,10 @@ function memberToJson(profile: MemberRecord, latestMembership: MembershipSummary
   };
 }
 
+/**
+ * Memberships hang off the gym user (an Int), not the member profile, so the
+ * newest one per member has to be joined in code rather than through include.
+ */
 async function latestMembershipByMemberId(
   tx: Prisma.TransactionClient,
   memberIds: number[],
@@ -88,7 +90,7 @@ async function latestMembershipByMemberId(
 
 export async function GET(request: NextRequest) {
   return withBusinessAuthorization(request, ['admin', 'staff', 'trainer'] as GymRole[], async (tx) => {
-    const search = new URL(request.url).searchParams;
+    const search = request.nextUrl.searchParams;
     const status = search.get('status');
 
     const where: Prisma.MemberProfileWhereInput = {};
@@ -96,7 +98,10 @@ export async function GET(request: NextRequest) {
 
     const requestedLimit = Number(search.get('limit'));
     const requestedOffset = Number(search.get('offset'));
-    const limit = Math.min(Math.max(Number.isFinite(requestedLimit) && requestedLimit > 0 ? requestedLimit : 100, 1), 500);
+    const limit = Math.min(
+      Math.max(Number.isFinite(requestedLimit) && requestedLimit > 0 ? requestedLimit : 100, 1),
+      500,
+    );
     const offset = Math.max(Number.isFinite(requestedOffset) && requestedOffset > 0 ? requestedOffset : 0, 0);
 
     const [members, total] = await Promise.all([
@@ -110,10 +115,15 @@ export async function GET(request: NextRequest) {
       tx.memberProfile.count({ where }),
     ]);
 
-    const memberships = await latestMembershipByMemberId(tx, members.map((member) => member.gymUserId));
+    const memberships = await latestMembershipByMemberId(
+      tx,
+      members.map((member) => member.gymUserId),
+    );
 
     return NextResponse.json({
-      members: members.map((member) => memberToJson(member, memberships.get(member.gymUserId) ?? null)),
+      members: members.map((member) =>
+        memberToJson(member, memberships.get(member.gymUserId) ?? null),
+      ),
       total,
       limit,
       offset,
@@ -135,14 +145,33 @@ export async function POST(request: NextRequest) {
     }
 
     const input = body as Record<string, unknown>;
-    const gymUserId = typeof input.gymUserId === 'number' ? input.gymUserId : Number(input.gymUserId);
+    let gymUserId = typeof input.gymUserId === 'number' ? input.gymUserId : Number(input.gymUserId);
     if (!Number.isInteger(gymUserId) || gymUserId <= 0) {
-      return NextResponse.json({ error: 'A numeric gymUserId is required.', requestId }, { status: 400 });
+      // The admin Register form collects a name and email rather than an account
+      // id, so resolve the gym account from the email and create it when needed.
+      const email = typeof input.email === 'string' ? input.email.trim().toLowerCase() : '';
+      if (!email) {
+        return NextResponse.json(
+          { error: 'A numeric gymUserId or an email is required.', requestId },
+          { status: 400 },
+        );
+      }
+      const name = typeof input.name === 'string' ? input.name.trim() || null : null;
+      const account = await tx.user.upsert({
+        where: { email },
+        update: {},
+        create: { email, name },
+        select: { id: true },
+      });
+      gymUserId = account.id;
     }
 
     const existing = await tx.memberProfile.findUnique({ where: { gymUserId } });
     if (existing) {
-      return NextResponse.json({ error: 'A member profile already exists for this account.', requestId }, { status: 409 });
+      return NextResponse.json(
+        { error: 'A member profile already exists for this account.', requestId },
+        { status: 409 },
+      );
     }
 
     const gymUser = await tx.user.findUnique({ where: { id: gymUserId }, select: { id: true } });
@@ -158,15 +187,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    await tx.\;
-
     const profile = await tx.memberProfile.create({
       data: {
         gymUserId,
         displayNumber: memberDisplayNumber(gymUserId),
         phone: typeof input.phone === 'string' ? input.phone.trim() || null : null,
-        emergencyContactName: typeof input.emergencyContactName === 'string' ? input.emergencyContactName.trim() || null : null,
-        emergencyContactPhone: typeof input.emergencyContactPhone === 'string' ? input.emergencyContactPhone.trim() || null : null,
+        emergencyContactName:
+          typeof input.emergencyContactName === 'string' ? input.emergencyContactName.trim() || null : null,
+        emergencyContactPhone:
+          typeof input.emergencyContactPhone === 'string' ? input.emergencyContactPhone.trim() || null : null,
         dateOfBirth,
         gender: typeof input.gender === 'string' ? input.gender.trim() || null : null,
         address: typeof input.address === 'string' ? input.address.trim() || null : null,

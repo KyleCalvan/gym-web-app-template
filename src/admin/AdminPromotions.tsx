@@ -3,6 +3,12 @@ import { useMemo, useState } from 'react';
 import { Badge, TabbedCard, Modal, Field, TextInput, Select } from '../shared';
 import { onPickImage } from '../shared/imageUpload.ts';
 import { formatPromotionDate, formatPromotionDiscount } from '../member/promotionEligibility.ts';
+import {
+  createPromotion,
+  deletePromotion as deletePromotionRequest,
+  fetchPromotions,
+  updatePromotion,
+} from '../lib/api-client.ts';
 import type { Promotion, ViewProps } from '../types.ts';
 
 const formatDate = (value) => value ? formatPromotionDate(value) : '';
@@ -36,33 +42,48 @@ function AdminPromotions({ promotions, setPromotions, plans, toast, addAudit }: 
     [promotions, filter, today],
   );
 
-  const togglePublish = (id) => {
-    setPromotions(prev => prev.map(p => p.id===id ? {...p, status: p.status==='Published' ? 'Draft' : 'Published'} : p));
-    toast('Promotion status updated');
+  const togglePublish = async (id) => {
+    const current = promotions.find(p => p.id === id);
+    const action = current && current.status === 'Published' ? 'draft' : 'publish';
+    try {
+      await updatePromotion(id, { action });
+      setPromotions(await fetchPromotions());
+      toast(action === 'publish' ? 'Promotion published' : 'Promotion moved to draft');
+      addAudit?.('info', action === 'publish' ? 'Promotion published' : 'Promotion unpublished', current ? current.title : id);
+    } catch (error) {
+      toast('Could not update the promotion — ' + ((error && error.message) || 'request failed'));
+    }
   };
 
-  const submitNew = (e) => {
+  const submitNew = async (e) => {
     e.preventDefault();
     if (!form.title.trim() || !form.validFrom || !form.validUntil) { toast('Title and validity dates required'); return; }
     if (form.validFrom > form.validUntil) { toast('The end date must be on or after the start date'); return; }
-    const id = 'PROMO-0' + (promotions.length + 1);
-    const validFrom = form.validFrom;
-    const validUntil = form.validUntil;
-    const newPromo = {
-      id, title: form.title.trim(),
-      discountType: form.discountType, discount: form.discountValue || 'Custom',
-      description: form.description.trim(),
-      validFrom, validUntil, plan: form.applicablePlan,
-      code: form.code || ('AUTO' + Date.now().toString().slice(-5)),
-      maxRedemptions: Number(form.maxRedemptions) || 0,
-      redemptions: 0,
-      minSpend: Number(form.minSpend) || 0,
-      status: 'Draft',
-      imageUrl: form.imageUrl.trim() || '/gym-interior.jpg',
-    };
-    setPromotions(prev => [...prev, newPromo]);
-    toast('Promotion created — ' + newPromo.title);
-    addAudit?.('info', 'Promotion created', newPromo.title + ' (' + id + ')');
+    const code = form.code.trim().toUpperCase() || ('AUTO' + Date.now().toString().slice(-5));
+    const discountType = form.discountType === 'Fixed Amount' ? 'Fixed' : form.discountType === 'Bundle' ? 'Bundle' : 'Percentage';
+    const discountValue = Number(String(form.discountValue).replace(/[^0-9.]/g, '')) || 0;
+    const planNames = form.applicablePlan && form.applicablePlan !== 'Any Plan' ? [form.applicablePlan] : [];
+    try {
+      await createPromotion({
+        title: form.title.trim(),
+        code,
+        discountType,
+        discountValue,
+        validFrom: form.validFrom,
+        validUntil: form.validUntil,
+        description: form.description.trim() || null,
+        planNames,
+        minSpendCentavos: Math.round((Number(form.minSpend) || 0) * 100),
+        maxRedemptions: Number(form.maxRedemptions) || null,
+        imageUrl: form.imageUrl.trim() || null,
+      });
+      setPromotions(await fetchPromotions());
+      toast('Promotion created — ' + form.title.trim());
+      addAudit?.('info', 'Promotion created', form.title.trim() + ' (' + code + ')');
+    } catch (error) {
+      toast('Could not create the promotion — ' + ((error && error.message) || 'request failed'));
+      return;
+    }
     setForm({title:'', discountType:'Percentage', discountValue:'', validFrom:'', validUntil:'', applicablePlan:'Any Plan', description:'', maxRedemptions:'', minSpend:'', code:'', imageUrl:''});
     setShowCreate(false);
   };
@@ -80,11 +101,25 @@ function AdminPromotions({ promotions, setPromotions, plans, toast, addAudit }: 
       imageUrl: p.imageUrl || '',
     });
   };
-  const submitEdit = (e) => {
+  const submitEdit = async (e) => {
     e.preventDefault();
     if (!editForm.title.trim() || !editForm.validFrom || !editForm.validUntil) { toast('Title and validity dates are required'); return; }
     if (editForm.validFrom > editForm.validUntil) { toast('The end date must be on or after the start date'); return; }
-    setPromotions(prev => prev.map(p => p.id===editing.id ? {...p, ...editForm} : p));
+    try {
+      await updatePromotion(editing.id, {
+        title: String(editForm.title ?? '').trim() || undefined,
+        description: String(editForm.description ?? '').trim() || null,
+        discountValue: Number(String(editForm.discount ?? '').replace(/[^0-9.]/g, '')) || undefined,
+        validFrom: editForm.validFrom,
+        validUntil: editForm.validUntil,
+        maxRedemptions: Number(editForm.maxRedemptions) || null,
+        imageUrl: String(editForm.imageUrl ?? '').trim() || null,
+      });
+      setPromotions(await fetchPromotions());
+    } catch (error) {
+      toast('Could not save the promotion — ' + ((error && error.message) || 'request failed'));
+      return;
+    }
     toast('Promotion updated — ' + editForm.title);
     addAudit?.('info', 'Promotion updated', editForm.title + ' (' + editing.id + ')');
     setEditing(null); setEditForm(null);
@@ -92,9 +127,15 @@ function AdminPromotions({ promotions, setPromotions, plans, toast, addAudit }: 
 
   ;
 
-  const deletePromotion = () => {
+  const deletePromotion = async () => {
     if (!pendingDelete) return;
-    setPromotions((prev) => prev.filter((promotion) => promotion.id !== pendingDelete.id));
+    try {
+      await deletePromotionRequest(pendingDelete.id);
+      setPromotions(await fetchPromotions());
+    } catch (error) {
+      toast('Could not delete the promotion — ' + ((error && error.message) || 'request failed'));
+      return;
+    }
     addAudit?.('warn', 'Promotion deleted', `${pendingDelete.title} (${pendingDelete.id})`);
     toast(`Promotion deleted — ${pendingDelete.title}`);
     setPendingDelete(null);

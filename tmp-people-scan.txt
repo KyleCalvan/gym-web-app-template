@@ -1,0 +1,10 @@
+L24:     setTrainers(prev => prev.map(t => t.id===editing.id ? {...t, ...editForm, sessionPrice: Number(editForm.sessionPrice)} : t));
+L34:     const newT = {
+L39:     setTrainers(prev => [...prev, newT]);
+L56:     setSessions(prev => [...prev, {id, member: member.name, trainer: trainer.name, date, time, type:'Custom', status:'Pending', paid:false, amount: trainer.sessionPrice}]);
+L75:     setStaff(prev => prev.map(s => s.id === staffEditForm.id ? staffEditForm : s));
+L94:     setStaff(prev => [...prev, newS]);
+L101:     const now = new Date().toISOString();
+L102:     setStaff(prev => prev.map(x => x.id === s.id ? { ...x, deletedAt: now } : x));
+L108:     const now = new Date().toISOString();
+L109:     setTrainers(prev => prev.map(x => x.id === t.id ? { ...x, deletedAt: now } : x));

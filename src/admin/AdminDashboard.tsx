@@ -1,7 +1,14 @@
 // @ts-nocheck
 import { StatTile, Badge, BarChart, Donut, Table, TabbedCard } from '../shared';
 import { downloadCSV } from '../shared/utils/csv.ts';
-import { REVENUE_7D, MEMBERSHIP_DIST, peso } from '../data.ts';
+import { peso } from '../data.ts';
+
+/** Normalises any wire date (ISO timestamp or YYYY-MM-DD) to a YYYY-MM-DD key. */
+function dayKey(value){
+  if (!value) return '';
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? String(value).slice(0, 10) : parsed.toISOString().slice(0, 10);
+}
 
 function AdminDashboard({ onNav, members, trainers, transactions, sessions, promotions, today, toast }){
   const published = promotions.filter(p=>p.status==='Published');
@@ -13,7 +20,33 @@ function AdminDashboard({ onNav, members, trainers, transactions, sessions, prom
   const revenueMtd = paid.reduce((a,t)=>a+t.amount,0);
   const activeTrainers = liveTrainers.filter(t=>t.status==='Active').length;
   const today2 = new Date().toLocaleDateString('en-US', {month:'short', day:'2-digit', year:'numeric'});
-  const sessionsToday = sessions.filter(s=>s.date===today2).length;
+  const todayKey = dayKey(new Date().toISOString());
+  const sessionsToday = sessions.filter(s=>dayKey(s.date)===todayKey).length;
+
+  // Derived from live transactions, not mocks — the last 7 calendar days of paid revenue.
+  const revenue7d = Array.from({length:7}, (_, index) => {
+    const day = new Date();
+    day.setHours(0,0,0,0);
+    day.setDate(day.getDate() - (6 - index));
+    const key = dayKey(day.toISOString());
+    return {
+      d: day.toLocaleDateString('en-US', {month:'short', day:'2-digit'}),
+      v: paid.filter(t=>dayKey(t.date)===key).reduce((sum,t)=>sum+t.amount,0),
+    };
+  });
+  const revenue7dTotal = revenue7d.reduce((sum,d)=>sum+d.v,0);
+
+  // Membership distribution straight off the live member rows.
+  const membershipDist = [
+    { l: 'Active', color: 'var(--court)' },
+    { l: 'Expiring', color: 'var(--amber)' },
+    { l: 'Frozen', color: 'var(--steel)' },
+    { l: 'Expired', color: 'var(--signal)' },
+  ].map(({ l, color }) => ({
+    l,
+    color,
+    v: liveMembers.filter(m=>m.status===l).length,
+  })).filter(d=>d.v>0);
 
   const exportReport = () => {
     const rows = [
@@ -67,10 +100,14 @@ function AdminDashboard({ onNav, members, trainers, transactions, sessions, prom
 
       <div className="grid grid-2" style={{marginBottom:18}}>
         <TabbedCard title="Revenue — Last 7 Days">
-          <BarChart data={REVENUE_7D} valueKey="v" labelKey="d" prefix="₱" />
+          {revenue7dTotal > 0
+            ? <BarChart data={revenue7d} valueKey="v" labelKey="d" prefix="₱" />
+            : <div style={{fontSize:13.8, color:'var(--steel)', padding:'8px 0'}}>No paid transactions in the last 7 days.</div>}
         </TabbedCard>
         <TabbedCard title="Membership Distribution">
-          <Donut data={MEMBERSHIP_DIST} />
+          {membershipDist.length > 0
+            ? <Donut data={membershipDist} />
+            : <div style={{fontSize:13.8, color:'var(--steel)', padding:'8px 0'}}>No members yet.</div>}
         </TabbedCard>
       </div>
 

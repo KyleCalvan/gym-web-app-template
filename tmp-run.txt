@@ -1,0 +1,23 @@
+OK=false
+FAILS=1
+STEPS=19
+  200 trainers GET (probe)
+  201 trainers POST
+  200 trainers PATCH (by displayNumber)
+  200 trainers GET (after create/patch)
+  201 staff POST
+  500 staff PATCH (by displayNumber)
+  200 staff DELETE (soft)
+  200 staff GET (after)
+  200 members GET
+  200 member GET (detail)
+  201 bookings POST (admin, no availability row)
+  200 bookings GET
+  200 qr GET (before)
+  201 qr POST
+  200 qr PATCH (label+url)
+  200 qr GET (after patch)
+  200 qr DELETE
+  200 qr GET (after delete)
+  200 trainers DELETE (cleanup)
+  FAIL staff PATCH (by displayNumber) 500 "<!DOCTYPE html><html><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><style data-next-hide-fouc=\"true\">body{display:none}</style><noscript data-next-hide-fouc=\"true\"><styl"

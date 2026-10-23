@@ -1,6 +1,18 @@
 // @ts-nocheck
 import { useState } from 'react';
 import { Avatar, Badge, Table, TabbedCard, Modal, Field, TextInput, Select } from '../shared';
+import {
+  bookSession,
+  createStaff,
+  createTrainer,
+  fetchSessions,
+  fetchStaff,
+  fetchTrainers,
+  removeStaff as removeStaffApi,
+  removeTrainer as removeTrainerApi,
+  updateStaff,
+  updateTrainer,
+} from '../lib/api-client.ts';
 import type { Staff, StaffRole, StaffShift, StaffStatus } from '../types.ts';
 
 function AdminPeople({ trainers, setTrainers, staff, setStaff, members, sessions, setSessions, toast, addAudit }){
@@ -9,7 +21,7 @@ function AdminPeople({ trainers, setTrainers, staff, setStaff, members, sessions
   const [editing, setEditing] = useState(null);
   const [editForm, setEditForm] = useState(null);
   const [adding, setAdding] = useState(false);
-  const [addForm, setAddForm] = useState({name:'', specialty:'', certs:'', sessionPrice:'900', status:'Active'});
+  const [addForm, setAddForm] = useState({name:'', email:'', specialty:'', certs:'', sessionPrice:'900', status:'Active'});
   const [viewing, setViewing] = useState(null);
   const [assignForm, setAssignForm] = useState({trainerId:trainers[0]?.id||'', memberId:members[0]?.id||'', dateTime:''});
   const [pendingTrainerRemove, setPendingTrainerRemove] = useState(null);
@@ -19,43 +31,68 @@ function AdminPeople({ trainers, setTrainers, staff, setStaff, members, sessions
     setEditing(t);
     setEditForm({name:t.name, specialty:t.specialty, certs:t.certs, sessionPrice:String(t.sessionPrice), status:t.status});
   };
-  const submitEdit = (e) => {
+  const submitEdit = async (e) => {
     e.preventDefault();
-    setTrainers(prev => prev.map(t => t.id===editing.id ? {...t, ...editForm, sessionPrice: Number(editForm.sessionPrice)} : t));
+    try {
+      await updateTrainer(editing.id, {
+        name: editForm.name,
+        specialty: editForm.specialty,
+        sessionRate: Math.round((Number(editForm.sessionPrice) || 0) * 100),
+        status: editForm.status,
+        certifications: editForm.certs ? editForm.certs.split(',').map((c) => c.trim()).filter(Boolean) : [],
+      });
+      setTrainers(await fetchTrainers());
+    } catch (error) {
+      toast('Could not update the trainer — ' + ((error && error.message) || 'request failed'));
+      return;
+    }
     toast('Trainer updated — ' + editForm.name);
     addAudit?.('info', 'Trainer updated', editForm.name);
     setEditing(null); setEditForm(null);
   };
 
-  const submitAdd = (e) => {
+  const submitAdd = async (e) => {
     e.preventDefault();
     if (!addForm.name.trim()) { toast('Trainer name is required'); return; }
-    const id = 'T-0' + (trainers.length + 1);
-    const newT = {
-      id, name: addForm.name.trim(), specialty: addForm.specialty || 'General',
-      certs: addForm.certs || '', rating: 0, sessionsWeek: 0,
-      status: addForm.status, sessionPrice: Number(addForm.sessionPrice) || 900,
-    };
-    setTrainers(prev => [...prev, newT]);
-    toast('Trainer added — ' + newT.name);
-    addAudit?.('info', 'Trainer registered', newT.name + ' (' + id + ')');
+    if (!addForm.email.trim()) { toast('Trainer email is required to create the account'); return; }
+    try {
+      await createTrainer({
+        name: addForm.name.trim(),
+        email: addForm.email.trim(),
+        specialty: addForm.specialty || 'General',
+        certifications: addForm.certs ? addForm.certs.split(',').map((c) => c.trim()).filter(Boolean) : [],
+        sessionRate: Math.round((Number(addForm.sessionPrice) || 900) * 100),
+      });
+      setTrainers(await fetchTrainers());
+    } catch (error) {
+      toast('Could not add the trainer — ' + ((error && error.message) || 'request failed'));
+      return;
+    }
+    toast('Trainer added — ' + addForm.name.trim());
+    addAudit?.('info', 'Trainer registered', addForm.name.trim());
     setAdding(false);
-    setAddForm({name:'', specialty:'', certs:'', sessionPrice:'900', status:'Active'});
+    setAddForm({name:'', email:'', specialty:'', certs:'', sessionPrice:'900', status:'Active'});
   };
 
-  const submitAssign = (e) => {
+  const submitAssign = async (e) => {
     e.preventDefault();
     if (!assignForm.trainerId || !assignForm.memberId || !assignForm.dateTime) { toast('All fields required'); return; }
     const trainer = trainers.find(t=>t.id===assignForm.trainerId);
     const member = members.find(m=>m.id===assignForm.memberId);
-    const dt = new Date(assignForm.dateTime);
-    if (isNaN(dt)) { toast('Invalid date'); return; }
-    const date = dt.toLocaleDateString('en-US', {month:'short', day:'2-digit', year:'numeric'});
-    const time = dt.toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit'});
-    const id = 'S-' + (401 + sessions.length);
-    setSessions(prev => [...prev, {id, member: member.name, trainer: trainer.name, date, time, type:'Custom', status:'Pending', paid:false, amount: trainer.sessionPrice}]);
-    toast('Session assigned — ' + trainer.name + ' ↔ ' + member.name);
-    addAudit?.('info', 'Session assigned', trainer.name + ' ↔ ' + member.name);
+    if (isNaN(new Date(assignForm.dateTime))) { toast('Invalid date'); return; }
+    try {
+      await bookSession({
+        memberId: assignForm.memberId,
+        trainerId: assignForm.trainerId,
+        startsAt: assignForm.dateTime,
+      });
+      setSessions(await fetchSessions());
+    } catch (error) {
+      toast('Could not assign the session — ' + ((error && error.message) || 'request failed'));
+      return;
+    }
+    toast('Session assigned — ' + (trainer?.name ?? '') + ' ↔ ' + (member?.name ?? ''));
+    addAudit?.('info', 'Session assigned', (trainer?.name ?? '') + ' ↔ ' + (member?.name ?? ''));
     setAssignForm({trainerId:trainers[0]?.id||'', memberId:members[0]?.id||'', dateTime:''});
   };
 
@@ -69,44 +106,69 @@ function AdminPeople({ trainers, setTrainers, staff, setStaff, members, sessions
     setStaffEditing(s);
     setStaffEditForm({...s});
   };
-  const submitStaffEdit = (e: React.FormEvent) => {
+  const submitStaffEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!staffEditForm) return;
-    setStaff(prev => prev.map(s => s.id === staffEditForm.id ? staffEditForm : s));
+    try {
+      await updateStaff(staffEditForm.id, {
+        name: staffEditForm.name,
+        jobRole: staffEditForm.role,
+        shift: staffEditForm.shift,
+        status: staffEditForm.status,
+        phone: staffEditForm.phone,
+        phoneSecondary: staffEditForm.phoneSecondary ?? null,
+      });
+      setStaff(await fetchStaff());
+    } catch (error) {
+      toast('Could not update the staff member — ' + ((error && error.message) || 'request failed'));
+      return;
+    }
     toast('Staff updated — ' + staffEditForm.name);
     addAudit?.('info', 'Staff updated', staffEditForm.name);
     setStaffEditing(null); setStaffEditForm(null);
   };
-  const submitStaffAdd = (e: React.FormEvent) => {
+  const submitStaffAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!staffAddForm.name.trim()) { toast('Staff name is required'); return; }
-    const id = 'S-' + String(staff.length + 1).padStart(2, '0');
-    const newS: Staff = {
-      id,
-      name: staffAddForm.name.trim(),
-      role: staffAddForm.role,
-      shift: staffAddForm.shift,
-      status: staffAddForm.status,
-      email: staffAddForm.email.trim(),
-      phone: staffAddForm.phone.trim(),
-      hireDate: new Date().toLocaleDateString('en-US', {month:'short', day:'2-digit', year:'numeric'}),
-    };
-    setStaff(prev => [...prev, newS]);
-    toast('Staff added — ' + newS.name);
-    addAudit?.('info', 'Staff registered', newS.name + ' (' + id + ')');
+    if (!staffAddForm.email.trim()) { toast('Staff email is required to create the account'); return; }
+    try {
+      await createStaff({
+        name: staffAddForm.name.trim(),
+        email: staffAddForm.email.trim(),
+        jobRole: staffAddForm.role,
+        shift: staffAddForm.shift,
+        phone: staffAddForm.phone.trim() || undefined,
+      });
+      setStaff(await fetchStaff());
+    } catch (error) {
+      toast('Could not add the staff member — ' + ((error && error.message) || 'request failed'));
+      return;
+    }
+    toast('Staff added — ' + staffAddForm.name.trim());
+    addAudit?.('info', 'Staff registered', staffAddForm.name.trim());
     setStaffAdding(false);
     setStaffAddForm({name:'', role:'Front Desk', shift:'Morning', email:'', phone:'', status:'Active'});
   };
-  const removeStaff = (s: Staff) => {
-    const now = new Date().toISOString();
-    setStaff(prev => prev.map(x => x.id === s.id ? { ...x, deletedAt: now } : x));
+  const removeStaff = async (s: Staff) => {
+    try {
+      await removeStaffApi(s.id);
+      setStaff(await fetchStaff());
+    } catch (error) {
+      toast('Could not remove the staff member — ' + ((error && error.message) || 'request failed'));
+      return;
+    }
     toast('Staff removed — ' + s.name);
     addAudit?.('warn', 'Staff removed (soft)', s.name + ' (' + s.id + ')');
     setPendingStaffRemove(null);
   };
-  const removeTrainer = (t) => {
-    const now = new Date().toISOString();
-    setTrainers(prev => prev.map(x => x.id === t.id ? { ...x, deletedAt: now } : x));
+  const removeTrainer = async (t) => {
+    try {
+      await removeTrainerApi(t.id);
+      setTrainers(await fetchTrainers());
+    } catch (error) {
+      toast('Could not remove the trainer — ' + ((error && error.message) || 'request failed'));
+      return;
+    }
     toast('Trainer removed — ' + t.name);
     addAudit?.('warn', 'Trainer removed (soft)', t.name + ' (' + t.id + ')');
     setPendingTrainerRemove(null);
@@ -254,6 +316,7 @@ function AdminPeople({ trainers, setTrainers, staff, setStaff, members, sessions
         <Modal title="Add Trainer" onClose={()=>setAdding(false)}>
           <form onSubmit={submitAdd}>
             <Field label="Full Name"><TextInput required value={addForm.name} onChange={v=>setAddForm(f=>({...f, name:v}))} /></Field>
+            <Field label="Email"><TextInput type="email" required placeholder="name@vinathletics.gym" value={addForm.email} onChange={v=>setAddForm(f=>({...f, email:v}))} /></Field>
             <Field label="Specialty"><TextInput value={addForm.specialty} onChange={v=>setAddForm(f=>({...f, specialty:v}))} placeholder="e.g. Strength & Conditioning" /></Field>
             <Field label="Certifications"><TextInput value={addForm.certs} onChange={v=>setAddForm(f=>({...f, certs:v}))} placeholder="e.g. NASM-CPT" /></Field>
             <Field label="Session Price (₱)"><TextInput type="number" required value={addForm.sessionPrice} onChange={v=>setAddForm(f=>({...f, sessionPrice:v}))} /></Field>

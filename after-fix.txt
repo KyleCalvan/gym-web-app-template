@@ -1,2 +1,0 @@
-Line95:     const search = new URL(request.url).Params;
-Line152:     const gymUser = await tx.gymUser.findUnique({ where: { id: gymUserId }, select: { id: true } });

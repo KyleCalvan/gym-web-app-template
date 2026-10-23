@@ -534,7 +534,12 @@ export async function fetchMember(memberId: string): Promise<Member> {
 }
 
 export interface CreateMemberInput {
-  gymUserId: number;
+  /** Existing account id. Omit when supplying an email for a new account. */
+  gymUserId?: number;
+  /** Email of the account to create or attach the member profile to. */
+  email?: string;
+  /** Display name used when the email creates a new account. */
+  name?: string;
   phone?: string;
   emergencyContactName?: string;
   emergencyContactPhone?: string;
@@ -609,6 +614,26 @@ export async function createMembership(
   });
 }
 
+export async function createMembershipStatus(
+  memberId: string,
+  status: 'Active' | 'Expiring' | 'Frozen' | 'Expired' | 'Cancelled',
+  reason?: string,
+): Promise<void> {
+  // Same display-number → cuid resolution as createMembership.
+  const profile = await apiFetch<{ member?: { id?: string } }>(
+    `/api/members/${encodeURIComponent(memberId)}`,
+  );
+  const canonicalId = profile.member?.id;
+  if (!canonicalId) {
+    throw new ApiError(`Could not resolve member ${memberId}.`, 404);
+  }
+
+  await apiFetch(`/api/members/${encodeURIComponent(canonicalId)}/membership`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status, reason }),
+  });
+}
+
 export async function fetchTrainers(): Promise<Trainer[]> {
   return toTrainers(await apiFetch('/api/trainers?limit=200'));
 }
@@ -625,12 +650,234 @@ export async function fetchPromotions(): Promise<Promotion[]> {
   return toPromotions(await apiFetch('/api/promotions?limit=200'));
 }
 
+export interface PromotionInput {
+  title: string;
+  code: string;
+  discountType: 'Percentage' | 'Fixed' | 'Bundle';
+  discountValue: number;
+  validFrom: string;
+  validUntil: string;
+  description?: string | null;
+  planNames?: string[];
+  minSpendCentavos?: number | null;
+  maxRedemptions?: number | null;
+  imageUrl?: string | null;
+}
+
+/**
+ * Creates a promotion. The server always stores new promotions as Draft and
+ * rejects duplicate codes, so a 409 here is a real, user-facing conflict.
+ */
+export async function createPromotion(input: PromotionInput): Promise<Promotion> {
+  const payload = await apiFetch('/api/promotions', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+  return toPromotion(record(payload).promotion);
+}
+
+/**
+ * Patches an existing promotion. Passing `{ action: 'publish' }` flips it to
+ * Published server-side; `{ action: 'draft' }` does the reverse.
+ */
+export async function updatePromotion(
+  promotionId: string,
+  input: Partial<PromotionInput> & { action?: 'publish' | 'draft' },
+): Promise<Promotion> {
+  const payload = await apiFetch(`/api/promotions/${encodeURIComponent(promotionId)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  });
+  return toPromotion(record(payload).promotion);
+}
+
+export async function deletePromotion(promotionId: string): Promise<void> {
+  await apiFetch(`/api/promotions/${encodeURIComponent(promotionId)}`, {
+    method: 'DELETE',
+  });
+}
+
 export async function fetchNotifications(): Promise<Notification[]> {
   return toNotifications(await apiFetch('/api/notifications'));
 }
 
 export async function fetchStaff(): Promise<Staff[]> {
   return toStaffList(await apiFetch('/api/staff?limit=200'));
+}
+
+export interface TrainerInput {
+  /** Written to the canonical User account, not the trainer profile. */
+  name?: string;
+  specialty?: string | null;
+  bio?: string | null;
+  sessionRate?: number;
+  status?: 'Active' | 'On Leave' | 'Inactive';
+  certifications?: string[];
+}
+
+export async function updateTrainer(trainerId: string, input: TrainerInput): Promise<Trainer> {
+  const payload = await apiFetch(`/api/trainers/${encodeURIComponent(trainerId)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  });
+  return toTrainer(record(payload).trainer);
+}
+
+export async function removeTrainer(trainerId: string): Promise<Trainer> {
+  const payload = await apiFetch(`/api/trainers/${encodeURIComponent(trainerId)}`, {
+    method: 'DELETE',
+  });
+  return toTrainer(record(payload).trainer);
+}
+
+export interface StaffInput {
+  /** Written to the canonical User account, not the staff profile. */
+  name?: string;
+  jobRole?: 'Front Desk' | 'Sales' | 'Manager';
+  shift?: 'Morning' | 'Evening' | 'Night';
+  status?: 'Active' | 'On Leave' | 'Inactive';
+  phone?: string | null;
+  phoneSecondary?: string | null;
+}
+
+export async function updateStaff(staffId: string, input: StaffInput): Promise<Staff> {
+  const payload = await apiFetch(`/api/staff/${encodeURIComponent(staffId)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  });
+  return toStaff(record(payload).staff);
+}
+
+export async function removeStaff(staffId: string): Promise<Staff> {
+  const payload = await apiFetch(`/api/staff/${encodeURIComponent(staffId)}`, {
+    method: 'DELETE',
+  });
+  return toStaff(record(payload).staff);
+}
+
+export interface CreateBookingInput {
+  /** Canonical numeric member id (resolve a display number with fetchMember first). */
+  memberId: number;
+  trainerId: string;
+  /** yyyy-mm-dd */
+  date: string;
+  /** HH:MM */
+  startTime: string;
+  /** HH:MM */
+  endTime: string;
+  notes?: string | null;
+}
+
+export async function createBooking(input: CreateBookingInput): Promise<void> {
+  await apiFetch('/api/bookings', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+/**
+ * Books a session from UI-level values. The UI addresses members by display
+ * number and picks a single datetime, so resolve the canonical member id and
+ * split the datetime into the date/start/end triplet the API expects.
+ */
+export async function bookSession(input: {
+  memberId: string;
+  trainerId: string;
+  startsAt: string;
+  durationMinutes?: number;
+  notes?: string | null;
+}): Promise<void> {
+  const profile = await apiFetch<{ member?: { id?: string; gymUserId?: number } }>(
+    `/api/members/${encodeURIComponent(input.memberId)}`,
+  );
+  // bookings.memberId is the numeric User id, never the member's cuid.
+  const canonicalId = profile.member?.gymUserId;
+  if (typeof canonicalId !== 'number' || !Number.isInteger(canonicalId)) {
+    throw new ApiError(`Could not resolve member ${input.memberId}.`, 404);
+  }
+
+  const start = new Date(input.startsAt);
+  if (Number.isNaN(start.getTime())) {
+    throw new ApiError('Choose a valid session date and time.', 400);
+  }
+  const end = new Date(start.getTime() + (input.durationMinutes ?? 60) * 60_000);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const date = `${start.getFullYear()}-${pad(start.getMonth() + 1)}-${pad(start.getDate())}`;
+  const clock = (d: Date) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+
+  await createBooking({
+    memberId: canonicalId,
+    trainerId: input.trainerId,
+    date,
+    startTime: clock(start),
+    endTime: clock(end),
+    notes: input.notes ?? null,
+  });
+}
+
+export interface CreateTrainerInput {
+  name: string;
+  email: string;
+  specialty?: string;
+  certifications?: string[];
+  sessionRate?: number;
+  bio?: string | null;
+}
+
+export async function createTrainer(input: CreateTrainerInput): Promise<Trainer> {
+  const payload = await apiFetch('/api/trainers', {
+    method: 'POST',
+    body: JSON.stringify({
+      name: input.name,
+      email: input.email,
+      specialty: input.specialty ?? null,
+      certifications: input.certifications ?? [],
+      sessionRate: input.sessionRate ?? 0,
+      bio: input.bio ?? null,
+    }),
+  });
+  return toTrainer(record(payload).trainer);
+}
+
+export interface CreateStaffInput {
+  name: string;
+  email: string;
+  jobRole: 'Front Desk' | 'Sales' | 'Manager';
+  shift: 'Morning' | 'Evening' | 'Night';
+  phone?: string;
+  phoneSecondary?: string;
+}
+
+export async function createStaff(input: CreateStaffInput): Promise<Staff> {
+  const payload = await apiFetch('/api/staff', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+  return toStaff(record(payload).staff);
+}
+
+export async function updateQrDestination(
+  destinationId: string,
+  input: { label?: string; url?: string },
+): Promise<void> {
+  await apiFetch('/api/qr-destinations', {
+    method: 'PATCH',
+    body: JSON.stringify({ links: [{ id: destinationId, ...input }] }),
+  });
+}
+
+export async function createQrDestination(input: { label: string; url: string }): Promise<QrDestination> {
+  const payload = await apiFetch('/api/qr-destinations', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+  return toQrDestination(record(payload).destination);
+}
+
+export async function deleteQrDestination(destinationId: string): Promise<void> {
+  await apiFetch(`/api/qr-destinations?id=${encodeURIComponent(destinationId)}`, {
+    method: 'DELETE',
+  });
 }
 
 export async function fetchQrDestinations(): Promise<QrDestination[]> {
