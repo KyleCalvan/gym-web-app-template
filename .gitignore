@@ -21,3 +21,5 @@ backend/prisma/generated/
 
 # Scratch artifacts from verification runs (may contain live session cookies).
 tmp-*
+# Integration harness writes this route at runtime and removes it on teardown
+app/api/integration-session-fixture/
