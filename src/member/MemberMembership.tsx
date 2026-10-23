@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useMemo, useState } from 'react';
 import { Badge, Dropdown, Field, Modal, TabbedCard, PaymentSimulationModal } from '../shared';
 import { peso } from '../data.ts';
@@ -16,13 +15,38 @@ import {
 import { buildCancelConfirmation, comparePlans, planDurationMonths } from './planComparison.ts';
 import { createReceiptReference } from '../receipt.ts';
 import { createSimulatedTransaction, getConfiguredPaymentFee, updateSimulatedTransaction } from '../payments.ts';
+import { purchaseMyMembership, type PurchaseMembershipResult } from '../lib/api-client.ts';
+import type { Member, Plan, Promotion, Transaction } from '../types.ts';
+
+interface PromotionRedemption {
+  id: string;
+  memberId: string;
+  promotionId: string;
+  code: string;
+  redeemedAt: string;
+}
+
+interface PaymentFlowState {
+  transactionId: string;
+  method: string;
+  amount: number;
+  fees?: number;
+  onSuccess: () => void;
+}
 
 const PAYMENT_METHODS = [
   { value: 'GCash', label: 'GCash' },
   { value: 'Cash', label: 'Cash on-site' },
 ];
 
-function PlanComparisonTable({ currentPlan, plans, member, promotions, redemptions, asOf }) {
+function PlanComparisonTable({ currentPlan, plans, member, promotions, redemptions, asOf }: {
+  currentPlan: Plan | null;
+  plans: Plan[];
+  member: Member | undefined;
+  promotions: Promotion[];
+  redemptions: PromotionRedemption[];
+  asOf: Date;
+}) {
   return (
     <div className="plan-comparison" role="region" aria-label="Plan comparison">
       <div className="plan-comparison-head">
@@ -182,6 +206,20 @@ function PlanComparisonTable({ currentPlan, plans, member, promotions, redemptio
 function MemberMembership({
   members, setMembers, plans, promotions, promotionRedemptions, setPromotions, setPromotionRedemptions,
   setTransactions, currentUserId, today, toast, addAudit, preferredPaymentMethod = 'GCash',
+}: {
+  members: Member[];
+  setMembers: React.Dispatch<React.SetStateAction<Member[]>>;
+  plans: Plan[];
+  promotions: Promotion[];
+  promotionRedemptions: PromotionRedemption[];
+  setPromotions: React.Dispatch<React.SetStateAction<Promotion[]>>;
+  setPromotionRedemptions: React.Dispatch<React.SetStateAction<PromotionRedemption[]>>;
+  setTransactions: React.Dispatch<React.SetStateAction<Transaction[]>>;
+  currentUserId: string;
+  today: string;
+  toast: (message: string) => void;
+  addAudit?: (level: 'info' | 'warn' | 'error', action: string, details?: string) => void;
+  preferredPaymentMethod?: 'Cash' | 'GCash' | 'Card';
 }){
   const me = members.find(m => m.id === currentUserId) || members[0];
   const myRedemptions = useMemo(
@@ -193,7 +231,7 @@ function MemberMembership({
     [promotions, myRedemptions, me?.plan],
   );
 
-  const bestDiscountFor = (planName, basePrice) => {
+  const bestDiscountFor = (planName: string, basePrice: number) => {
     let best = null;
     const planPromotions = getActivePromotionsForMember(
       promotions || [],
@@ -218,14 +256,14 @@ function MemberMembership({
   const [showChoose, setShowChoose] = useState(false);
   const [pickedPlan, setPickedPlan] = useState(me?.plan || 'Premium');
   const [method, setMethod] = useState(preferredPaymentMethod);
-  const [paymentFlow, setPaymentFlow] = useState(null);
+  const [paymentFlow, setPaymentFlow] = useState<PaymentFlowState | null>(null);
   const [codeInput, setCodeInput] = useState('');
-  const [redemptionStatus, setRedemptionStatus] = useState(null);
+  const [redemptionStatus, setRedemptionStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const [showVerify, setShowVerify] = useState(false);
   const [verifyStep, setVerifyStep] = useState(1);
-  const [idPreview, setIdPreview] = useState(null);
-  const [formPreview, setFormPreview] = useState(null);
+  const [idPreview, setIdPreview] = useState<string | null>(null);
+  const [formPreview, setFormPreview] = useState<string | null>(null);
   const [verificationStatus, setVerificationStatus] = useState('None');
 
   const expiryDate = me?.membershipValidUntil ? new Date(`${me.membershipValidUntil.slice(0, 10)}T00:00:00`) : null;
@@ -242,7 +280,7 @@ function MemberMembership({
   const currentPriceToPay = currentDiscount ? currentDiscount.discountedPrice : (currentPlan?.price || 0);
   const isFrozen = me?.status === 'Frozen';
 
-  const handleRedeemPromotion = (event) => {
+  const handleRedeemPromotion = (event?: React.FormEvent) => {
     event?.preventDefault?.();
     const { promotion, error } = findRedeemablePromotion(
       promotions || [],
@@ -277,7 +315,7 @@ function MemberMembership({
     toast(`Promotion ${promotion.code} redeemed`);
   };
 
-  const beginPayment = ({ type, amount, onSuccess }) => {
+  const beginPayment = ({ type, amount, onSuccess }: { type: string; amount: number; onSuccess: () => void }) => {
     const fees = getConfiguredPaymentFee(method, amount);
     const transaction = createSimulatedTransaction({
       member: me.name,
@@ -291,14 +329,14 @@ function MemberMembership({
     setPaymentFlow({ transactionId: transaction.id, method, amount, fees, onSuccess });
   };
 
-  const updatePaymentState = (paymentState) => {
+  const updatePaymentState = (paymentState: string) => {
     setTransactions(prev => prev.map(transaction => {
       if (transaction.id !== paymentFlow?.transactionId) return transaction;
       return updateSimulatedTransaction(transaction, paymentState);
     }));
   };
 
-  const completePayment = (paymentState) => {
+  const completePayment = (paymentState: string) => {
     if (paymentState !== 'Successful') {
       toast('Simulated payment failed. Membership was not changed.');
       return;
@@ -313,36 +351,32 @@ function MemberMembership({
 
   // Renewal is preserved on the current-plan card and inside the "Choose plan" modal,
   // so members can still extend their plan without a dedicated "Switch Plan" button.
-  const renew = () => {
+  const renew = async () => {
     const plan = currentPlan;
     if (!plan) return;
-    const baseDate = expiryDate && remainingDays !== null && remainingDays >= 0 ? expiryDate : new Date();
-    const monthsToAdd = planDurationMonths(plan);
-    const nextExpiry = new Date(baseDate);
-    const originalDay = nextExpiry.getDate();
-    nextExpiry.setDate(1);
-    nextExpiry.setMonth(nextExpiry.getMonth() + monthsToAdd);
-    nextExpiry.setDate(Math.min(originalDay, new Date(nextExpiry.getFullYear(), nextExpiry.getMonth() + 1, 0).getDate()));
-    const membershipValidUntil = `${nextExpiry.getFullYear()}-${String(nextExpiry.getMonth() + 1).padStart(2, '0')}-${String(nextExpiry.getDate()).padStart(2, '0')}`;
-    const discount = currentDiscount;
-    const amount = discount ? discount.discountedPrice : plan.price;
-    const txnType = `Membership Renewal (${me.plan})` + (discount ? ` · code ${discount.promo.code}` : '');
-    beginPayment({
-      type: txnType,
-      amount,
-      onSuccess: () => {
+
+    try {
+      const result: PurchaseMembershipResult = await purchaseMyMembership({
+        planName: plan.name,
+        method: method as 'Cash' | 'GCash' | 'Card',
+      });
+
+      if (result.paymentStatus === 'Successful' && result.membership) {
+        const membershipValidUntil = result.membership.expiresAt.slice(0, 10);
         setMembers(prev => prev.map(member => member.id === me.id ? { ...member, membershipValidUntil, status: 'Active' } : member));
-        addAudit?.('info', 'Membership renewed', `${me.plan}${discount ? ` · code ${discount.promo.code}` : ''}`);
-        toast(
-          discount
-            ? `Membership renewed through ${formatPromotionDate(membershipValidUntil)} — saved ${peso(discount.savings)} with ${discount.promo.code}`
-            : `Membership renewed through ${formatPromotionDate(membershipValidUntil)}`,
-        );
-      },
-    });
+        addAudit?.('info', 'Membership renewed', `${me.plan}`);
+        toast(`Membership renewed through ${formatPromotionDate(membershipValidUntil)}`);
+      } else {
+        // GCash/Card pending confirmation
+        toast(`Payment recorded as ${result.paymentStatus}. Membership activates once payment is confirmed.`);
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Renewal failed';
+      toast(message);
+    }
   };
 
-  const choosePlan = (e) => {
+  const choosePlan = async (e) => {
     e?.preventDefault?.();
     if (pickedPlan === me.plan) { toast('That is already your current plan'); setShowChoose(false); return; }
     if (pickedPlan.toLowerCase().includes('student') && verificationStatus !== 'Verified') {
@@ -350,30 +384,28 @@ function MemberMembership({
     }
     const newPlan = plans.find(p => p.name === pickedPlan);
     if (!newPlan) return;
-    const discount = bestDiscountFor(newPlan.name, newPlan.price);
-    const amount = discount ? discount.discountedPrice : newPlan.price;
-    const monthsToAdd = planDurationMonths(newPlan);
-    const baseDate = new Date();
-    const nextExpiry = new Date(baseDate);
-    nextExpiry.setDate(1);
-    nextExpiry.setMonth(nextExpiry.getMonth() + monthsToAdd);
-    nextExpiry.setDate(Math.min(nextExpiry.getDate(), new Date(nextExpiry.getFullYear(), nextExpiry.getMonth() + 1, 0).getDate()));
-    const membershipValidUntil = `${nextExpiry.getFullYear()}-${String(nextExpiry.getMonth() + 1).padStart(2, '0')}-${String(nextExpiry.getDate()).padStart(2, '0')}`;
-    const txnType = `Plan Change → ${pickedPlan}` + (discount ? ` · code ${discount.promo.code}` : '');
+
     setShowChoose(false);
-    beginPayment({
-      type: txnType,
-      amount,
-      onSuccess: () => {
+
+    try {
+      const result: PurchaseMembershipResult = await purchaseMyMembership({
+        planName: pickedPlan,
+        method: method as 'Cash' | 'GCash' | 'Card',
+      });
+
+      if (result.paymentStatus === 'Successful' && result.membership) {
+        const membershipValidUntil = result.membership.expiresAt.slice(0, 10);
         setMembers(prev => prev.map(m => m.id === me.id ? { ...m, plan: pickedPlan, membershipValidUntil, status: 'Active' } : m));
-        addAudit?.('info', 'Plan changed', `${me.plan} → ${pickedPlan}${discount ? ` · code ${discount.promo.code}` : ''}`);
-        toast(
-          discount
-            ? `Switched to ${pickedPlan} — saved ${peso(discount.savings)} with ${discount.promo.code}`
-            : `Switched to ${pickedPlan} plan`,
-        );
-      },
-    });
+        addAudit?.('info', 'Plan changed', `${me.plan} → ${pickedPlan}`);
+        toast(`Switched to ${pickedPlan} plan`);
+      } else {
+        // GCash/Card pending confirmation
+        toast(`Payment recorded as ${result.paymentStatus}. Plan change activates once payment is confirmed.`);
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Plan change failed';
+      toast(message);
+    }
   };
 
   const confirmCancel = () => {
@@ -396,7 +428,7 @@ function MemberMembership({
     setCancelReason('');
   };
 
-  const handleFileUpload = (e, type) => {
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, type: 'id' | 'form') => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();

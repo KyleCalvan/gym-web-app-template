@@ -1061,6 +1061,51 @@ export async function fetchPlans(): Promise<Plan[]> {
 }
 
 /* ------------------------------------------------------------------ *
+ * Member self-service membership purchase
+ * ------------------------------------------------------------------ */
+
+export interface MemberMembership {
+  id: string;
+  planName: string;
+  status: string;
+  startedAt: string;
+  expiresAt: string;
+  plan: { name: string; price: number; period: string } | null;
+}
+
+export interface PurchaseMembershipInput {
+  planName: string;
+  method: 'Cash' | 'GCash' | 'Card';
+}
+
+export interface PurchaseMembershipResult {
+  orderId: string;
+  totalAmount: number; // centavos
+  paymentStatus: 'Successful' | 'Pending';
+  membership: MemberMembership | null;
+}
+
+/** Fetches the caller's current membership (member role only). */
+export async function fetchMyMembership(): Promise<MemberMembership | null> {
+  const payload = await apiFetch<{ membership: MemberMembership | null }>('/api/me/membership');
+  return payload.membership;
+}
+
+/**
+ * Purchases or renews a membership for the calling member.
+ * Cash payments succeed immediately and activate the membership.
+ * GCash/Card return Pending and require staff confirmation.
+ */
+export async function purchaseMyMembership(
+  input: PurchaseMembershipInput,
+): Promise<PurchaseMembershipResult> {
+  return apiFetch<PurchaseMembershipResult>('/api/me/membership', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+/* ------------------------------------------------------------------ *
  * Accounts and live sessions
  * ------------------------------------------------------------------ */
 
