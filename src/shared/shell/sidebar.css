@@ -41,7 +41,7 @@
   .drawer-user{
     display:flex;align-items:center;gap:10px;
     margin:0 14px 14px;padding:10px 12px;
-    background:var(--paper);border:1.5px solid var(--line);border-radius:var(--radius);
+    background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);
   }
   .drawer-user .who{min-width:0;}
   .drawer-user .who b{

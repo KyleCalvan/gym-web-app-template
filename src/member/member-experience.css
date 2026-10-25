@@ -150,9 +150,9 @@
 /* Discounted price (strikethrough + bold + savings) */
 .price-with-discount{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 8px;}
 .member-plan-price-old{color:var(--steel);font-weight:500;opacity:.7;font-size:14px;}
-.price-with-discount strong{font-size:22px;font-weight:700;color:var(--ink);}
+.price-with-discount strong{font-size:clamp(32px,3vw,44px);font-weight:700;color:var(--signal-ink);}
 .member-plan-price-period{color:var(--steel);font-size:13px;}
-.member-plan-price-saved{display:inline-flex;align-items:center;padding:3px 8px;border-radius:999px;background:rgba(40,167,69,.12);color:rgb(40,167,69);font:600 11px var(--font-mono);letter-spacing:.2px;}
+.member-plan-price-saved{display:inline-flex;align-items:center;padding:3px 8px;border-radius:999px;background:rgba(40,167,69,.12);color:var(--signal-ink);font:600 11px var(--font-mono);letter-spacing:.2px;}
 .member-plan-price-code{margin-top:6px;font:11px var(--font-mono);color:var(--signal-ink);letter-spacing:.5px;}
 .member-renew-savings{margin-bottom:14px;padding:10px 12px;background:rgba(40,167,69,.1);color:rgb(40,167,69);border-radius:var(--radius);font-size:13px;line-height:1.5;display:flex;flex-direction:column;gap:4px;}
 .checkout-rate{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 10px;padding:6px 10px;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface-2);}
@@ -224,7 +224,7 @@
 .plan-comparison-head-cell{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
 .plan-comparison-current-pill{padding:2px 8px;border-radius:999px;background:var(--accent-glow);color:var(--signal-ink);font:600 10.5px var(--font-mono);letter-spacing:.4px;}
 .plan-comparison-popular-pill{padding:2px 8px;border-radius:999px;background:var(--surface-2);color:var(--ink-soft);font:600 10.5px var(--font-mono);letter-spacing:.4px;}
-.plan-comparison-price{color:var(--ink);font-size:14px;font-weight:600;margin-top:6px;}
+.plan-comparison-price{color:var(--signal-ink);font-size:24px;font-weight:600;margin-top:6px;}
 .plan-comparison-price small{color:var(--steel);font-weight:500;font-size:12px;}
 .plan-comparison-table .is-current{background:color-mix(in srgb,var(--signal) 7%,transparent);}
 .plan-comparison-bullets{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:4px;}
@@ -236,8 +236,8 @@
 .plan-comparison-bullet-shared{color:var(--steel);}
 .plan-comparison-tag{display:inline-flex;align-items:center;padding:1px 6px;border-radius:6px;font:600 10px var(--font-mono);letter-spacing:.4px;text-transform:uppercase;}
 .plan-comparison-tag-shared{background:var(--surface-2);color:var(--steel);}
-.plan-comparison-tag-new{background:rgba(40,167,69,.18);color:rgb(40,167,69);}
-.plan-comparison-tag-lost{background:rgba(220,53,69,.18);color:rgb(220,53,69);}
+.plan-comparison-tag-new{background:var(--accent-glow);color:var(--signal-ink);}
+.plan-comparison-tag-lost{background:var(--surface-2);color:var(--ink-soft);}
 .plan-comparison-lost{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin-top:8px;padding-top:6px;border-top:1px dashed var(--line);}
 .plan-comparison-lost-label{font:600 10.5px var(--font-mono);letter-spacing:.4px;color:var(--steel);text-transform:uppercase;}
 .plan-comparison-muted{color:var(--steel);font-style:italic;font-size:12px;}
@@ -250,8 +250,8 @@
 /* Plan card */
 .plan-card{position:relative;display:flex;flex-direction:column;gap:10px;padding:22px 18px 18px;border:1px solid var(--line);border-radius:var(--radius);background:var(--paper);}
 .plan-card.featured{border-color:color-mix(in srgb,var(--signal) 35%,var(--line));}
-.plan-card.is-current{border-color:var(--signal);box-shadow:0 0 0 1px var(--signal) inset;}
-.plan-card .ribbon-current{background:var(--signal);color:var(--signal-ink);right:auto;left:14px;}
+.plan-card.is-current{border-color:var(--signal);box-shadow:none;}
+.plan-card .ribbon-current{background:var(--signal);color:var(--on-signal);right:auto;left:14px;}
 .plan-card-desc{margin:0;color:var(--steel);font-size:12.5px;line-height:1.5;}
 .plan-card-perks{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:5px;}
 .plan-card-perks li{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--ink);}
@@ -273,3 +273,10 @@
 /* Destructive action button (cancel). Distinct from btn-signal/btn-outline. */
 .btn.btn-danger{background:rgb(220,53,69);color:#fff;border:1px solid rgb(220,53,69);font-weight:600;}
 .btn.btn-danger:hover{background:rgb(200,40,55);border-color:rgb(200,40,55);}
+
+.plan-card-exclusions{color:var(--steel);font-size:13px;padding-top:10px;border-top:1px solid var(--line);}
+.plan-card-exclusions>span,.plan-card-terms>span{display:block;font-weight:500;margin-bottom:5px;}
+.plan-card-exclusions ul{list-style:none;margin:0;padding:0;display:grid;gap:6px;}
+.plan-card-exclusions li{display:flex;align-items:flex-start;gap:6px;}
+.plan-card-exclusions svg{flex:none;margin-top:3px;}
+.plan-card-terms{margin:0;color:var(--ink-soft);font-size:12px;line-height:1.5;}

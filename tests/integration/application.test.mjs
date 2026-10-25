@@ -72,7 +72,7 @@ before(async () => {
   await mkdir(fixtureDirectory);
   try {
     await copyFile(new URL('./fixtures/session-route.ts', import.meta.url), fixtureRoute);
-    await runNode('node_modules/next/dist/bin/next', ['build'], database.env);
+    await runNode('node_modules/next/dist/bin/next', ['build', ...(process.env.NEXT_TEST_WEBPACK === '1' ? ['--webpack'] : [])], database.env);
   } finally {
     await unlink(fixtureRoute);
     await rmdir(fixtureDirectory);

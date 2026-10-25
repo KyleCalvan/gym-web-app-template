@@ -19,7 +19,7 @@ function LandingHero({ onNavigate }) {
       <div className="hero-blob hero-blob-2" />
       <HeroImage className="hero-photo-bg" />
       <div className="landing-hero-inner">
-        <div>
+        <div className="hero-content">
           <motion.div className="eyebrow" {...heroItem(0)}>
             Gym Management, Squared Away
           </motion.div>
@@ -27,13 +27,6 @@ function LandingHero({ onNavigate }) {
             Run your gym like a{' '}
             <span className="accent-word">
               champion&nbsp;runs
-              <motion.span
-                className="vm-underline"
-                initial={{ scaleX: 0 }}
-                animate={{ scaleX: 1 }}
-                transition={{ duration: 0.5, delay: 0.3, ease: ease.out }}
-                style={{ transformOrigin: 'left center' }}
-              />
             </span>{' '}
             a season.
           </motion.h1>

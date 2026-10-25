@@ -1,0 +1,6 @@
+---------------------------
+failed to create junction point at "\\\\?\\C:\\Users\\Kyle\\Downloads\\gym123 - Copy\\vinathletics-gym\\.next\\node_modules\\pg-4938673685eca30b" pointing to "\\\\?\\C:\\Users\\Kyle\\Downloads\\gym123 - Copy\\vinathletics-gym\\backend\\node_modules\\pg"
+
+Caused by:
+- creation of a new symbolic link or junction point failed: Access is denied. (os error 5)
+- Access is denied. (os error 5)

@@ -39,7 +39,8 @@ export function Topbar({
   onCloseNotifications: () => void;
   toast: (message: string) => void;
 }) {
-  const title = VIEW_TITLES_BY_ROLE[role]?.[view] || VIEW_TITLES[view] || view;
+  const title = nav?.flatMap(section => section.items).find(item => item.id === view)?.label
+    || VIEW_TITLES_BY_ROLE[role]?.[view] || VIEW_TITLES[view] || 'Overview';
 
   const handlePillClick = () => {
     // The pill opens the profile dropdown (which holds Profile / Log out)

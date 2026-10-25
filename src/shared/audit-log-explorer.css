@@ -22,7 +22,7 @@
 .audit-log-fields{display:grid;gap:0;margin:8px 0 0}.audit-log-fields>div{display:grid;grid-template-columns:112px minmax(0,1fr);gap:10px;padding:9px 0;border-bottom:1px solid var(--line)}
 .audit-log-fields dt{color:var(--steel);font:10px var(--font-mono);text-transform:uppercase}.audit-log-fields dd{margin:0;font-size:12px;overflow-wrap:anywhere}
 .audit-log-structured{margin-top:14px}.audit-log-structured h4{margin:0 0 7px;font:700 10px var(--font-mono);text-transform:uppercase;color:var(--steel)}
-.audit-log-value{margin:0;padding:10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);font:11px/1.5 var(--font-mono);white-space:pre-wrap;overflow-wrap:anywhere}
+.audit-log-value{margin:0;padding:10px;border:1px solid var(--line);border-radius:6px;background:var(--paper);color:var(--ink);font:11px/1.5 var(--font-mono);white-space:pre-wrap;overflow-wrap:anywhere}
 .audit-log-empty,.audit-log-sentinel,.audit-log-end{padding:18px;text-align:center;color:var(--steel);font-size:12px}.audit-log-sentinel{min-height:45px}
 @media(max-width:850px){.audit-log-layout{grid-template-columns:1fr}.audit-log-detail{position:static;grid-row:1}}
 @media(max-width:520px){.audit-log-filters>select{flex:1 1 130px}.audit-log-filters label{flex:1 1 100%;justify-content:space-between}.audit-log-filters label input{max-width:62%}.audit-log-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}

@@ -4,20 +4,20 @@
   --ink-soft:#D8DDD5;
   /* Recessed canvas, raised panels, and a brighter hover layer. These tones
      preserve the gym's dark identity without collapsing into flat black. */
-  --paper:#10120F;
-  --surface:#191C18;
-  --surface-2:#232720;
-  --signal:#A8EF45;
-  --signal-dark:#8ED52D;
-  --signal-gradient:linear-gradient(135deg, #B8F565 0%, #8ED52D 100%);
-  --accent-glow:rgba(168,239,69,.18);
+  --paper:#0B100E;
+  --surface:#121815;
+  --surface-2:#1C2721;
+  --signal:#64BD8A;
+  --signal-dark:#4CA571;
+  --signal-gradient:linear-gradient(135deg, #64BD8A, #4CA571);
+  --accent-glow:rgba(100,189,138,.12);
   /* --signal-ink is the accent *as text*: the same lime reads as a background
      fine, but as text on a light surface it needs a deeper green. --on-signal
      is text on a lime fill and stays pure black in both themes — anything
      lighter on #9BE92A loses the sharp contrast the accent needs. */
-  --signal-ink:#A8EF45;
+  --signal-ink:#83D6A6;
   --on-signal:#10120F;
-  --court:#A8EF45;
+  --court:#83D6A6;
   --court-soft:#27311E;
   --steel:#AEB6AA;
   --steel-soft:#252A23;
@@ -26,10 +26,12 @@
   --amber-soft:#1A1A1A;
   --danger:#DC2626;
   --danger-soft:#1A1A1A;
-  --line:#30362D;
-  --line-strong:#465040;
+  --line:#29372F;
+  --line-strong:#40564A;
   --radius:12px;
-  --shadow-card:0 12px 32px rgba(0,0,0,.20);
+  --control-radius:10px;
+  --navbar-height:72px;
+  --shadow-card:0 6px 20px rgba(0,0,0,.14);
   --scrim:rgba(8,10,7,.56);
   /* Font stacks are theme-independent, so they live in :root only and the
      light theme inherits them. */
@@ -49,13 +51,13 @@
   --paper:#F2F4EF;
   --surface:#FBFCF9;
   --surface-2:#E8ECE5;
-  --signal:#A8EF45;
-  --signal-dark:#8ED52D;
-  --signal-gradient:linear-gradient(135deg, #B8F565 0%, #8ED52D 100%);
+  --signal:#256B48;
+  --signal-dark:#1C5639;
+  --signal-gradient:linear-gradient(135deg, #2E7D54, #256B48);
   --accent-glow:rgba(102,153,42,.16);
-  --signal-ink:#4F791C;
-  --on-signal:#15200D;
-  --court:#4F791C;
+  --signal-ink:#256B48;
+  --on-signal:#FFFFFF;
+  --court:#256B48;
   --court-soft:#E5EEDB;
   --steel:#586253;
   --steel-soft:#E8ECE5;

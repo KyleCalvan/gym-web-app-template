@@ -2,13 +2,13 @@
 
 .resource-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;}
 .resource-card{
-  background:var(--surface);border:2px solid var(--ink);border-radius:0;padding:20px;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:20px;
   display:flex;flex-direction:column;gap:10px;position:relative;cursor:pointer;
   transition:transform .15s ease, box-shadow .15s ease;
   overflow:hidden;
 }
 .resource-card .thumb{
-  height:200px;margin:-20px -20px 14px;border-radius:0;
+  height:200px;margin:-20px -20px 14px;border-radius:var(--radius);
   background-size:cover;background-position:center;background-color:#262626;
 }
 @media (min-width: 768px){
@@ -17,7 +17,7 @@
 
 /* Image drop zone (used in promotion create/edit modals) */
 .dropzone{
-  border:2px dashed var(--line);border-radius:0;height:160px;
+  border:1px dashed var(--line);border-radius:var(--radius);height:160px;
   display:flex;align-items:center;justify-content:center;
   background-color:var(--surface);background-size:cover;background-position:center;
   color:var(--steel);font-size:13.2px;text-align:center;cursor:pointer;padding:14px;
@@ -32,7 +32,7 @@
 .resource-card .head .badge{flex-shrink:0;}
 .resource-card .desc{font-size:13.8px;color:var(--steel);margin:0;line-height:1.45;}
 .resource-card .meta{display:flex;flex-wrap:wrap;gap:10px;font-family:var(--font-mono);font-size:12.1px;color:var(--steel);}
-.resource-card .meta .pill{background:var(--surface-2);border:1.5px solid var(--line);border-radius:0;padding:3px 9px;letter-spacing:.5px;text-transform:uppercase;}
+.resource-card .meta .pill{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius);padding:3px 9px;letter-spacing:.5px;text-transform:uppercase;}
 .resource-card .foot{display:flex;justify-content:space-between;align-items:center;margin-top:auto;padding-top:8px;border-top:1px solid var(--line);font-family:var(--font-mono);font-size:11.6px;color:var(--steel);letter-spacing:.5px;text-transform:uppercase;}
 .resource-card .foot .open{color:var(--signal-ink);font-weight:700;}
 

@@ -15,12 +15,15 @@ export function Toast({ message, onDone }: ToastProps) {
   return (
     <motion.div
       className="toast"
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
       initial={{ x: 24, opacity: 0, scale: 0.95 }}
       animate={{ x: 0, opacity: 1, scale: 1 }}
       exit={{ opacity: 0, y: 6, scale: 0.96 }}
       transition={spring.toast}
     >
-      <span className="dot"></span>{message}
+      <span className="dot" aria-hidden="true"></span>{message}
     </motion.div>
   );
 }

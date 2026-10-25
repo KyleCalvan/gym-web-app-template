@@ -117,7 +117,7 @@ const addPlan = (item: POSCartItem) => {
     <>
       <div className="grid grid-2-1 staff-pos">
         <TabbedCard title="Membership Plans">
-          <p className="staff-pos-hint">Add one of each membership plan to this sale.</p>
+          <p className="staff-pos-hint">Choose one membership plan per sale.</p>
           <div className="staff-pos-products">
             {items.map((item) => {
               const inCart = cart.some((entry) => entry.id === item.id);

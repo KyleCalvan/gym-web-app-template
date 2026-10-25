@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { useEffect, useRef, useState } from 'react';
-import { Check } from 'lucide-react';
+import { Check, X } from 'lucide-react';
 import SectionHeading from './SectionHeading.tsx';
 import { cx } from './landing-utils.ts';
 
@@ -72,6 +72,8 @@ function PlansStrip({ plansRef, activePlans, onNavigate }) {
               <h3>{p.name}</h3>
               <div className="price">₱{p.price.toLocaleString('en-PH')}<span>/{p.period}</span></div>
               <ul>{p.perks.map((perk, i) => <li key={i}><Check size={13} strokeWidth={2.5} aria-hidden="true" /><span>{perk}</span></li>)}</ul>
+              {p.excludedBenefits?.length > 0 && <div className="plan-card-exclusions"><span>Not included</span><ul>{p.excludedBenefits.map(benefit => <li key={benefit}><X size={12} aria-hidden="true" />{benefit}</li>)}</ul></div>}
+              {p.terms && <p className="plan-card-terms"><span>Terms</span>{p.terms}</p>}
               <button
                 className={"btn btn-sm btn-block " + (p.featured ? 'btn-signal' : 'btn-outline')}
                 onClick={() => onNavigate && onNavigate('/login')}

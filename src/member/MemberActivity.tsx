@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { useMemo, useState } from 'react';
+import { memberSessionsByDate } from './calendarEvents.ts';
 import { Badge, BarChart, StatTile, TabbedCard, Table, Modal, Field } from '../shared';
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -145,6 +146,8 @@ function MemberActivity({
     [sessions, me?.name],
   );
 
+  const sessionsByDate = useMemo(() => memberSessionsByDate(sessions, me?.name), [sessions, me?.name]);
+
   const handleCheckIn = () => {
     if (isFrozen) { toast('Frozen accounts cannot check in.'); return; }
     if (checkedToday) { toast('Already checked in today.'); return; }
@@ -158,7 +161,6 @@ function MemberActivity({
     }]);
     setCheckIns(c => ({ ...c, count: c.count + 1 }));
     toast('Checked in — see you at the gym!');
-    setSelectedDay(date);
   };
 
   return (
@@ -229,13 +231,13 @@ function MemberActivity({
         }
       >
         <div className="cal-toolbar">
-          <button className="btn btn-ghost btn-sm" onClick={() => setViewMonth(({year, month}) => {
+          <button aria-label="Previous month" className="btn btn-ghost btn-sm" onClick={() => setViewMonth(({year, month}) => {
             const m = month - 1;
             if (m < 0) return { year: year - 1, month: 11 };
             return { year, month: m };
           })}>◀</button>
           <div className="cal-title">{MONTHS[viewMonth.month]} {viewMonth.year}</div>
-          <button className="btn btn-ghost btn-sm" onClick={() => setViewMonth(({year, month}) => {
+          <button aria-label="Next month" className="btn btn-ghost btn-sm" onClick={() => setViewMonth(({year, month}) => {
             const m = month + 1;
             if (m > 11) return { year: year + 1, month: 0 };
             return { year, month: m };
@@ -246,6 +248,7 @@ function MemberActivity({
           {grid.map((iso, i) => {
             if (!iso) return <div key={`empty-${i}`} className="cal-cell empty"></div>;
             const rec = historyByDate.get(iso);
+            const daySessions = sessionsByDate.get(iso) || [];
             const day = Number(iso.slice(8, 10));
             const isToday = iso === todayISO();
             return (
@@ -253,11 +256,14 @@ function MemberActivity({
                 key={iso}
                 type="button"
                 className={`cal-cell${rec ? ' checked' : ''}${isToday ? ' today' : ''}`}
-                onClick={() => rec && setSelectedDay(iso)}
-                style={{ cursor: rec ? 'pointer' : 'default' }}
+                onClick={() => setSelectedDay(iso)}
+                aria-pressed={selectedDay === iso}
+                aria-label={iso + (rec ? ', checked in' : '') + ', ' + daySessions.length + ' sessions'}
+                style={{ cursor: 'pointer' }}
               >
                 <span className="cal-day">{day}</span>
                 {rec && <span className="cal-dot" aria-hidden="true"></span>}
+                {daySessions.length > 0 && <span className="cal-session-count">{daySessions.length}<span className="cal-session-label"> sessions</span></span>}
               </button>
             );
           })}
@@ -265,13 +271,14 @@ function MemberActivity({
         <div className="cal-legend">
           <span className="cal-legend-dot" aria-hidden="true"></span>
           <span>Checked in</span>
-          {selectedDay && historyByDate.get(selectedDay) && (
-            <span style={{marginLeft:'auto', color:'var(--steel)'}}>
-              {selectedDay} · checked in at {historyByDate.get(selectedDay).time}
-              <button className="btn btn-ghost btn-sm" style={{marginLeft:8}} onClick={() => setSelectedDay(null)}>close</button>
-            </span>
-          )}
+
         </div>
+        {selectedDay && <section className="member-day-agenda" aria-label="Selected day activities" aria-live="polite">
+          <div className="member-day-heading"><h3>{selectedDay}</h3><button className="btn btn-ghost btn-sm" onClick={() => setSelectedDay(null)}>Close</button></div>
+          {!historyByDate.has(selectedDay) && !sessionsByDate.has(selectedDay) && <p>No activities recorded or scheduled for this day.</p>}
+          {historyByDate.has(selectedDay) && <div className="member-activity-record"><span>Gym check-in</span><time>{historyByDate.get(selectedDay).time}</time></div>}
+          {(sessionsByDate.get(selectedDay) || []).map(session => <div key={session.id} className="member-activity-record"><div><strong>{session.type}</strong><span>{session.trainer}</span></div><time>{session.time}</time><Badge status={session.status} /></div>)}
+        </section>}
       </TabbedCard>
 
       <div style={{height:18}}></div>

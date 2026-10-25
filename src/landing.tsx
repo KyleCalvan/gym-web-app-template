@@ -36,43 +36,14 @@ export default function Landing({ plans, promotions, trainers, onNavigate }: Lan
   const [stuck, setStuck] = useState<boolean>(false);
   const landingRef = useRef<HTMLElement>(null);
 
-  // The landing page renders at the desktop design width and is scaled down to
-  // fit whatever viewport it's given, so the desktop structure is preserved at
-  // every size (see the "Miniaturized desktop view" block in landing.css).
-  // `zoom` is used rather than `transform: scale()` because it re-flows the
-  // document, leaving no overflow to clip and no empty space below the page.
-  const DESIGN_WIDTH = 1180;
+  // Use the actual navigation height, including wrapped content.
   useEffect(() => {
     const el = landingRef.current;
-    if (!el) return;
-    const fit = () => {
-      // window.innerWidth is the wrong anchor for this calculation on mobile.
-      // When a page lays out wider than the screen, mobile browsers expand the
-      // *layout* viewport to fit the content, so innerWidth reports the
-      // content width (1180) rather than the glass (390) -- the scale would
-      // come out as 1 and the page would never zoom. Anchoring to the device's
-      // own width keeps the fit tied to the actual screen; on desktop the two
-      // agree, and on mobile the smaller of the two is always the screen.
-      const vw = Math.min(window.innerWidth, window.screen.width || window.innerWidth);
-      const scale = Math.min(1, vw / DESIGN_WIDTH);
-      if (scale < 1) {
-        el.style.zoom = String(scale);
-      } else {
-        el.style.removeProperty('zoom');
-        el.style.removeProperty('width');
-      }
-      // Publish the scale so CSS can divide it back out: each content strip
-      // counter-zooms by 1/--fit-scale so its text renders at true device
-      // pixels instead of the zoomed-down ones (see landing.css).
-      el.style.setProperty('--fit-scale', String(scale < 1 ? scale : 1));
-    };
-    fit();
-    window.addEventListener('resize', fit);
-    window.addEventListener('orientationchange', fit);
-    return () => {
-      window.removeEventListener('resize', fit);
-      window.removeEventListener('orientationchange', fit);
-    };
+    const nav = el?.querySelector('nav');
+    if (!el || !nav) return;
+    const observer = new ResizeObserver(() => el.style.setProperty('--navbar-height', nav.getBoundingClientRect().height + 'px'));
+    observer.observe(nav);
+    return () => observer.disconnect();
   }, []);
 
   useEffect(() => {

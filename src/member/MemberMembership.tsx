@@ -95,7 +95,7 @@ function PlanComparisonTable({ currentPlan, plans, member, promotions, redemptio
                     </ul>
                     {diff && diff.removedBenefits.length > 0 && (
                       <div className="plan-comparison-lost">
-                        <span className="plan-comparison-lost-label">You'd lose:</span>
+                        <span className="plan-comparison-lost-label">Not offered by this plan:</span>
                         {diff.removedBenefits.map((b) => <span key={b} className="plan-comparison-tag plan-comparison-tag-lost">{b}</span>)}
                       </div>
                     )}
@@ -108,7 +108,7 @@ function PlanComparisonTable({ currentPlan, plans, member, promotions, redemptio
               {plans.map((plan) => (
                 <td key={plan.name} className={plan.name === currentPlan?.name ? 'is-current' : ''}>
                   {plan.excludedBenefits.length === 0
-                    ? <span className="plan-comparison-muted">—</span>
+                    ? <span className="plan-comparison-muted">None listed</span>
                     : <ul className="plan-comparison-bullets plan-comparison-bullets-muted">
                         {plan.excludedBenefits.map((b) => <li key={b}><X size={12} aria-hidden="true" /> {b}</li>)}
                       </ul>}
@@ -499,6 +499,8 @@ function MemberMembership({
                 )}
                 {discount && <div className="member-plan-price-code mono">with code {discount.promo.code}</div>}
                 <ul className="plan-card-perks">{p.perks.map((perk, i) => <li key={i}><Check size={12} aria-hidden="true" /> {perk}</li>)}</ul>
+                {p.excludedBenefits?.length > 0 && <div className="plan-card-exclusions"><span>Not included</span><ul>{p.excludedBenefits.map(benefit => <li key={benefit}><X size={12} aria-hidden="true" />{benefit}</li>)}</ul></div>}
+                {p.terms && <p className="plan-card-terms"><span>Terms</span>{p.terms}</p>}
                 <div className="plan-card-meta">
                   <span><strong>{p.sessionLimit === 'unlimited' ? 'Unlimited' : p.sessionLimit}</strong> sessions / mo</span>
                   <span>{p.members} {p.members === 1 ? 'member' : 'members'}</span>
