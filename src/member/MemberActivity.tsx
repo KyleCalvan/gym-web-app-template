@@ -1,7 +1,8 @@
 // @ts-nocheck
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { formatTime12h } from '../trainer/availability';
+import { gymDateISO } from './activityDates';
 import { Badge, BarChart, StatTile, TabbedCard, Table, Modal, Field } from '../shared';
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -22,17 +23,40 @@ const nowHHMM = (): string => {
 
 function MemberActivity({
   members, setMembers, sessions, currentUserId,
-  checkInHistory, setCheckInHistory, setCheckIns, toast, readOnly = false,
+  checkInHistory, setCheckInHistory, setCheckIns, toast, emptyDefaults = false,
 }) {
   const me = members.find(m => m.id === currentUserId) || members[0];
   const myId = me?.id || '';
+  const [activity, setActivity] = useState(null);
+  const [activityError, setActivityError] = useState('');
+  const [saving, setSaving] = useState(false);
+  const live = emptyDefaults;
+  const today = live ? gymDateISO() : todayISO();
+  const history = live ? (activity?.checkInHistory ?? []) : checkInHistory;
+  const allSessions = live ? (activity?.sessions ?? []) : sessions;
+  const canCheckIn = live ? activity?.canCheckIn === true : me?.status !== 'Frozen';
+
+  const loadActivity = () => {
+    setActivityError('');
+    fetch('/api/member/activity', { cache: 'no-store' })
+      .then(async response => {
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Activity could not be loaded.');
+        setActivity(data);
+      })
+      .catch(error => setActivityError(error instanceof Error ? error.message : 'Activity could not be loaded.'));
+  };
+  useEffect(() => { if (live) loadActivity(); }, [live]);
 
   const checkedToday = useMemo(
-    () => checkInHistory.some(r => r.memberId === myId && r.date === todayISO()),
-    [checkInHistory, myId],
+    () => history.some(r => r.memberId === myId && r.date === today),
+    [history, myId, today],
   );
-  const isFrozen = me?.status === 'Frozen';
-  const [metrics, setMetrics] = useState(() => ({ weightKg: me?.weightKg ?? (readOnly ? 0 : 72), heightCm: me?.heightCm ?? (readOnly ? 0 : 172) }));
+  const isFrozen = live ? activity?.membershipStatus === 'Frozen' : me?.status === 'Frozen';
+  const [metrics, setMetrics] = useState(() => ({ weightKg: me?.weightKg ?? (emptyDefaults ? 0 : 72), heightCm: me?.heightCm ?? (emptyDefaults ? 0 : 172) }));
+  useEffect(() => {
+    if (live && activity) setMetrics({ weightKg: activity.weightKg ?? 0, heightCm: activity.heightCm ?? 0 });
+  }, [live, activity?.weightKg, activity?.heightCm]);
   const [editingMetrics, setEditingMetrics] = useState(false);
   const [metricDraft, setMetricDraft] = useState(metrics);
   const heightM = metrics.heightCm / 100;
@@ -42,15 +66,31 @@ function MemberActivity({
     : bmi < 25 ? { label: 'Healthy', tone: 'ok' }
     : bmi < 30 ? { label: 'Overweight', tone: 'warn' }
     : { label: 'Obese', tone: 'warn' };
-  const mySessionsCount = sessions.filter(s => s.member === me?.name).length;
+  const mySessionsCount = allSessions.filter(s => s.member === (live ? myId : me?.name)).length;
   const sessionPct = Math.min(100, Math.round((mySessionsCount / 10) * 100));
 
-  const saveMetrics = (e) => {
+  const saveMetrics = async (e) => {
     e.preventDefault();
     const weightKg = Number(metricDraft.weightKg);
     const heightCm = Number(metricDraft.heightCm);
-    if (!weightKg || !heightCm || weightKg < 20 || heightCm < 50) {
+    if (!Number.isFinite(weightKg) || !Number.isFinite(heightCm) || weightKg < 20 || weightKg > 500 || heightCm < 50 || heightCm > 300) {
       toast('Please enter realistic values');
+      return;
+    }
+    if (live) {
+      setSaving(true);
+      try {
+        const response = await fetch('/api/member/activity', { method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ weightKg, heightCm }) });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Metrics could not be saved.');
+        setActivity(previous => ({ ...previous, weightKg: data.weightKg, heightCm: data.heightCm }));
+        setMetrics({ weightKg: data.weightKg, heightCm: data.heightCm });
+        setEditingMetrics(false);
+        toast('Progress metrics saved');
+      } catch (error) {
+        toast(error instanceof Error ? error.message : 'Metrics could not be saved.');
+      } finally { setSaving(false); }
       return;
     }
     setMembers((previous) => previous.map((member) => member.id === me?.id ? { ...member, weightKg, heightCm } : member));
@@ -60,8 +100,8 @@ function MemberActivity({
   };
 
   const myHistory = useMemo(
-    () => checkInHistory.filter(r => r.memberId === myId),
-    [checkInHistory, myId],
+    () => history.filter(r => r.memberId === myId),
+    [history, myId],
   );
   const historyByDate = useMemo(() => {
     const m = new Map();
@@ -72,17 +112,17 @@ function MemberActivity({
   // Reuse the member's existing sessions; never expose another member's entries.
   const sessionsByDate = useMemo(() => {
     const days = new Map();
-    sessions.filter(session => session.member === me?.name).forEach(session => {
+    allSessions.filter(session => session.member === (live ? myId : me?.name)).forEach(session => {
       const day = session.date.slice(0, 10);
       days.set(day, [...(days.get(day) || []), session]);
     });
     return days;
-  }, [sessions, me?.name]);
+  }, [allSessions, live, myId, me?.name]);
 
   // Calendar view state
   const [viewMonth, setViewMonth] = useState(() => {
-    const d = new Date();
-    return { year: d.getFullYear(), month: d.getMonth() };
+    const current = live ? gymDateISO() : todayISO();
+    return { year: Number(current.slice(0, 4)), month: Number(current.slice(5, 7)) - 1 };
   });
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
 
@@ -109,58 +149,72 @@ function MemberActivity({
     const dates = new Set(myHistory.map(r => r.date));
     if (dates.size === 0) return 0;
     let count = 0;
-    const cursor = new Date();
+    const cursor = new Date(`${today}T12:00:00.000Z`);
     // Allow streak if today OR yesterday is in dates.
-    if (!dates.has(toISO(cursor))) {
-      cursor.setDate(cursor.getDate() - 1);
-      if (!dates.has(toISO(cursor))) return 0;
+    if (!dates.has(cursor.toISOString().slice(0, 10))) {
+      cursor.setUTCDate(cursor.getUTCDate() - 1);
+      if (!dates.has(cursor.toISOString().slice(0, 10))) return 0;
     }
-    while (dates.has(toISO(cursor))) {
+    while (dates.has(cursor.toISOString().slice(0, 10))) {
       count++;
-      cursor.setDate(cursor.getDate() - 1);
+      cursor.setUTCDate(cursor.getUTCDate() - 1);
     }
     return count;
-  }, [myHistory]);
+  }, [myHistory, today]);
 
   // Monthly check-in count (real data).
   const monthCheckIns = useMemo(() => {
-    const now = new Date();
-    const ym = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+    const ym = today.slice(0, 7);
     return myHistory.filter(r => r.date.startsWith(ym)).length;
-  }, [myHistory]);
+  }, [myHistory, today]);
   const monthCheckPct = Math.min(100, Math.round((monthCheckIns / 20) * 100));
 
-  // Real weekly chart for current month (Week 1..4 by 7-day chunks ending today).
+  // Four seven-day windows ending on the gym's current date.
   const weeklyData = useMemo(() => {
-    const now = new Date();
+    const now = Date.parse(`${today}T00:00:00.000Z`);
     const buckets = [0, 0, 0, 0]; // Wk1..Wk4
     myHistory.forEach(r => {
-      const d = new Date(r.date);
-      const diffDays = Math.floor((now - d) / (1000 * 60 * 60 * 24));
-      if (diffDays < 0 || diffDays > 28) return;
-      const idx = Math.min(3, Math.floor(diffDays / 7));
+      const diffDays = Math.round((now - Date.parse(`${r.date}T00:00:00.000Z`)) / (1000 * 60 * 60 * 24));
+      if (diffDays < 0 || diffDays >= 28) return;
+      const idx = Math.floor(diffDays / 7);
       buckets[idx]++;
     });
     return [
-      { d: 'Wk1', v: buckets[0] },
-      { d: 'Wk2', v: buckets[1] },
-      { d: 'Wk3', v: buckets[2] },
-      { d: 'Wk4', v: buckets[3] },
+      { d: '21–27d ago', v: buckets[3] },
+      { d: '14–20d ago', v: buckets[2] },
+      { d: '7–13d ago', v: buckets[1] },
+      { d: 'Past 7d', v: buckets[0] },
     ];
-  }, [myHistory]);
+  }, [myHistory, today]);
 
   // Coaching session log (filter sessions for me).
   const mySessions = useMemo(
-    () => sessions
-      .filter(s => s.member === me?.name)
+    () => allSessions
+      .filter(s => s.member === (live ? myId : me?.name))
       .slice()
       .sort((a, b) => (a.date < b.date ? 1 : -1)),
-    [sessions, me?.name],
+    [allSessions, live, myId, me?.name],
   );
 
-  const handleCheckIn = () => {
+  const handleCheckIn = async () => {
     if (isFrozen) { toast('Frozen accounts cannot check in.', 'error'); return; }
     if (checkedToday) { toast('Already checked in today.', 'info'); return; }
+    if (live) {
+      if (!canCheckIn) { toast('An active membership is required to check in.', 'error'); return; }
+      setSaving(true);
+      try {
+        const response = await fetch('/api/member/activity', { method: 'POST' });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Check-in could not be saved.');
+        setActivity(previous => ({ ...previous, checkInHistory: [...previous.checkInHistory, data.checkIn] }));
+        setSelectedDay(data.checkIn.date);
+        toast('Checked in — see you at the gym!', 'success');
+      } catch (error) {
+        toast(error instanceof Error ? error.message : 'Check-in could not be saved.');
+        loadActivity();
+      } finally { setSaving(false); }
+      return;
+    }
     const date = todayISO();
     const time = nowHHMM();
     setCheckInHistory(prev => [...prev, {
@@ -174,6 +228,10 @@ function MemberActivity({
     setSelectedDay(date);
   };
 
+  if (live && !activity) return <div className="member-activity" role="status">
+    {activityError ? <p role="alert">{activityError} <button type="button" onClick={loadActivity}>Retry</button></p> : 'Loading your activity…'}
+  </div>;
+
   return (
     <div className="member-activity">
       <div className="grid grid-4" style={{marginBottom:18}}>
@@ -184,19 +242,19 @@ function MemberActivity({
       </div>
 
       <TabbedCard
-        title="Body Metrics & Goals"
         right={<button className="btn btn-outline btn-sm" onClick={()=>{setMetricDraft(metrics); setEditingMetrics(true);}}>Update Metrics</button>}
+        title={live ? 'Body Metrics' : 'Body Metrics & Goals'}
       >
         <div className="metrics-tracker">
           <div className="metric-tile">
             <div className="lbl">Weight</div>
-            <div className="val">{hasMetrics ? metrics.weightKg.toFixed(1) : '—'}{hasMetrics && <span className="metric-unit">kg</span>}</div>
-            <div className="sub">{hasMetrics ? 'Saved profile metric' : 'Not recorded'}</div>
+            <div className="val">{metrics.weightKg > 0 ? metrics.weightKg.toFixed(1) : '—'}{metrics.weightKg > 0 && <span className="metric-unit">kg</span>}</div>
+            <div className="sub">{metrics.weightKg > 0 ? 'Saved profile metric' : 'Not recorded'}</div>
           </div>
           <div className="metric-tile">
             <div className="lbl">Height</div>
-            <div className="val">{hasMetrics ? metrics.heightCm.toFixed(0) : '—'}{hasMetrics && <span className="metric-unit">cm</span>}</div>
-            <div className="sub">{hasMetrics ? `${(metrics.heightCm / 100).toFixed(2)} m` : 'Not recorded'}</div>
+            <div className="val">{metrics.heightCm > 0 ? metrics.heightCm.toFixed(0) : '—'}{metrics.heightCm > 0 && <span className="metric-unit">cm</span>}</div>
+            <div className="sub">{metrics.heightCm > 0 ? `${(metrics.heightCm / 100).toFixed(2)} m` : 'Not recorded'}</div>
           </div>
           <div className={`metric-tile ${bmiCategory.tone}`}>
             <div className="lbl">BMI</div>
@@ -204,7 +262,7 @@ function MemberActivity({
             <div className="sub">{hasMetrics ? bmiCategory.label : 'Not recorded'}</div>
           </div>
         </div>
-        <div className="member-progress-goals">
+        {!live && <div className="member-progress-goals">
           <div>
             <div className="member-progress-label"><span>Monthly check-in goal</span><span className="mono">{monthCheckIns}/20 · {monthCheckPct}%</span></div>
             <div className="progress-bar"><div style={{width:`${monthCheckPct}%`}}></div></div>
@@ -213,7 +271,7 @@ function MemberActivity({
             <div className="member-progress-label"><span>Coaching session target</span><span className="mono">{mySessionsCount}/10 · {sessionPct}%</span></div>
             <div className="progress-bar"><div style={{width:`${sessionPct}%`}}></div></div>
           </div>
-        </div>
+        </div>}
       </TabbedCard>
 
       {isFrozen && (
@@ -234,13 +292,15 @@ function MemberActivity({
           <button
             className="btn btn-signal btn-sm"
             onClick={handleCheckIn}
-            disabled={isFrozen || checkedToday}
-            title={isFrozen ? 'Frozen accounts cannot check in' : (checkedToday ? 'Already checked in today' : 'Tap to record today\'s visit')}
+            disabled={!canCheckIn || checkedToday || saving}
+            title={isFrozen ? 'Frozen accounts cannot check in' : !canCheckIn ? 'An active membership is required' : (checkedToday ? 'Already checked in today' : 'Tap to record today\'s visit')}
           >
             {checkedToday ? 'Checked In Today' : 'Check In'}
           </button>
         }
       >
+        {live && !canCheckIn && !isFrozen && !checkedToday &&
+          <p className="member-metric-help">An active membership is required to check in.</p>}
         <div className="cal-toolbar" aria-label="Calendar month navigation">
           <button aria-label="Previous month" className="btn btn-ghost btn-sm" onClick={() => setViewMonth(({year, month}) => {
             const m = month - 1;
@@ -261,7 +321,7 @@ function MemberActivity({
             const rec = historyByDate.get(iso);
             const entries = sessionsByDate.get(iso) || [];
             const day = Number(iso.slice(8, 10));
-            const isToday = iso === todayISO();
+            const isToday = iso === today;
             return (
               <button
                 key={iso}
@@ -306,7 +366,7 @@ function MemberActivity({
       <div style={{height:18}}></div>
 
       <div className="grid grid-2">
-        <TabbedCard title="Weekly Check-ins">
+        <TabbedCard title="Check-ins Over the Past 28 Days">
           <BarChart data={weeklyData} valueKey="v" labelKey="d" />
         </TabbedCard>
         <TabbedCard title="Coaching Session Log">
@@ -340,19 +400,12 @@ function MemberActivity({
               </Field>
             </div>
             <p className="member-metric-help">BMI is calculated automatically from weight and height.</p>
-            <button type="submit" className="btn btn-signal btn-block">Save Metrics</button>
+            <button type="submit" className="btn btn-signal btn-block" disabled={saving}>Save Metrics</button>
           </form>
         </Modal>
       )}
     </div>
   );
-}
-
-function toISO(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
 }
 
 export default MemberActivity;

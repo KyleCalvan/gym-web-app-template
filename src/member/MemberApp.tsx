@@ -5,15 +5,17 @@ import Sidebar from '../shared/shell/Sidebar';
 import { Topbar } from '../shared/shell/Topbar';
 import { ProfileMenu } from '../shared/shell/ProfileMenu';
 import { useToast } from '../shared/hooks/useToast';
-import type { Member, Notification, NotifPrefs, Plan, Session, Transaction, ViewProps } from '../types';
+import type { Member, Notification, NotifPrefs, Plan, Promotion, PromotionRedemption, QrDestination, Session, Trainer, TrainerAvailability, Transaction, TxnStatus, ViewProps } from '../types';
 import MemberDashboard from './MemberDashboard';
 import { MEMBER_NAV, MEMBER_VIEWS } from './index';
 
 type Overview = {
   joinedAt: string;
-  membership: { planName: string; status: string; endsAt: string } | null;
-  latestPayment: { amount: number; status: string; at: string } | null;
-  upcomingSessions: { id: string; startsAt: string; type: string; status: string; trainer: string | null }[];
+  membership: { planName: string; status: string; endsAt: string; cancellationScheduled: boolean } | null;
+  latestPayment: { type: string; amount: number; status: string; at: string } | null;
+  studentVerificationStatus: string | null;
+  upcomingSessions: { id: string; startsAt: string; type: string; status: string;
+    amount: number; paymentStatus: TxnStatus | null; trainer: string | null }[];
 };
 
 function sessionDate(value: string) {
@@ -29,6 +31,25 @@ export default function MemberApp({ name, email, phone, profileId, onLogout, pen
 }) {
   const [overview, setOverview] = useState<Overview | null>(null);
   const [plans, setPlans] = useState<Plan[]>([]);
+  const [trainers, setTrainers] = useState<Trainer[]>([]);
+  const [trainerAvailability, setTrainerAvailability] = useState<TrainerAvailability[]>([]);
+  const [bookingSlots, setBookingSlots] = useState<NonNullable<ViewProps['bookingSlots']>>([]);
+  const [promotions, setPromotions] = useState<Promotion[]>([]);
+  const [promotionRedemptions, setPromotionRedemptions] = useState<PromotionRedemption[]>([]);
+  const [promotionsAsOf, setPromotionsAsOf] = useState('');
+  const [paymentHistory, setPaymentHistory] = useState<Transaction[]>([]);
+  const [preferredPaymentMethod, setPreferredPaymentMethod] = useState<'GCash' | 'Cash'>('GCash');
+  const [paymentsLoading, setPaymentsLoading] = useState(false);
+  const [paymentsError, setPaymentsError] = useState('');
+  const [paymentRefresh, setPaymentRefresh] = useState(0);
+  const [qrDestinations, setQrDestinations] = useState<QrDestination[]>([]);
+  const [memberQrUrl, setMemberQrUrl] = useState<string | null>(null);
+  const [qrError, setQrError] = useState('');
+  const [qrLoading, setQrLoading] = useState(false);
+  const [qrRefresh, setQrRefresh] = useState(0);
+  const [promotionError, setPromotionError] = useState('');
+  const [promotionsLoading, setPromotionsLoading] = useState(true);
+  const [promotionRefresh, setPromotionRefresh] = useState(0);
   const [error, setError] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [view, setView] = useState('dashboard');
@@ -43,6 +64,16 @@ export default function MemberApp({ name, email, phone, profileId, onLogout, pen
   const [toastNode, fireToast] = useToast();
   const pillRef = useRef<HTMLButtonElement>(null);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const emailChange = params.get('email-change');
+    if (!emailChange) return;
+    fireToast(emailChange === 'updated' ? 'Your email address has been updated.'
+      : 'The email verification link is invalid or expired. Please request a new one.');
+    params.delete('email-change');
+    window.history.replaceState(null, '', `${window.location.pathname}${params.size ? `?${params}` : ''}`);
+  }, [fireToast]);
+
   function refresh() {
     setError('');
     fetch('/api/member/overview', { cache: 'no-store' })
@@ -54,7 +85,63 @@ export default function MemberApp({ name, email, phone, profileId, onLogout, pen
       .catch(() => setError('Your member overview could not be loaded. Please refresh.'));
   }
 
-  useEffect(() => { refresh(); }, []);
+  useEffect(() => { if (view === 'dashboard') refresh(); }, [view]);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const result = params.get('checkout');
+    const reference = params.get('reference');
+    if (!result || !reference) return;
+    const coaching = reference.startsWith('COACH-');
+    setView(coaching ? 'coaching' : 'membership');
+    if (result === 'cancelled') {
+      window.history.replaceState(null, '', '/account');
+      if (coaching) {
+        void cancelCoachingCheckout(reference).then(status => {
+          fireToast(status === 'Paid' ? 'Test payment confirmed. Your coaching sessions are booked.'
+            : status === 'Pending' ? 'Payment is still processing. Check its status before leaving.'
+              : 'Checkout was not completed. No coaching session was booked.');
+          if (status !== 'Pending' && window.opener) window.close();
+        }).catch(error => fireToast(error instanceof Error ? error.message : 'Checkout could not be cancelled.'));
+      } else {
+        fireToast('Checkout was not completed. Your membership has not changed.');
+      }
+      return;
+    }
+    let cancelled = false;
+    async function verify() {
+      for (let attempt = 0; attempt < 5 && !cancelled; attempt += 1) {
+        try {
+          const endpoint = coaching ? '/api/member/coaching-checkout/status' : '/api/member/checkout/status';
+          const response = await fetch(`${endpoint}?reference=${encodeURIComponent(reference!)}`, { cache: 'no-store' });
+          const data: { status?: string; error?: string } = await response.json();
+          if (cancelled) return;
+          if (!response.ok) throw new Error(data.error || 'Payment could not be verified.');
+          if (data.status === 'Paid') {
+            window.history.replaceState(null, '', '/account');
+            refresh();
+            fireToast(coaching ? 'Test payment confirmed. Your coaching sessions are booked.'
+              : 'Test payment confirmed. Your membership is active.');
+            if (coaching && window.opener) window.close();
+            return;
+          }
+          if (data.status === 'Failed') {
+            fireToast(coaching ? 'Checkout failed. No coaching session was booked.'
+              : 'Checkout failed. Your membership has not changed.');
+            return;
+          }
+        } catch (error) {
+          if (attempt === 4) {
+            fireToast(error instanceof Error ? error.message : 'Payment could not be verified.');
+            return;
+          }
+        }
+        if (attempt < 4) await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+      if (!cancelled) fireToast('Payment is still pending. Refresh this page to check again.');
+    }
+    void verify();
+    return () => { cancelled = true; };
+  }, []);
   useEffect(() => {
     let active = true;
     fetch('/api/gym-plans').then(async response => {
@@ -65,15 +152,171 @@ export default function MemberApp({ name, email, phone, profileId, onLogout, pen
     return () => { active = false; };
   }, []);
   useEffect(() => {
+    if (view !== 'coaching') return;
+    let active = true;
+    fetch('/api/member/coaching-options', { cache: 'no-store' }).then(async response => {
+      if (!response.ok) throw new Error('Coaching schedules could not be loaded.');
+      return response.json() as Promise<{ trainers: Trainer[]; trainerAvailability: TrainerAvailability[]; bookingSlots: NonNullable<ViewProps['bookingSlots']> }>;
+    }).then(result => {
+      if (!active) return;
+      setTrainers(result.trainers);
+      setTrainerAvailability(result.trainerAvailability);
+      setBookingSlots(result.bookingSlots);
+    }).catch(() => { if (active) fireToast('Coaching schedules could not be loaded. Please try again.'); });
+    return () => { active = false; };
+  }, [view]);
+  useEffect(() => {
+    if (view !== 'promotions' && view !== 'dashboard') return;
+    let active = true;
+    setPromotionsLoading(true);
+    setPromotionError('');
+    fetch('/api/member/promotions', { cache: 'no-store' }).then(async response => {
+      if (!response.ok) throw new Error('Promotions could not be loaded.');
+      return response.json() as Promise<{ asOf: string; promotions: Promotion[]; promotionRedemptions: PromotionRedemption[] }>;
+    }).then(result => {
+      if (!active) return;
+      setPromotions(result.promotions);
+      setPromotionRedemptions(result.promotionRedemptions);
+      setPromotionsAsOf(result.asOf);
+    }).catch(() => {
+      if (active) setPromotionError('Promotions could not be loaded. Please try again.');
+    }).finally(() => { if (active) setPromotionsLoading(false); });
+    return () => { active = false; };
+  }, [view, promotionRefresh]);
+  useEffect(() => {
+    if (view !== 'promotions' && view !== 'dashboard') return;
+    const refreshOnFocus = () => setPromotionRefresh(count => count + 1);
+    window.addEventListener('focus', refreshOnFocus);
+    return () => window.removeEventListener('focus', refreshOnFocus);
+  }, [view]);
+  useEffect(() => {
+    if (view !== 'payments') return;
+    let active = true;
+    setPaymentsLoading(true);
+    setPaymentsError('');
+    fetch('/api/member/payments', { cache: 'no-store' }).then(async response => {
+      if (!response.ok) throw new Error('Payment history could not be loaded.');
+      return response.json() as Promise<{ transactions: Transaction[]; preferredPaymentMethod: 'GCash' | 'Cash' }>;
+    }).then(result => {
+      if (!active) return;
+      setPaymentHistory(result.transactions);
+      setPreferredPaymentMethod(result.preferredPaymentMethod);
+    }).catch(() => {
+      if (active) setPaymentsError('Payment history could not be loaded. Please try again.');
+    }).finally(() => { if (active) setPaymentsLoading(false); });
+    return () => { active = false; };
+  }, [view, paymentRefresh]);
+  useEffect(() => {
+    if (view !== 'chat') return;
+    let active = true;
+    setQrLoading(true);
+    setQrError('');
+    fetch('/api/member/qr', { cache: 'no-store' }).then(async response => {
+      if (!response.ok) throw new Error('Gym links and QR could not be loaded.');
+      return response.json() as Promise<{ destinations: QrDestination[]; memberQrUpdatedAt: string | null }>;
+    }).then(result => {
+      if (!active) return;
+      setQrDestinations(result.destinations);
+      setMemberQrUrl(result.memberQrUpdatedAt
+        ? `/api/member/qr?image=1&version=${encodeURIComponent(result.memberQrUpdatedAt)}` : null);
+    }).catch(() => { if (active) setQrError('Gym links and QR could not be loaded. Please retry.'); })
+      .finally(() => { if (active) setQrLoading(false); });
+    return () => { active = false; };
+  }, [view, qrRefresh]);
+  useEffect(() => {
+    if (view !== 'chat') return;
+    const refreshOnFocus = () => setQrRefresh(count => count + 1);
+    window.addEventListener('focus', refreshOnFocus);
+    return () => window.removeEventListener('focus', refreshOnFocus);
+  }, [view]);
+  useEffect(() => {
     document.documentElement.dataset.theme = theme;
     try { localStorage.setItem('vinathletics-theme', theme); } catch { /* Theme remains active for this visit. */ }
   }, [theme]);
 
   function handleNav(nextView: string) {
+    if (nextView === 'payments') setPaymentsLoading(true);
+    if (nextView === 'promotions') setPromotionsLoading(true);
     setView(nextView);
     setProfileOpen(false);
     setNotificationsOpen(false);
     setIsSidebarOpen(false);
+  }
+
+  async function startPlanCheckout(planName: string) {
+    const response = await fetch('/api/member/checkout', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ planName }),
+    });
+    const data: { checkoutUrl?: string; error?: string } = await response.json();
+    if (!response.ok || !data.checkoutUrl) throw new Error(data.error || 'Checkout could not start.');
+    window.location.assign(data.checkoutUrl);
+  }
+
+  async function startCoachingCheckout(selection: { trainerId: string; dates: string[]; time: string; expectedTotal: number }) {
+    const response = await fetch('/api/member/coaching-checkout', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(selection),
+    });
+    const data: { checkoutUrl?: string; reference?: string; error?: string } = await response.json();
+    if (!response.ok || !data.checkoutUrl || !data.reference) throw new Error(data.error || 'Coaching checkout could not start.');
+    return { checkoutUrl: data.checkoutUrl, reference: data.reference };
+  }
+
+  async function checkCoachingCheckout(reference: string): Promise<'Pending' | 'Paid' | 'Failed'> {
+    const response = await fetch(`/api/member/coaching-checkout/status?reference=${encodeURIComponent(reference)}`, { cache: 'no-store' });
+    const data: { status?: 'Pending' | 'Paid' | 'Failed'; error?: string } = await response.json();
+    if (!response.ok || !data.status) throw new Error(data.error || 'Payment status could not be verified.');
+    if (data.status === 'Paid') {
+      refresh();
+      void fetch('/api/member/coaching-options', { cache: 'no-store' }).then(async result => {
+        if (!result.ok) return;
+        const options: { trainers: Trainer[]; trainerAvailability: TrainerAvailability[];
+          bookingSlots: NonNullable<ViewProps['bookingSlots']> } = await result.json();
+        setTrainers(options.trainers);
+        setTrainerAvailability(options.trainerAvailability);
+        setBookingSlots(options.bookingSlots);
+      }).catch(() => {});
+    }
+    return data.status;
+  }
+
+  async function cancelCoachingCheckout(reference: string): Promise<'Pending' | 'Paid' | 'Failed'> {
+    const response = await fetch('/api/member/coaching-checkout/cancel', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reference }),
+    });
+    const data: { status?: 'Pending' | 'Paid' | 'Failed'; error?: string } = await response.json();
+    if (!response.ok || !data.status) throw new Error(data.error || 'Checkout could not be cancelled.');
+    if (data.status === 'Paid') refresh();
+    return data.status;
+  }
+
+  async function cancelPlan(reason: string) {
+    const response = await fetch('/api/member/membership/cancel', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason }),
+    });
+    const data: { membership?: Overview['membership']; error?: string } = await response.json();
+    if (!response.ok || !data.membership) throw new Error(data.error || 'Plan cancellation could not be saved.');
+    setOverview(previous => previous ? { ...previous, membership: data.membership! } : previous);
+  }
+
+  async function savePreferredPaymentMethod(method: 'GCash' | 'Cash') {
+    const response = await fetch('/api/member/payments', {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ preferredPaymentMethod: method }),
+    });
+    if (!response.ok) throw new Error('Payment preference could not be saved. Please try again.');
+    const result: { preferredPaymentMethod: 'GCash' | 'Cash' } = await response.json();
+    setPreferredPaymentMethod(result.preferredPaymentMethod);
+  }
+
+  async function saveMemberEmail(updatedEmail: string) {
+    const response = await fetch('/api/member/email', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: updatedEmail }),
+    });
+    const result: { message?: string } = await response.json();
+    if (!response.ok) throw new Error(result.message || 'Verification email could not be sent.');
   }
 
   const user = { id: profileId, name, role: 'Member' };
@@ -83,15 +326,18 @@ export default function MemberApp({ name, email, phone, profileId, onLogout, pen
     plan: overview?.membership?.planName ?? '',
     status: overview?.membership?.status ?? '',
     membershipValidUntil: overview?.membership?.endsAt ?? null,
+    membershipCancellationScheduled: overview?.membership?.cancellationScheduled ?? false,
   };
   const sessions = overview?.upcomingSessions.map(session => ({
     id: session.id, member: name, trainer: session.trainer ?? 'Trainer to be assigned',
     date: sessionDate(session.startsAt),
     time: new Intl.DateTimeFormat('en-PH', { timeZone: 'Asia/Manila', timeStyle: 'short' }).format(new Date(session.startsAt)),
     type: session.type, status: session.status,
+    amount: session.amount, paid: session.paymentStatus === 'Paid',
+    paymentStatus: session.paymentStatus,
   })) ?? [];
-  const transactions = overview?.latestPayment ? [{
-    id: 'latest-payment', member: name, type: 'Payment', amount: overview.latestPayment.amount,
+  const overviewTransactions = overview?.latestPayment ? [{
+    id: 'latest-payment', member: name, type: overview.latestPayment.type, amount: overview.latestPayment.amount,
     status: overview.latestPayment.status, method: 'Not recorded',
     date: new Intl.DateTimeFormat('en-PH', { dateStyle: 'medium', timeZone: 'Asia/Manila' }).format(new Date(overview.latestPayment.at)),
   }] : [];
@@ -101,12 +347,12 @@ export default function MemberApp({ name, email, phone, profileId, onLogout, pen
   const viewProps: ViewProps = {
     role: 'member', currentUser: user, currentUserId: member.id, onNav: handleNav,
     members: [member as Member], setMembers: ignoreChange,
-    trainers: [], setTrainers: ignoreChange,
+    trainers, setTrainers: ignoreChange,
     plans, setPlans: ignoreChange,
-    transactions: transactions as Transaction[], setTransactions: ignoreChange,
+    transactions: view === 'payments' ? paymentHistory : overviewTransactions as Transaction[], setTransactions: ignoreChange,
     sessions: sessions as Session[], setSessions: ignoreChange,
-    trainerAvailability: [], setTrainerAvailability: ignoreChange,
-    promotions: [], setPromotions: ignoreChange,
+    trainerAvailability, setTrainerAvailability: ignoreChange, bookingSlots,
+    promotions: view === 'promotions' ? promotions : [], setPromotions: ignoreChange,
     staff: [], setStaff: ignoreChange, admins: [], setAdmins: ignoreChange,
     superadmins: [], setSuperadmins: ignoreChange,
     notifications, setNotifications, bookings: sessions as Session[], setBookings: ignoreChange,
@@ -114,11 +360,18 @@ export default function MemberApp({ name, email, phone, profileId, onLogout, pen
     checkInHistory: [], setCheckInHistory: ignoreChange,
     notifPrefs, setNotifPrefs, auditLog: [], setAuditLog: ignoreChange,
     activeSessions: [], setActiveSessions: ignoreChange, currentSessionId: null,
-    toast: fireToast, today: '', addAudit: () => {},
-    promotionRedemptions: [], setPromotionRedemptions: ignoreChange,
-    preferredPaymentMethod: 'GCash', setPreferredPaymentMethod: ignoreChange,
-    qrDestinations: [], setQrDestinations: ignoreChange,
-    onDeleteAccount: ignoreChange, readOnly: true,
+    toast: fireToast, today: promotionsAsOf, addAudit: () => {},
+    promotionRedemptions: view === 'promotions' ? promotionRedemptions : [], setPromotionRedemptions: ignoreChange,
+    preferredPaymentMethod, setPreferredPaymentMethod: ignoreChange,
+    onSavePaymentMethod: savePreferredPaymentMethod, transactionsAreMine: true,
+    onSaveMemberEmail: saveMemberEmail,
+    qrDestinations, memberQrUrl, setQrDestinations: ignoreChange,
+    onDeleteAccount: ignoreChange, emptyDefaults: true, onPlanCheckout: startPlanCheckout,
+    onPlanCancel: cancelPlan,
+    onCoachingCheckout: startCoachingCheckout,
+    onCoachingCheckoutStatus: checkCoachingCheckout,
+    onCoachingCheckoutCancel: cancelCoachingCheckout,
+    studentVerified: overview?.studentVerificationStatus === 'Verified',
   };
 
   return <div className="app-shell" aria-busy={pending}>
@@ -135,17 +388,23 @@ export default function MemberApp({ name, email, phone, profileId, onLogout, pen
         {view === 'dashboard' && error && <p role="alert">{error} <button type="button" onClick={refresh}>Retry</button></p>}
         {view === 'dashboard' && !overview && !error && <p role="status">Loading your member dashboard…</p>}
         {view === 'dashboard' && overview && <MemberDashboard members={[member]} currentUserId={member.id}
-          sessions={sessions} bookings={sessions} transactions={transactions}
-          trainers={[]} plans={[]} promotions={[]} promotionRedemptions={[]}
+          sessions={sessions} bookings={sessions} transactions={overviewTransactions}
+          trainers={[]} trainerAvailability={[]} bookingSlots={[]} plans={[]}
+          promotions={promotions} promotionRedemptions={promotionRedemptions}
           setSessions={() => {}} setBookings={() => {}} setTransactions={() => {}}
           setPromotions={() => {}} setPromotionRedemptions={() => {}}
-          onNav={handleNav} onBook={() => fireToast('Online booking is not available yet.')}
-          paymentKnown={false} promotionsAvailable={false}
-          toast={fireToast} today={''} addAudit={() => {}} preferredPaymentMethod={''} />}
-        {view !== 'dashboard' && ViewComp && <>
-          <p className="member-readonly-note" role="note">This page is a read-only preview. Changes and purchases are not saved yet.</p>
-          <div inert><ViewComp {...viewProps} /></div>
-        </>}
+          onNav={handleNav} onBook={() => handleNav('coaching')}
+          paymentKnown promotionsLoading={promotionsLoading} promotionsError={promotionError}
+          toast={fireToast} today={promotionsAsOf} addAudit={() => {}} preferredPaymentMethod={preferredPaymentMethod} />}
+        {view === 'promotions' && promotionError && <p role="alert">{promotionError} <button type="button" onClick={() => setPromotionRefresh(count => count + 1)}>Retry</button></p>}
+        {view === 'promotions' && promotionsLoading && <p role="status">Loading promotions…</p>}
+        {view === 'payments' && paymentsError && <p role="alert">{paymentsError} <button type="button" onClick={() => setPaymentRefresh(count => count + 1)}>Retry</button></p>}
+        {view === 'payments' && paymentsLoading && <p role="status">Loading payment history…</p>}
+        {view === 'chat' && qrError && <p role="alert">{qrError} <button type="button" onClick={() => setQrRefresh(count => count + 1)}>Retry</button></p>}
+        {view === 'chat' && qrLoading && <p role="status">Loading gym links and QR…</p>}
+        {view !== 'dashboard' && ViewComp && !(view === 'promotions' && (promotionsLoading || promotionError))
+          && !(view === 'payments' && (paymentsLoading || paymentsError))
+          && !(view === 'chat' && (qrLoading || qrError)) && <ViewComp {...viewProps} />}
       </div>
     </div>
     <ProfileMenu role="member" availableRoles={['member']} onSwitchRole={() => {}}

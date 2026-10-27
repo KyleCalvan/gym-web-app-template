@@ -51,3 +51,10 @@ test('does not return promotions with missing or malformed validity dates', () =
 
   assert.deepEqual(getEligiblePromotions(promos, { plan: 'Premium' }, '2026-10-17'), []);
 });
+
+test('shows Any Plan promotions to members who have not purchased a plan', () => {
+  assert.deepEqual(getEligiblePromotions([
+    promo({ id: 'any' }),
+    promo({ id: 'specific', plan: 'Premium' }),
+  ], { plan: '' }, '2026-10-17').map(item => item.id), ['any']);
+});

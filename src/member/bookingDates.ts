@@ -94,7 +94,7 @@ export function isBookingSlotAvailable(
   const requestedTime = timeInMinutes(slot.time);
   return !bookings.some((booking) => {
     if (
-      booking.id === slot.excludeBookingId ||
+      (slot.excludeBookingId !== undefined && booking.id === slot.excludeBookingId) ||
       booking.status === 'Cancelled' ||
       booking.status === 'Completed' ||
       booking.date !== slot.date ||

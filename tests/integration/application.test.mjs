@@ -173,6 +173,199 @@ test('Google Account holder completes profile and explicitly accepts current ter
   assert.doesNotMatch(page, /Maria Santos|Basic Membership|Premium Membership/);
 });
 
+test('member payment history is private and the preferred method persists', async () => {
+  const accountId = await seedSessionAccount();
+  const otherAccountId = await seedSessionAccount();
+  const { cookie } = await issueSession(accountId);
+  const paymentReference = `PAY-${randomUUID()}`;
+  await withDatabaseClient(database.env, async (client) => {
+    const { rows } = await client.query('SELECT "accountId", "profileId" FROM "AssignedRole" WHERE "accountId" IN ($1, $2) AND role = $3',
+      [accountId, otherAccountId, 'member']);
+    for (const row of rows) {
+      await client.query('INSERT INTO "MemberProfile" ("profileId") VALUES ($1)', [row.profileId]);
+    }
+    const ownId = rows.find(row => row.accountId === accountId).profileId;
+    const otherId = rows.find(row => row.accountId === otherAccountId).profileId;
+    await client.query(`INSERT INTO "PaymentTransaction" (id, reference, "memberId", "customerName", type, method, status, "paymentState", amount, fees)
+      VALUES ($1, $2, $3, 'Session Member', 'Coaching session', 'GCash', 'Paid', 'Successful', 110, 10),
+             ($4, $5, $6, 'Other Member', 'Private purchase', 'Cash', 'Paid', 'Successful', 250, 0)`,
+    [randomUUID(), paymentReference, ownId, randomUUID(), `PAY-${randomUUID()}`, otherId]);
+  });
+  assert.equal((await fetch(`${application.url}/api/member/payments`)).status, 401);
+  const response = await fetch(`${application.url}/api/member/payments`, { headers: { cookie } });
+  assert.equal(response.status, 200, application.logs());
+  const history = await response.json();
+  assert.equal(history.preferredPaymentMethod, 'GCash');
+  assert.equal(history.transactions.length, 1);
+  assert.equal(history.transactions[0].transactionReference, paymentReference);
+  assert.equal(history.transactions[0].amount, 100);
+  assert.equal(history.transactions[0].fees, 10);
+  const change = (method, origin = application.url) => fetch(`${application.url}/api/member/payments`, {
+    method: 'PATCH', headers: { cookie, origin, 'content-type': 'application/json' },
+    body: JSON.stringify({ preferredPaymentMethod: method }),
+  });
+  assert.equal((await change('Cash', 'https://attacker.example')).status, 403);
+  assert.equal((await change('Card')).status, 400);
+  assert.equal((await change('Cash')).status, 200);
+  const saved = await fetch(`${application.url}/api/member/payments`, { headers: { cookie } }).then(response => response.json());
+  assert.equal(saved.preferredPaymentMethod, 'Cash');
+  assert.equal(saved.transactions.length, 1);
+  const overview = await fetch(`${application.url}/api/member/overview`, { headers: { cookie } }).then(response => response.json());
+  assert.equal(overview.latestPayment.type, 'Coaching session');
+});
+
+test('checkout rejects another plan while the member has an active membership', async () => {
+  const accountId = await seedSessionAccount();
+  const { cookie } = await issueSession(accountId);
+  const firstPlan = `Current-${randomUUID()}`;
+  const otherPlan = `Other-${randomUUID()}`;
+  await withDatabaseClient(database.env, async (client) => {
+    const { rows: [assignment] } = await client.query(
+      'SELECT "profileId" FROM "AssignedRole" WHERE "accountId" = $1 AND "role" = $2',
+      [accountId, 'member'],
+    );
+    await client.query('INSERT INTO "MemberProfile" ("profileId") VALUES ($1)', [assignment.profileId]);
+    await client.query('INSERT INTO "GymPlan" (name, price, period, "updatedAt") VALUES ($1, 1000, $3, NOW()), ($2, 1500, $3, NOW())',
+      [firstPlan, otherPlan, 'month']);
+    await client.query(`INSERT INTO "Membership" (id, "memberId", "planName", status, "startsAt", "endsAt", "updatedAt")
+      VALUES ($1, $2, $3, 'Active', NOW() - INTERVAL '1 day', NOW() + INTERVAL '1 month', NOW())`,
+    [randomUUID(), assignment.profileId, firstPlan]);
+  });
+  const response = await fetch(`${application.url}/api/member/checkout`, {
+    method: 'POST',
+    headers: { cookie, origin: application.url, 'content-type': 'application/json' },
+    body: JSON.stringify({ planName: otherPlan }),
+  });
+  assert.equal(response.status, 409, application.logs());
+  assert.match((await response.json()).error, /already have an active plan/);
+});
+
+test('member activity reads only personal records and persists metrics and one daily check-in', async () => {
+  const accountId = await seedSessionAccount();
+  const otherAccountId = await seedSessionAccount();
+  const { cookie } = await issueSession(accountId);
+  const planName = `Activity-${randomUUID()}`;
+  const { memberId, otherMemberId, pastSessionId, futureSessionId } = await withDatabaseClient(database.env, async (client) => {
+    const { rows } = await client.query('SELECT "accountId", "profileId" FROM "AssignedRole" WHERE "accountId" IN ($1, $2) AND role = $3',
+      [accountId, otherAccountId, 'member']);
+    const memberId = rows.find(row => row.accountId === accountId).profileId;
+    const otherMemberId = rows.find(row => row.accountId === otherAccountId).profileId;
+    await client.query('INSERT INTO "MemberProfile" ("profileId", "weightKg", "heightCm") VALUES ($1, 72.5, 171), ($2, 80, 180)',
+      [memberId, otherMemberId]);
+    await client.query('INSERT INTO "GymPlan" (name, price, period, "updatedAt") VALUES ($1, 1000, $2, NOW())', [planName, 'month']);
+    await client.query(`INSERT INTO "Membership" (id, "memberId", "planName", status, "startsAt", "endsAt", "updatedAt")
+      VALUES ($1, $2, $3, 'Active', NOW() - INTERVAL '1 day', NOW() + INTERVAL '1 month', NOW())`,
+    [randomUUID(), memberId, planName]);
+    await client.query('INSERT INTO "Attendance" (id, "memberId", "visitDate") VALUES ($1, $2, $3)',
+      [randomUUID(), otherMemberId, '2026-01-01']);
+    const trainerId = randomUUID();
+    const { rows: [trainer] } = await client.query('INSERT INTO "User" (email, name) VALUES ($1, $2) RETURNING id',
+      [`${trainerId}@example.test`, 'Activity Trainer']);
+    await client.query('INSERT INTO "RoleProfile" (id, "gymUserId", role) VALUES ($1, $2, $3)', [trainerId, trainer.id, 'trainer']);
+    await client.query('INSERT INTO "TrainerProfile" ("profileId") VALUES ($1)', [trainerId]);
+    const pastSessionId = randomUUID();
+    const futureSessionId = randomUUID();
+    await client.query(`INSERT INTO "CoachingSession" (id, "memberId", "trainerId", "startsAt", status, amount, "updatedAt")
+      VALUES ($1, $4, $3, NOW() - INTERVAL '2 days', 'Completed', 500, NOW()),
+             ($2, $4, $3, NOW() + INTERVAL '2 days', 'Confirmed', 500, NOW()),
+             ($5, $6, $3, NOW() + INTERVAL '3 days', 'Confirmed', 500, NOW())`,
+    [pastSessionId, futureSessionId, trainerId, memberId, randomUUID(), otherMemberId]);
+    return { memberId, otherMemberId, pastSessionId, futureSessionId };
+  });
+  const endpoint = `${application.url}/api/member/activity`;
+  const headers = { cookie, origin: application.url, 'content-type': 'application/json' };
+  assert.equal((await fetch(endpoint)).status, 401);
+  const initial = await fetch(endpoint, { headers: { cookie } });
+  assert.equal(initial.status, 200, application.logs());
+  const before = await initial.json();
+  assert.equal(before.weightKg, 72.5);
+  assert.equal(before.heightCm, 171);
+  assert.equal(before.canCheckIn, true);
+  assert.deepEqual(before.checkInHistory, []);
+  assert.deepEqual(before.sessions.map(session => session.id).sort(), [pastSessionId, futureSessionId].sort());
+  assert.ok(before.sessions.every(session => session.trainer === 'Activity Trainer'));
+  assert.equal((await fetch(endpoint, { method: 'PATCH', headers: { ...headers, origin: 'https://attacker.example' },
+    body: JSON.stringify({ weightKg: 73, heightCm: 172 }) })).status, 403);
+  assert.equal((await fetch(endpoint, { method: 'PATCH', headers, body: JSON.stringify({ weightKg: 0, heightCm: 172 }) })).status, 400);
+  const updated = await fetch(endpoint, { method: 'PATCH', headers, body: JSON.stringify({ weightKg: 73.2, heightCm: 172 }) });
+  assert.equal(updated.status, 200, application.logs());
+  assert.deepEqual(await updated.json(), { weightKg: 73.2, heightCm: 172 });
+  const checked = await fetch(endpoint, { method: 'POST', headers });
+  assert.equal(checked.status, 201, application.logs());
+  const { checkIn } = await checked.json();
+  assert.equal(checkIn.memberId, memberId);
+  assert.match(checkIn.date, /^\d{4}-\d{2}-\d{2}$/);
+  assert.equal((await fetch(endpoint, { method: 'POST', headers })).status, 409);
+  const reloaded = await fetch(endpoint, { headers: { cookie } }).then(response => response.json());
+  assert.equal(reloaded.weightKg, 73.2);
+  assert.equal(reloaded.heightCm, 172);
+  assert.deepEqual(reloaded.checkInHistory, [checkIn]);
+  const other = await withDatabaseClient(database.env, client => client.query(
+    'SELECT "weightKg", "heightCm", COUNT(a.id)::int AS visits FROM "MemberProfile" m LEFT JOIN "Attendance" a ON a."memberId" = m."profileId" WHERE m."profileId" = $1 GROUP BY m."profileId"',
+    [otherMemberId]));
+  assert.equal(Number(other.rows[0].weightKg), 80);
+  assert.equal(other.rows[0].visits, 1);
+});
+
+test('member cancellation saves only the signed-in member’s plan and appears in their overview', async () => {
+  const accountId = await seedSessionAccount();
+  const otherAccountId = await seedSessionAccount();
+  const { cookie } = await issueSession(accountId);
+  const planName = `Cancel-${randomUUID()}`;
+  const membershipIds = [randomUUID(), randomUUID()];
+  const profiles = await withDatabaseClient(database.env, async (client) => {
+    const { rows } = await client.query(
+      'SELECT "accountId", "profileId" FROM "AssignedRole" WHERE "accountId" IN ($1, $2) AND role = $3',
+      [accountId, otherAccountId, 'member'],
+    );
+    await client.query('INSERT INTO "GymPlan" (name, price, period, "updatedAt") VALUES ($1, 1000, $2, NOW())',
+      [planName, 'month']);
+    for (const [index, account] of [accountId, otherAccountId].entries()) {
+      const profileId = rows.find(row => row.accountId === account).profileId;
+      await client.query('INSERT INTO "MemberProfile" ("profileId") VALUES ($1)', [profileId]);
+      await client.query(`INSERT INTO "Membership" (id, "memberId", "planName", status, "startsAt", "endsAt", "updatedAt")
+        VALUES ($1, $2, $3, 'Active', NOW() - INTERVAL '1 day', NOW() + INTERVAL '1 month', NOW())`,
+      [membershipIds[index], profileId, planName]);
+    }
+    return rows;
+  });
+  const cancel = (headers = { cookie, origin: application.url, 'content-type': 'application/json' }, reason = ' Moving away ') =>
+    fetch(`${application.url}/api/member/membership/cancel`, {
+      method: 'POST', headers, body: JSON.stringify({ reason }),
+    });
+  assert.equal((await cancel({ origin: application.url, 'content-type': 'application/json' })).status, 401);
+  assert.equal((await cancel({ cookie, origin: 'https://attacker.example', 'content-type': 'application/json' })).status, 403);
+  assert.equal((await cancel(undefined, 'x'.repeat(501))).status, 400);
+  const response = await cancel();
+  assert.equal(response.status, 200, application.logs());
+  const { membership } = await response.json();
+  assert.equal(membership.planName, planName);
+  assert.equal(membership.status, 'Active');
+  assert.equal(membership.cancellationScheduled, true);
+  const overview = await fetch(`${application.url}/api/member/overview`, { headers: { cookie } });
+  assert.equal(overview.status, 200, application.logs());
+  assert.equal((await overview.json()).membership.cancellationScheduled, true);
+  assert.equal((await cancel()).status, 409);
+  const checkout = await fetch(`${application.url}/api/member/checkout`, {
+    method: 'POST', headers: { cookie, origin: application.url, 'content-type': 'application/json' },
+    body: JSON.stringify({ planName }),
+  });
+  assert.equal(checkout.status, 409);
+  const persisted = await withDatabaseClient(database.env, async (client) => {
+    const { rows } = await client.query('SELECT id, status, "cancelledAt", "cancellationReason", "endsAt" FROM "Membership" WHERE id IN ($1, $2) ORDER BY id', membershipIds);
+    return rows;
+  });
+  const own = persisted.find(row => row.id === membershipIds[0]);
+  const other = persisted.find(row => row.id === membershipIds[1]);
+  assert.equal(own.cancellationReason, 'Moving away');
+  assert.ok(own.cancelledAt instanceof Date);
+  assert.ok(Math.abs(own.cancelledAt.getTime() - Date.now()) < 10_000);
+  assert.equal(own.status, 'Active');
+  assert.ok(own.endsAt > own.cancelledAt);
+  assert.equal(other.cancelledAt, null);
+  assert.equal(profiles.length, 2);
+});
+
 test('mandatory terms renewal keeps every other Account gate in force', async () => {
   const accountId = await seedSessionAccount();
   const { cookie } = await issueSession(accountId);
@@ -720,6 +913,56 @@ async function issueSession(accountId, app = application) {
   assert.equal(response.status, 200, app.logs());
   return { cookie: responseCookieHeader(response), response };
 }
+
+test('admin QR uploads and gym links persist for the intended member only', async () => {
+  const adminId = await seedSessionAccount({ roles: ['admin'], mfa: true });
+  const firstId = await seedSessionAccount();
+  const secondId = await seedSessionAccount();
+  const profileIds = await withDatabaseClient(database.env, async (client) => {
+    const ids = [];
+    for (const accountId of [firstId, secondId]) {
+      const { rows: [assignment] } = await client.query('SELECT "profileId" FROM "AssignedRole" WHERE "accountId" = $1 AND "role" = $2', [accountId, 'member']);
+      await client.query('INSERT INTO "MemberProfile" ("profileId") VALUES ($1)', [assignment.profileId]);
+      ids.push(assignment.profileId);
+    }
+    return ids;
+  });
+  const adminSession = await issueSession(adminId);
+  const rotation = await sessionCommand('rotate', { accountId: adminId, cookie: adminSession.cookie, mfaVerified: true });
+  assert.equal(rotation.status, 200);
+  const adminCookie = responseCookieHeader(rotation);
+  const firstCookie = (await issueSession(firstId)).cookie;
+  const secondCookie = (await issueSession(secondId)).cookie;
+  const links = [{ id: 'facebook', label: 'Gym Facebook page', url: 'https://www.facebook.com/vinathletics' }];
+  const saveLinks = (cookie, destinations = links) => fetch(`${application.url}/api/gym-qr`, {
+    method: 'PUT', headers: { cookie, origin: application.url, 'content-type': 'application/json' },
+    body: JSON.stringify({ destinations }),
+  });
+  assert.equal((await saveLinks(firstCookie)).status, 403);
+  assert.equal((await saveLinks(adminCookie, [{ ...links[0], url: 'https://facebook.com.attacker.example' }])).status, 400);
+  assert.equal((await saveLinks(adminCookie)).status, 200);
+  assert.deepEqual((await fetch(`${application.url}/api/member/qr`, { headers: { cookie: firstCookie } }).then(r => r.json())).destinations, links);
+
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9fJpEAAAAASUVORK5CYII=', 'base64');
+  const form = new FormData();
+  form.set('profileId', profileIds[0]);
+  form.set('image', new Blob([png], { type: 'image/png' }), 'member.png');
+  const upload = (cookie) => fetch(`${application.url}/api/admin/member-qr`, {
+    method: 'PUT', headers: { cookie, origin: application.url }, body: form,
+  });
+  assert.equal((await upload(firstCookie)).status, 403);
+  assert.equal((await upload(adminCookie)).status, 200, application.logs());
+  const first = await fetch(`${application.url}/api/member/qr`, { headers: { cookie: firstCookie } }).then(r => r.json());
+  const second = await fetch(`${application.url}/api/member/qr`, { headers: { cookie: secondCookie } }).then(r => r.json());
+  assert.equal(typeof first.memberQrUpdatedAt, 'string');
+  assert.equal(second.memberQrUpdatedAt, null);
+  const firstImage = await fetch(`${application.url}/api/member/qr?image=1`, { headers: { cookie: firstCookie } });
+  assert.equal(firstImage.status, 200);
+  assert.equal(firstImage.headers.get('content-type'), 'image/png');
+  assert.deepEqual(Buffer.from(await firstImage.arrayBuffer()), png);
+  assert.equal((await fetch(`${application.url}/api/member/qr?image=1`, { headers: { cookie: secondCookie } })).status, 404);
+  assert.equal((await fetch(`${application.url}/api/admin/member-qr`, { headers: { cookie: firstCookie } })).status, 403);
+});
 
 function responseCookieHeader(response) {
   return response.headers.getSetCookie().map((cookie) => cookie.split(';')[0]).join('; ');

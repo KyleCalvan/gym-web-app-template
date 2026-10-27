@@ -13,6 +13,7 @@ const TAB_LABELS: Record<ProfileSettingsTab, string> = {
 export default function ProfileSettingsPanel({
   account,
   profile,
+  profileIntro = 'Update the details shown on your account.',
   onOpenSecurity,
   notifPrefs,
   setNotifPrefs,
@@ -20,6 +21,7 @@ export default function ProfileSettingsPanel({
 }: {
   account: ReactNode;
   profile: ReactNode;
+  profileIntro?: string;
   onOpenSecurity: () => void;
   notifPrefs: NotifPrefs;
   setNotifPrefs: Setter<NotifPrefs>;
@@ -64,7 +66,7 @@ export default function ProfileSettingsPanel({
         {tab === 'profile' && (
           <>
             <h2>Profile Details</h2>
-            <p className="profile-settings-intro">Update the details shown on your account.</p>
+            <p className="profile-settings-intro">{profileIntro}</p>
             {profile}
           </>
         )}

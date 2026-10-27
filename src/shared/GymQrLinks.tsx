@@ -9,6 +9,7 @@ import { validateQrDestination } from '../qrDestinations.ts';
 
 interface GymQrLinksProps {
   destinations?: QrDestination[];
+  memberQrUrl?: string | null;
 }
 
 interface GeneratedQr {
@@ -16,7 +17,7 @@ interface GeneratedQr {
   error?: string;
 }
 
-export default function GymQrLinks({ destinations = [] }: GymQrLinksProps) {
+export default function GymQrLinks({ destinations = [], memberQrUrl }: GymQrLinksProps) {
   const [codes, setCodes] = useState<Record<string, GeneratedQr>>({});
   const safeDestinations = destinations.filter(
     (destination) => destination.url.trim() && !validateQrDestination(destination),
@@ -46,9 +47,10 @@ export default function GymQrLinks({ destinations = [] }: GymQrLinksProps) {
   return (
     <TabbedCard title="Connect with VinAthletics">
       <p className="gym-qr-intro">
-        Scan a QR code with your phone camera to open the labeled official gym destination. Check the displayed URL before continuing.
+        {memberQrUrl ? 'Your member QR appears below. Scan the other codes to open the gym’s official links.'
+          : 'Scan a QR code with your phone camera to open the labeled official gym destination. Check the displayed URL before continuing.'}
       </p>
-      {safeDestinations.length === 0 ? (
+      {safeDestinations.length === 0 && !memberQrUrl ? (
         <div className="gym-qr-empty" role="status">
           <QrCode size={28} aria-hidden="true" />
           <strong>Gym links are not configured yet</strong>
@@ -56,6 +58,10 @@ export default function GymQrLinks({ destinations = [] }: GymQrLinksProps) {
         </div>
       ) : (
         <div className="gym-qr-grid">
+          {memberQrUrl && <article className="gym-qr-card">
+            <h3>My gym QR code</h3>
+            <img className="gym-qr-image" src={memberQrUrl} alt="Your gym QR code uploaded by an administrator" />
+          </article>}
           {safeDestinations.map((destination) => {
             const code = codes[destination.id];
             return (

@@ -38,6 +38,7 @@ import type {
 import { DEFAULT_QR_DESTINATIONS } from './qrDestinations.ts';
 import { isTrainerAvailability } from './trainer/availability.ts';
 import { LoadingScreen } from './shared/LoadingScreen';
+import { cancelDemoMemberCheckout } from './paymongo/demoClient';
 
 const NAV_BY_ROLE: Record<Role, NavSection[]> = {
   admin: ADMIN_NAV,
@@ -68,8 +69,18 @@ export interface DemoSession {
 export default function DemoApp({ session, onLogout }: { session: DemoSession; onLogout: () => void }) {
   const handledDemoSession = useRef<string | null>(null);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (window.opener && params.get('reference')?.startsWith('DEMO-') && params.get('checkout') === 'cancelled') {
+      void cancelDemoMemberCheckout(params.get('reference')!).then(status => {
+        if (status !== 'Pending') window.close();
+      }).catch(() => {});
+    }
+  }, []);
+
   const [members, setMembers]               = useState<Member[]>(() => [...MEMBERS]);
   const [trainers, setTrainers]             = useState<Trainer[]>(() => [...TRAINERS]);
+  const [trainersLoaded, setTrainersLoaded] = useState(false);
   const [plans, setPlans]                   = useState<Plan[]>(() => [...PLANS]);
   const [transactions, setTransactions]     = useState<Transaction[]>(() => [...TRANSACTIONS]);
   const [preferredPaymentMethod, setPreferredPaymentMethod] = useState('GCash');
@@ -93,6 +104,35 @@ export default function DemoApp({ session, onLogout }: { session: DemoSession; o
   const [checkIns, setCheckIns]             = useState<CheckIns>({ count: 0, today: today() });
   const [checkInHistory, setCheckInHistory] = useState<CheckInRecord[]>([]);
   const [notifPrefs, setNotifPrefs]         = useState<NotifPrefs>({ email: true, sms: false, reminders: true, promos: false });
+
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem('vinathletics.trainers');
+      if (saved) {
+        const parsed: unknown = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          const savedTrainers = parsed.filter((item): item is Trainer => item && typeof item === 'object'
+            && typeof item.id === 'string' && typeof item.name === 'string'
+            && typeof item.sessionPrice === 'number' && Number.isFinite(item.sessionPrice)
+            && ['Active', 'On Leave', 'Inactive'].includes(item.status));
+          setTrainers([...TRAINERS.filter(trainer => !savedTrainers.some(savedTrainer => savedTrainer.id === trainer.id)), ...savedTrainers]);
+        }
+      }
+    } catch (error) {
+      console.error('Could not load saved trainers.', error);
+    } finally {
+      setTrainersLoaded(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!trainersLoaded) return;
+    try {
+      window.localStorage.setItem('vinathletics.trainers', JSON.stringify(trainers));
+    } catch (error) {
+      console.error('Could not save trainers to this browser.', error);
+    }
+  }, [trainers, trainersLoaded]);
 
   useEffect(() => {
     try {

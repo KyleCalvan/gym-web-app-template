@@ -4,19 +4,19 @@ import { Badge, Table, TabbedCard } from '../shared';
 import BookingCheckoutModal from './BookingCheckoutModal.tsx';
 import { formatPromotionDate, formatPromotionDiscount, getActivePromotionsForMember, getEligiblePromotions } from './promotionEligibility.ts';
 import { getBookingDatesError, getBookingToday, isBookingSlotAvailable } from './bookingDates.ts';
+import { getCommonBookableTimes } from './bookingAvailability.ts';
 import { peso } from '../data.ts';
 
-function MemberDashboard({ members, sessions, setSessions, bookings, setBookings, setTransactions, transactions, trainers, currentUserId, plans, promotions, setPromotions, promotionRedemptions, setPromotionRedemptions, onNav, toast, today, addAudit, preferredPaymentMethod, onBook, paymentKnown = true, promotionsAvailable = true }){
+function MemberDashboard({ members, sessions, setSessions, bookings, setBookings, setTransactions, transactions, trainers, trainerAvailability = [], bookingSlots, currentUserId, plans, promotions, setPromotions, promotionRedemptions, setPromotionRedemptions, onNav, toast, today, addAudit, preferredPaymentMethod, onBook, paymentKnown = true, promotionsAvailable = true, promotionsLoading = false, promotionsError = '' }){
   const me = members.find(m => m.id === currentUserId) || members[0];
-  const dashboardToday = new Date();
-  const todayISO = `${dashboardToday.getFullYear()}-${String(dashboardToday.getMonth() + 1).padStart(2, '0')}-${String(dashboardToday.getDate()).padStart(2, '0')}`;
+  const todayISO = getBookingToday();
   const myRedemptions = useMemo(
     () => (promotionRedemptions || []).filter((r) => r.memberId === me?.id),
     [promotionRedemptions, me?.id],
   );
   const activePromotions = useMemo(
-    () => getActivePromotionsForMember(promotions || [], myRedemptions, me),
-    [promotions, myRedemptions, me?.plan],
+    () => getActivePromotionsForMember(promotions || [], myRedemptions, me, today || new Date()),
+    [promotions, myRedemptions, me?.plan, today],
   );
   const upcomingSource = bookings.length > 0 ? bookings : sessions.filter(s => s.member === me?.name);
   const upcoming = upcomingSource
@@ -36,13 +36,18 @@ function MemberDashboard({ members, sessions, setSessions, bookings, setBookings
     : remainingDays < 0 ? `Expired ${Math.abs(remainingDays)} day${Math.abs(remainingDays) === 1 ? '' : 's'} ago`
     : remainingDays === 0 ? 'Expires today'
     : `${remainingDays} day${remainingDays === 1 ? '' : 's'} remaining`;
-  const eligiblePromotions = getEligiblePromotions(promotions || [], me).slice(0, 2);
+  const eligiblePromotions = getEligiblePromotions(promotions || [], me, today || new Date()).slice(0, 2);
   const [showBook, setShowBook] = useState(false);
 
   const persistBookings = ({ id, trainer, dates, time, amount, totalAmount }) => {
     const dateError = getBookingDatesError(dates, getBookingToday());
     if (dateError) return dateError;
-    const unavailableDate = dates.find(date => !isBookingSlotAvailable(sessions, { trainer, date, time }));
+    const selectedTrainer = trainers.find(person => person.name === trainer && !person.deletedAt && person.status === 'Active');
+    const occupiedSlots = bookingSlots || sessions;
+    if (!selectedTrainer || !getCommonBookableTimes(trainerAvailability, occupiedSlots, selectedTrainer, dates).includes(time)) {
+      return 'The selected trainer, dates, or time is no longer available. Choose another slot.';
+    }
+    const unavailableDate = dates.find(date => !isBookingSlotAvailable(occupiedSlots, { trainer, date, time }));
     if (unavailableDate) return `That time is no longer available on ${unavailableDate}. Choose another slot.`;
     const newBookings = dates.map((date, index) => ({
       id: index === 0 ? id : `${id}-${index + 1}`,
@@ -91,7 +96,7 @@ function MemberDashboard({ members, sessions, setSessions, bookings, setBookings
           </div>
           <div className="member-summary-detail">
             <span className="member-summary-label">Latest payment</span>
-            {latestPayment ? <><strong><Badge status={latestPayment.status} /></strong><span>{latestPayment.type} · {latestPayment.date}</span></> : <strong>No payment recorded</strong>}
+            {latestPayment ? <><strong><Badge status={latestPayment.status} /></strong><span>{latestPayment.type} · {peso(latestPayment.amount)} · {latestPayment.date}</span></> : <strong>No payment recorded</strong>}
           </div>
         </div>
       </section>
@@ -108,7 +113,7 @@ function MemberDashboard({ members, sessions, setSessions, bookings, setBookings
                 <td>{s.trainer}</td>
                 <td>{s.type}</td>
                 <td><Badge status={s.status}/></td>
-                {paymentKnown && <td><Badge status={s.paid ? 'Paid' : 'Pending'}/></td>}
+                {paymentKnown && <td><Badge status={s.paymentStatus ?? 'Not recorded'}/></td>}
               </tr>
             )} />
           )}
@@ -127,7 +132,11 @@ function MemberDashboard({ members, sessions, setSessions, bookings, setBookings
         title="Current Promotions"
         right={<button className="btn btn-outline btn-sm" onClick={()=>onNav && onNav('promotions')}>View all</button>}
       >
-        {!promotionsAvailable || eligiblePromotions.length === 0 ? (
+        {promotionsLoading ? (
+          <div className="member-dashboard-empty" role="status">Loading promotions…</div>
+        ) : promotionsError ? (
+          <div className="member-dashboard-empty" role="alert">Promotions could not be loaded. Open Promotions to retry.</div>
+        ) : !promotionsAvailable || eligiblePromotions.length === 0 ? (
           <div className="member-dashboard-empty">{promotionsAvailable ? 'No active promotions are available for your current plan.' : 'Promotions are not available online yet.'}</div>
         ) : (
           <div className="member-promo-preview-grid">
@@ -149,6 +158,8 @@ function MemberDashboard({ members, sessions, setSessions, bookings, setBookings
       {showBook && (
         <BookingCheckoutModal
           trainers={trainers}
+          trainerAvailability={trainerAvailability}
+          bookingSlots={bookingSlots || sessions}
           activePromotions={activePromotions}
           promotions={promotions}
           setPromotions={setPromotions}

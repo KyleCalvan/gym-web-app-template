@@ -1,8 +1,9 @@
 // @ts-nocheck
 import { useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Dropdown, Modal, AnimatedStepTrack, Field, TextInput, Select, ReceiptDocument, PaymentSimulationModal } from '../shared';
+import { Dropdown, Modal, AnimatedStepTrack, Field, ReceiptDocument, PaymentSimulationModal } from '../shared';
 import { peso } from '../data.ts';
+import { getCoachingSessionPricePhp } from './coachingPrice.ts';
 import { dur, ease, spring } from '../motion.tsx';
 import { Tag } from 'lucide-react';
 import {
@@ -13,12 +14,13 @@ import {
   promotionTargetsAllPlans,
 } from './promotionEligibility.ts';
 import { createSimulatedTransaction, getConfiguredPaymentFee, updateSimulatedTransaction } from '../payments.ts';
+import { startDemoMemberCheckout, checkDemoMemberCheckout, cancelDemoMemberCheckout } from '../paymongo/demoClient.ts';
 import { getBookingDateError, getBookingDatesError, getBookingToday } from './bookingDates.ts';
+import { getBookableDates, getCommonBookableTimes } from './bookingAvailability.ts';
+import { formatTime12h } from '../trainer/availability.ts';
 
-const FALLBACK_SESSION_RATE = 900;
 const PAYMENT_METHODS = [
   { value: 'GCash', label: 'GCash' },
-  { value: 'Cash', label: 'Cash' },
 ];
 
 function BookingRedeemCode({ promotions, redemptions, setPromotions, setPromotionRedemptions, member, onRedeemed }) {
@@ -77,27 +79,36 @@ function BookingRedeemCode({ promotions, redemptions, setPromotions, setPromotio
 }
 
 function BookingCheckoutModal({
-  initialTrainer, trainers = [], activePromotions = [], today,
+  initialTrainer, trainers = [], trainerAvailability = [], bookingSlots = [], activePromotions = [], today,
   promotions, setPromotions, promotionRedemptions, setPromotionRedemptions, member,
   onClose, onComplete, onPersistBookings, setTransactions, preferredPaymentMethod = 'GCash',
+  onCoachingCheckout, onCoachingCheckoutStatus, onCoachingCheckoutCancel,
 }){
   const [step, setStep] = useState(0);
-  const [trainerName, setTrainerName] = useState(initialTrainer || trainers[0]?.name || '');
+  const [trainerName, setTrainerName] = useState(initialTrainer || '');
   const [date, setDate] = useState('');
   const [dates, setDates] = useState([]);
   const [time, setTime] = useState('');
-  const [method, setMethod] = useState(preferredPaymentMethod);
+  const [method, setMethod] = useState('GCash');
   const [processing, setProcessing] = useState(false);
   const processingLock = useRef(false);
   const [confirmedId, setConfirmedId] = useState(null);
   const [receiptNumber, setReceiptNumber] = useState(null);
   const [bookingError, setBookingError] = useState('');
   const [payment, setPayment] = useState(null);
-  const minDate = getBookingToday();
-
-  const availableTrainers = (trainers || []).filter(t => !t.deletedAt && t.status !== 'Inactive');
+  const availableTrainers = (trainers || []).filter(t => !t.deletedAt && t.status === 'Active');
   const selectedTrainer = availableTrainers.find(t => t.name === trainerName);
-  const baseRate = selectedTrainer?.sessionPrice || FALLBACK_SESSION_RATE;
+  const bookableDates = selectedTrainer
+    ? getBookableDates(trainerAvailability, bookingSlots, selectedTrainer)
+    : [];
+  const dateOptions = bookableDates.filter(candidate => !dates.includes(candidate) && (
+    !dates.length || getCommonBookableTimes(trainerAvailability, bookingSlots, selectedTrainer, [...dates, candidate]).length > 0
+  ));
+  const timeDates = dates.length ? dates : date ? [date] : [];
+  const bookableTimes = selectedTrainer
+    ? getCommonBookableTimes(trainerAvailability, bookingSlots, selectedTrainer, timeDates)
+    : [];
+  const baseRate = getCoachingSessionPricePhp(selectedTrainer?.sessionPrice ?? 0);
   const sessionCount = Math.max(dates.length, 0);
   const undiscountedTotal = baseRate * sessionCount;
 
@@ -134,24 +145,50 @@ function BookingCheckoutModal({
 
   const paymentOptions = useMemo(() => PAYMENT_METHODS.map((m) => ({ value: m.value, label: m.label })), []);
 
+  const changeTrainer = (name) => {
+    setTrainerName(name);
+    setDate('');
+    setDates([]);
+    setTime('');
+    setBookingError('');
+  };
+
   const addDate = () => {
     const dateError = getBookingDateError(date, getBookingToday());
     if (dateError) { setBookingError(dateError); return; }
     if (dates.includes(date)) { setBookingError('That session date has already been added.'); return; }
+    if (!selectedTrainer || !dateOptions.includes(date)) {
+      setBookingError('Choose an available date for this trainer.'); return;
+    }
+    const commonTimes = getCommonBookableTimes(trainerAvailability, bookingSlots, selectedTrainer, [...dates, date]);
+    if (!commonTimes.length) { setBookingError('Choose dates with a shared available time.'); return; }
     setDates(prev => [...prev, date].sort());
+    if (time && !commonTimes.includes(time)) setTime('');
     setDate('');
     setBookingError('');
   };
 
   const removeDate = (selectedDate) => {
-    setDates(prev => prev.filter(d => d !== selectedDate));
+    const remaining = dates.filter(d => d !== selectedDate);
+    setDates(remaining);
+    if (!remaining.length || !getCommonBookableTimes(trainerAvailability, bookingSlots, selectedTrainer, remaining).includes(time)) setTime('');
+    setBookingError('');
+  };
+
+  const selectionError = () => {
+    if (!selectedTrainer) return 'Choose a trainer.';
+    const dateError = getBookingDatesError(dates, getBookingToday());
+    if (dateError) return dateError;
+    if (!time || !getCommonBookableTimes(trainerAvailability, bookingSlots, selectedTrainer, dates).includes(time)) {
+      return 'Choose an available time for every selected date.';
+    }
+    return null;
   };
 
   const goPayment = (e) => {
     e.preventDefault();
-    const dateError = getBookingDatesError(dates, getBookingToday());
-    if (dateError) { setBookingError(dateError); return; }
-    if (!time) return;
+    const error = selectionError();
+    if (error) { setBookingError(error); return; }
     setBookingError('');
     setStep(1);
   };
@@ -159,9 +196,9 @@ function BookingCheckoutModal({
   const processPayment = (e) => {
     e.preventDefault();
     if (processingLock.current) return;
-    const dateError = getBookingDatesError(dates, getBookingToday());
-    if (dateError) {
-      setBookingError(dateError);
+    const error = selectionError();
+    if (error) {
+      setBookingError(error);
       setStep(0);
       return;
     }
@@ -190,9 +227,11 @@ function BookingCheckoutModal({
 
   const updatePaymentState = (paymentState) => {
     if (!payment) return;
-    const transaction = updateSimulatedTransaction(payment.transaction, paymentState);
-    setPayment({ ...payment, transaction });
-    setTransactions?.(prev => prev.map(tx => tx.id === transaction.id ? transaction : tx));
+    setPayment(previous => previous ? {
+      ...previous, transaction: updateSimulatedTransaction(previous.transaction, paymentState),
+    } : previous);
+    setTransactions?.(prev => prev.map(tx => tx.id === payment.transaction.id
+      ? updateSimulatedTransaction(tx, paymentState) : tx));
   };
 
   const completePayment = (paymentState) => {
@@ -200,13 +239,13 @@ function BookingCheckoutModal({
       setBookingError('Simulated payment failed. No session was booked.');
       return;
     }
-    const currentDateError = getBookingDatesError(dates, getBookingToday());
+    const currentDateError = onCoachingCheckout ? null : selectionError();
     if (currentDateError) {
       updatePaymentState('Failed');
       setBookingError(currentDateError);
       return false;
     }
-    const persistenceError = onPersistBookings?.({
+    const persistenceError = !onCoachingCheckout && onPersistBookings?.({
       id: payment.id,
       receiptNumber: payment.transaction.receiptNumber,
       trainer: trainerName,
@@ -220,7 +259,6 @@ function BookingCheckoutModal({
       transaction: payment.transaction,
     });
     if (persistenceError) {
-      updatePaymentState('Failed');
       setBookingError(persistenceError);
       return false;
     }
@@ -256,9 +294,10 @@ function BookingCheckoutModal({
               <Field label="Trainer">
                 <Dropdown
                   value={trainerName}
-                  onChange={setTrainerName}
+                  onChange={changeTrainer}
                   options={trainerOptions}
                   ariaLabel="Select a trainer"
+                  placeholder={trainerOptions.length ? 'Select a trainer…' : 'No trainers available'}
                   fullWidth
                 />
               </Field>
@@ -270,19 +309,19 @@ function BookingCheckoutModal({
                     <span className="member-plan-price-saved">with {sessionDiscount.promo.code}</span>
                   </div>
                 ) : (
-                  <input className="form-control mono" value={peso(baseRate)} readOnly />
+                  <input className="form-control mono" value={selectedTrainer ? peso(baseRate) : 'Select a trainer'} readOnly />
                 )}
               </Field>
               <Field label="Session dates">
                 <div className="booking-date-picker">
-                  <input
-                    className="form-control"
-                    type="date"
+                  <Dropdown
                     value={date}
-                    min={minDate}
-                    onChange={e => { setDate(e.target.value); setBookingError(''); }}
-                    aria-label="Choose a session date"
-                    aria-invalid={Boolean(bookingError)}
+                    onChange={selected => { setDate(selected); setBookingError(''); }}
+                    options={dateOptions.map(value => ({ value, label: new Intl.DateTimeFormat('en-PH', { timeZone: 'UTC', dateStyle: 'medium' }).format(new Date(`${value}T00:00:00Z`)) }))}
+                    placeholder={!selectedTrainer ? 'Choose a trainer first' : dateOptions.length ? 'Select a date…' : 'No available dates'}
+                    ariaLabel="Choose a session date"
+                    disabled={!selectedTrainer || !dateOptions.length}
+                    fullWidth
                   />
                   <button
                     className="btn btn-outline"
@@ -293,7 +332,7 @@ function BookingCheckoutModal({
                     Add date
                   </button>
                 </div>
-                {bookingError && step === 0 && <p role="alert" style={{ color: 'var(--danger, #dc3545)', fontSize: 13, margin: '6px 0 0' }}>{bookingError}</p>}
+                {selectedTrainer && !bookableDates.length && <span className="booking-date-hint">This trainer has no available dates yet.</span>}
                 <div className="booking-selected-dates" aria-live="polite">
                   {dates.length ? dates.map(selectedDate => (
                     <div className="booking-selected-date" key={selectedDate}>
@@ -307,11 +346,22 @@ function BookingCheckoutModal({
                       </button>
                     </div>
                   )) : (
-                    <span className="booking-date-hint">Choose a date and add it. You can add several days.</span>
+                    <span className="booking-date-hint">Choose a trainer date and add it. You can add several days with the same available time.</span>
                   )}
                 </div>
+                <span className="booking-date-hint">Each time option is a one-hour session.</span>
               </Field>
-              <Field label="Time"><TextInput type="time" required value={time} onChange={setTime} /></Field>
+              <Field label="Time">
+                <Dropdown
+                  value={time}
+                  onChange={selected => { setTime(selected); setBookingError(''); }}
+                  options={bookableTimes.map(value => ({ value, label: formatTime12h(value) }))}
+                  placeholder={!timeDates.length ? 'Choose a date first' : bookableTimes.length ? 'Select a time…' : 'No shared times'}
+                  ariaLabel="Choose a session time"
+                  disabled={!bookableTimes.length}
+                  fullWidth
+                />
+              </Field>
             </div>
             <p className="booking-total-preview">
               {dates.length} session{dates.length === 1 ? '' : 's'} · Total {peso(totalAmount)}
@@ -328,7 +378,7 @@ function BookingCheckoutModal({
                 onRedeemed={() => { /* re-render via prop changes */ }}
               />
             )}
-            <button className="btn btn-signal btn-block" type="submit" disabled={!dates.length || !time}>Continue to Payment</button>
+            <button className="btn btn-signal btn-block" type="submit" disabled={!selectedTrainer || !dates.length || !time}>Continue to Payment</button>
           </motion.form>
         )}
 
@@ -393,7 +443,7 @@ function BookingCheckoutModal({
               transition={spring.pop}
             >✓</motion.div>
             <h3 style={{textAlign:'center', fontSize:19.8, marginBottom:4}}>Booking Confirmed</h3>
-            <p style={{textAlign:'center', color:'var(--steel)', fontSize:13.8, marginBottom:16}}>A confirmation has been sent to your email.</p>
+            <p style={{textAlign:'center', color:'var(--steel)', fontSize:13.8, marginBottom:16}}>Your PayMongo test payment was verified and your sessions are booked.</p>
             <div className="receipt-print-root">
               <ReceiptDocument
                 transaction={{
@@ -419,15 +469,21 @@ function BookingCheckoutModal({
             </div>
           </motion.div>
         )}
-        {payment && <PaymentSimulationModal
+      </AnimatePresence>
+      {payment && <PaymentSimulationModal
           method={method}
           amount={totalAmount}
           fees={payment.fees}
+          startCheckout={onCoachingCheckout
+            ? () => onCoachingCheckout({ trainerId: selectedTrainer.id, dates, time,
+              expectedTotal: totalAmount + payment.fees })
+            : () => startDemoMemberCheckout(`Coaching sessions with ${trainerName}`, totalAmount + payment.fees)}
+          checkCheckout={onCoachingCheckoutStatus || checkDemoMemberCheckout}
+          cancelCheckout={onCoachingCheckoutCancel || cancelDemoMemberCheckout}
           onStateChange={updatePaymentState}
           onComplete={completePayment}
           onClose={closePayment}
         />}
-      </AnimatePresence>
     </Modal>
   );
 }

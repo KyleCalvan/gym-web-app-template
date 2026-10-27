@@ -26,6 +26,7 @@ export interface Member {
   joined: string;
   avatarUrl?: string;
   membershipValidUntil?: string | null;
+  membershipCancellationScheduled?: boolean;
   weightKg?: number;
   heightCm?: number;
   deletedAt?: string | null;
@@ -115,6 +116,7 @@ export interface Session {
   status: SessionStatus;
   paid: boolean;
   amount: number;
+  paymentStatus?: TxnStatus | null;
   rated?: boolean;
   rating?: number;
 }
@@ -289,8 +291,15 @@ export interface Conversation {
 // View props shared across every role's view component.
 // Each role's view receives this bag from <App/>.
 export interface ViewProps {
-  readOnly?: boolean;
+  emptyDefaults?: boolean;
+  onPlanCheckout?: (planName: string) => Promise<void>;
+  onPlanCancel?: (reason: string) => Promise<void>;
+  onCoachingCheckout?: (selection: { trainerId: string; dates: string[]; time: string; expectedTotal: number }) => Promise<{ checkoutUrl: string; reference: string }>;
+  onCoachingCheckoutStatus?: (reference: string) => Promise<'Pending' | 'Paid' | 'Failed'>;
+  onCoachingCheckoutCancel?: (reference: string) => Promise<'Pending' | 'Paid' | 'Failed'>;
+  studentVerified?: boolean;
   onProfilePhotoChange?: (url: string) => void;
+  onSaveMemberEmail?: (email: string) => Promise<void>;
   onNav: (id: string, action?: string) => void;
   initialAction?: string;
   role: Role;
@@ -307,6 +316,7 @@ export interface ViewProps {
   setSessions: Setter<Session[]>;
   trainerAvailability: TrainerAvailability[];
   setTrainerAvailability: Setter<TrainerAvailability[]>;
+  bookingSlots?: Pick<Session, 'id' | 'trainer' | 'date' | 'time' | 'status'>[];
   promotions: Promotion[];
   setPromotions: Setter<Promotion[]>;
   staff: Staff[];
@@ -340,8 +350,11 @@ export interface ViewProps {
   setPromotionRedemptions?: Setter<PromotionRedemption[]>;
   preferredPaymentMethod?: string;
   setPreferredPaymentMethod?: Setter<string>;
+  onSavePaymentMethod?: (method: 'GCash' | 'Cash') => Promise<void>;
+  transactionsAreMine?: boolean;
   qrDestinations?: QrDestination[];
   setQrDestinations?: Setter<QrDestination[]>;
+  memberQrUrl?: string | null;
   // Lets a member permanently remove their own account. App-level because the
   // session can't outlive the record it's signed in as.
   onDeleteAccount?: (userId: string) => void;

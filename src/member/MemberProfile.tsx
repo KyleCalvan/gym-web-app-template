@@ -5,24 +5,38 @@ import { SecurityFlow } from '../shared/components/SecurityFlow';
 import ProfileSettingsPanel from '../shared/ProfileSettingsPanel';
 import type { ViewProps } from '../types.ts';
 
-function MemberProfile({ members, setMembers, currentUserId, toast, addAudit, onDeleteAccount, notifPrefs, setNotifPrefs, currentUser, onProfilePhotoChange }: ViewProps){
+function MemberProfile({ members, setMembers, currentUserId, toast, addAudit, onDeleteAccount, notifPrefs, setNotifPrefs, currentUser, onProfilePhotoChange, onSaveMemberEmail }: ViewProps){
   const me = members.find(m => m.id === currentUserId) || members[0];
-  const [info, setInfo] = useState({
-    name: me?.name || currentUser?.name || '',
-    email: me?.email || '',
-    phone: me?.phone || '',
-    emergency: '',
-  });
+  const [email, setEmail] = useState(me?.email || '');
+  const [savingEmail, setSavingEmail] = useState(false);
+  const [verificationSentTo, setVerificationSentTo] = useState('');
 
   const [showSecurityFlow, setShowSecurityFlow] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setMembers(prev => prev.map(m => m.id === me.id ? {...m, ...info} : m));
-    toast('Profile updated');
-    addAudit?.('info', 'Profile updated', me?.id || 'member');
+    if (!me) return;
+    const updatedEmail = email.trim();
+    if (updatedEmail === me.email) return;
+    if (onSaveMemberEmail) {
+      setSavingEmail(true);
+      try {
+        await onSaveMemberEmail(updatedEmail);
+        setVerificationSentTo(updatedEmail);
+        toast('Check your new email address for a verification link.');
+      } catch (error) {
+        toast(error instanceof Error ? error.message : 'Email could not be updated.');
+      } finally {
+        setSavingEmail(false);
+      }
+      return;
+    }
+    setMembers(prev => prev.map(m => m.id === me.id ? { ...m, email: updatedEmail } : m));
+    setEmail(updatedEmail);
+    toast('Email updated');
+    addAudit?.('info', 'Email updated', me.id);
   };
 
   const handleAvatarFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -76,6 +90,7 @@ function MemberProfile({ members, setMembers, currentUserId, toast, addAudit, on
       </TabbedCard>
       <div>
         <ProfileSettingsPanel
+          profileIntro="Your profile details are read-only. You can update your email address."
           account={
             <div className="profile-settings-account-grid">
               <div className="profile-settings-account-item"><div className="eyebrow">Member ID</div><p className="mono">{me?.id || '—'}</p></div>
@@ -87,13 +102,13 @@ function MemberProfile({ members, setMembers, currentUserId, toast, addAudit, on
           profile={
           <form onSubmit={submit}>
             <div className="grid grid-2">
-              <Field label="Full Name"><TextInput required value={info.name} onChange={v=>setInfo(i=>({...i, name:v}))} /></Field>
-              <Field label="Email"><TextInput type="email" required value={info.email} onChange={v=>setInfo(i=>({...i, email:v}))} /></Field>
-              <Field label="Phone"><TextInput value={info.phone} onChange={v=>setInfo(i=>({...i, phone:v}))} /></Field>
-              <Field label="Emergency Contact"><TextInput placeholder="+63 9XX XXX XXXX" value={info.emergency} onChange={v=>setInfo(i=>({...i, emergency:v}))} /></Field>
+              <Field label="Full Name"><TextInput value={me?.name || currentUser?.name || ''} onChange={() => {}} readOnly /></Field>
+              <Field label="Email"><TextInput type="email" required value={email} onChange={value => { setEmail(value); setVerificationSentTo(''); }} /></Field>
+              <Field label="Phone"><TextInput value={me?.phone || ''} onChange={() => {}} readOnly /></Field>
+              <Field label="Emergency Contact"><TextInput value="" onChange={() => {}} placeholder="Not recorded" readOnly /></Field>
             </div>
             <div style={{display:'flex', gap:12, marginTop:12}}>
-              <button className="btn btn-signal btn-sm" type="submit" style={{width: 'auto'}}>Save Changes</button>
+              <button className="btn btn-signal btn-sm" type="submit" disabled={savingEmail || !email.trim() || email.trim() === me?.email || email.trim() === verificationSentTo} style={{width: 'auto'}}>{savingEmail ? 'Sending…' : 'Save Email'}</button>
             </div>
           </form>
           }

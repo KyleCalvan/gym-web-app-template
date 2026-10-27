@@ -10,6 +10,7 @@ import { NameFields } from '../shared/components/NameFields';
 import { splitName, formatName } from '../shared/nameParts';
 import { LoadingScreen } from '../shared/LoadingScreen';
 import MemberApp from '../member/MemberApp';
+import AdminQrDestinations from '../admin/AdminQrDestinations';
 import { clearAccountBrowserState, establishAccountBrowserState } from './browser-state';
 
 type Status = NonNullable<Awaited<ReturnType<typeof getAccountStatus>>>;
@@ -179,7 +180,9 @@ export default function AccountStatus({ initialStatus }: { initialStatus?: Visib
         {activeRole && <div className="account-interface" role="region" aria-label={`${ROLE_LABELS[activeRole]} interface`}>
           <h3>{ROLE_LABELS[activeRole]}</h3>
           <p>Your {ROLE_LABELS[activeRole].toLowerCase()} profile is connected to this Account.</p>
-          <p>Personal records and operations for this interface are unavailable while integration is being completed.</p>
+          {activeRole === 'admin' || activeRole === 'superadmin'
+            ? <AdminQrDestinations databaseMode toast={setNotice} />
+            : <p>Personal records and operations for this interface are unavailable while integration is being completed.</p>}
           {activeRole === 'member' && <p>Membership information is unavailable here.</p>}
         </div>}
       </section>}

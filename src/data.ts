@@ -26,7 +26,12 @@ export const MEMBERS: Member[] = [
   { id: 'M-1004', name: 'Antonio Luna', email: 'antonio.luna@mail.com', phone: '+63 920 456 7890', plan: 'Premium', status: 'Frozen', joined: '2026-04-20', avatarUrl: '/avatar-m4.jpg' },
 ];
 
-export const TRAINERS: Trainer[] = [];
+export const TRAINERS: Trainer[] = [
+  {
+    id: 'DEMO-trainer', name: 'James Reyes', specialty: 'Personal Training', certs: '',
+    rating: 0, sessionsWeek: 0, status: 'Active', sessionPrice: 900, reviews: [],
+  },
+];
 
 export const STAFF: Staff[] = [];
 
