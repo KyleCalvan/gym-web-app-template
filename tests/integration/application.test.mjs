@@ -578,20 +578,17 @@ test('limited status, client session updates, and enabled preview demos cannot c
     method: 'PATCH', headers: { cookie: signedIn.cookie, 'content-type': 'application/json' }, body: '{}',
   });
   assert.equal(mutation.status, 403);
-  const preview = await startApplication({ ...database.env, VERCEL_ENV: 'preview', DEMO_ACCOUNTS_ENABLED: 'true' });
-  try {
-    const login = await fetch(`${preview.url}/api/demo-session`, {
-      method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ email: 'admin@vinathletics.gym', password: 'admin123' }),
-    });
-    assert.equal(login.status, 200, preview.logs());
-    const demoCookie = responseCookieHeader(login);
-    assert.equal((await fetch(`${preview.url}/api/me`, { headers: { cookie: demoCookie } })).status, 401);
-    const demoMutation = await fetch(`${preview.url}/api/gym-plans`, {
-      method: 'PATCH', headers: { cookie: demoCookie, 'content-type': 'application/json' }, body: '{}',
-    });
-    assert.equal(demoMutation.status, 401);
-  } finally { await preview.stop(); }
+  const removedDemo = await fetch(`${application.url}/api/demo-session`, {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ email: 'admin@vinathletics.gym', password: 'admin123' }),
+  });
+  assert.equal(removedDemo.status, 404);
+  const unknownAccount = await fetch(`${application.url}/api/password-login`, {
+    method: 'POST', headers: { 'content-type': 'application/json', origin: application.url },
+    body: JSON.stringify({ email: 'no-account@invalid.test', password: 'incorrect-pass' }),
+  });
+  assert.equal(unknownAccount.status, 401);
+  assert.equal((await unknownAccount.json()).code, 'INVALID_CREDENTIALS');
 });
 
 test('fresh migrations match the schema and can be deployed again without changes', async () => {

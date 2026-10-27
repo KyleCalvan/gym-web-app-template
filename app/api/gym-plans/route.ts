@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import type { Prisma } from '@/backend/generated/prisma/client';
 import { apiError, withBusinessAuthorization } from '@/src/auth/http';
 import { prisma } from '@/src/auth/prisma';
-import { PLANS } from '@/src/data';
 import type { Plan } from '@/src/types';
 
 export const runtime = 'nodejs';
@@ -112,10 +111,6 @@ async function lockedPlanTransaction<T>(action: (tx: Prisma.TransactionClient) =
 
 async function readPlanCatalog() {
   return lockedPlanTransaction(async (tx) => {
-    const count = await tx.gymPlan.count();
-    if (count === 0) {
-      await tx.gymPlan.createMany({ data: PLANS.map(toDatabasePlan) });
-    }
     const [records, activePlanCount] = await Promise.all([
       tx.gymPlan.findMany({ orderBy: { createdAt: 'asc' } }),
       tx.gymPlan.count({ where: { status: 'Active' } }),

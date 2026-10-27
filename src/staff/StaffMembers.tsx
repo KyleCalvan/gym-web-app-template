@@ -26,7 +26,7 @@ function StaffMembers({ members, setMembers, plans, setCheckIns, today, toast, a
     addAudit?.('info', 'Member checked in', m.name + ' (' + m.id + ')');
   };
 
-  const isRegisteredMember = (m) => !m.deletedAt && Number(String(m?.id || '').replace(/\D/g, '')) >= 1042;
+  const isRegisteredMember = (m) => !m.deletedAt;
   const filtered = members
     .filter(isRegisteredMember)
     .filter(m =>

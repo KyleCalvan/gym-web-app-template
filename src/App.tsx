@@ -7,17 +7,21 @@ import LoginPage from './LoginPage';
 import DemoApp from './DemoApp';
 import type { DemoSession } from './DemoApp';
 import { LoadingScreen } from './shared/LoadingScreen';
-import AccountStatus from './auth/AccountStatus';
 import { clearFormerAccountBrowserState } from './auth/browser-state';
 import { PLANS, PROMOTIONS, TRAINERS } from './data';
 import type { Plan } from './types';
-import './auth/account-status.css';
 
 export default function App({ initialLoginTab = 'login' }: { initialLoginTab?: 'login' | 'register' } = {}) {
-  const { status, data: session } = useSession();
+  const { status } = useSession();
   if (status === 'loading') return <LoadingScreen />;
-  if (status === 'authenticated') return <AccountStatus key={session?.user.id} />;
+  if (status === 'authenticated') return <AccountRedirect />;
   return <PublicApp initialLoginTab={initialLoginTab} />;
+}
+
+function AccountRedirect() {
+  const router = useRouter();
+  useEffect(() => { router.replace('/account'); }, [router]);
+  return <LoadingScreen label="Opening your dashboard" />;
 }
 
 function PublicApp({ initialLoginTab }: { initialLoginTab: 'login' | 'register' }) {

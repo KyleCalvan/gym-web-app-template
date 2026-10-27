@@ -12,6 +12,7 @@ interface StaffPOSProps {
   plans: Plan[];
   toast: (message: string) => void;
   preferredPaymentMethod?: string;
+  readOnly?: boolean;
 }
 
 interface POSCartItem {
@@ -28,7 +29,7 @@ interface POSPayment {
   fees: number;
 }
 
-function StaffPOS({ setTransactions, members, plans, toast, preferredPaymentMethod = 'GCash' }: StaffPOSProps) {
+function StaffPOS({ setTransactions, members, plans, toast, preferredPaymentMethod = 'GCash', readOnly = false }: StaffPOSProps) {
   const [cart, setCart] = useState<POSCartItem[]>([]);
   const [method, setMethod] = useState(preferredPaymentMethod);
   const [memberId, setMemberId] = useState(members.find((member) => !member.deletedAt)?.id || '');
@@ -89,6 +90,7 @@ const addPlan = (item: POSCartItem) => {
   };
 
   const charge = () => {
+    if (readOnly) { toast('Point of Sale is not yet connected to the database.'); return; }
     if (cart.length === 0) { toast('Cart is empty'); return; }
     if (!cart.every((item) => items.some((available) => available.id === item.id && available.price === item.price))) {
       toast('A plan in the cart is no longer available. Review the cart before checkout.');

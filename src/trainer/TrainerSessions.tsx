@@ -35,10 +35,7 @@ function TrainerSessions({ sessions, setSessions, toast, addAudit }) {
       toast('Please fill in all fields');
       return;
     }
-    addAudit?.('info', `Schedule change requested for Session ${reqForm.session} to ${reqForm.newDateTime}. Reason: ${reqForm.reason}`);
-    toast('Schedule change request sent to admin');
-    setReqForm({ session: '', newDateTime: '', reason: '' });
-    setScheduleRequest(false);
+    toast('Schedule change requests are not yet connected to the database.');
   };
 
   return (

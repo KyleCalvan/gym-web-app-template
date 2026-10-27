@@ -15,7 +15,7 @@ const safeStamp = (iso) => iso.replace(/[:.]/g, '-');
 function SuperAdminBackups({
   members, trainers, plans, transactions, sessions, promotions, staff, admins,
   notifications, bookings, checkIns, checkInHistory, auditLog, activeSessions, notifPrefs,
-  toast, addAudit,
+  toast, addAudit, readOnly = false,
 }) {
   const [confirmDownload, setConfirmDownload] = useState(false);
   const [confirmRestore, setConfirmRestore] = useState(false);
@@ -35,6 +35,7 @@ function SuperAdminBackups({
   }, [auditLog]);
 
   const doDownload = () => {
+    if (readOnly) { toast('Database backups are not yet available.'); setConfirmDownload(false); return; }
     const snap = buildSnapshot({
       members, trainers, plans, transactions, sessions, promotions, staff, admins,
       notifications, bookings, checkIns, checkInHistory, auditLog, activeSessions, notifPrefs,
@@ -54,6 +55,7 @@ function SuperAdminBackups({
   };
 
   const doRestore = async () => {
+    if (readOnly) { toast('Database restore is not yet available.'); setConfirmRestore(false); return; }
     if (restoreText !== 'RESTORE') return;
     setRestoring(true);
     try {
@@ -71,6 +73,7 @@ function SuperAdminBackups({
   };
 
   const doUpload = async (e) => {
+    if (readOnly) { toast('Database backup upload is not yet available.'); e.target.value = ''; return; }
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -115,22 +118,23 @@ function SuperAdminBackups({
 
       <TabbedCard title="Database Backup">
         <p style={{ fontSize: 14.3, color: 'var(--steel)', margin: '0 0 14px' }}>
-          Download a JSON snapshot of every in-memory slice. Useful before destructive changes or for offline analysis.
-          The file contains all members, trainers, plans, transactions, sessions, promotions, staff, admins, notifications, bookings, check-ins, audit log, and active sessions.
+          {readOnly
+            ? 'The record counts below come from PostgreSQL. Backup download, upload, and restore are not yet connected.'
+            : 'Download a JSON snapshot of every in-memory slice. Useful before destructive changes or for offline analysis.'}
         </p>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', marginBottom: 14 }}>
-          <button className="btn btn-signal" onClick={() => setConfirmDownload(true)}>Download Backup</button>
+          <button className="btn btn-signal" onClick={() => readOnly ? toast('Database backups are not yet available.') : setConfirmDownload(true)}>Download Backup</button>
           <button
             className="btn btn-signal"
-            onClick={() => document.getElementById('backup-upload')?.click()}
+            onClick={() => readOnly ? toast('Database backup upload is not yet available.') : document.getElementById('backup-upload')?.click()}
             disabled={uploading}
           >
             {uploading ? 'Uploading...' : 'Upload JSON Backup'}
           </button>
           <button
             className="btn btn-danger"
-            onClick={() => setConfirmRestore(true)}
+            onClick={() => readOnly ? toast('Database restore is not yet available.') : setConfirmRestore(true)}
             disabled={restoring}
           >
             {restoring ? 'Restoring...' : 'Restore from Saved Backup'}

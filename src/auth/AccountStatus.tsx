@@ -49,7 +49,6 @@ export default function AccountStatus({ initialStatus }: { initialStatus?: Visib
         setSelectedRole(null);
       }
       void establishAccountBrowserState(status.account.id);
-      void fetch('/api/demo-session', { method: 'DELETE' }).catch(() => {});
     }
   }, [status?.account.id]);
   useEffect(() => { if (!initialStatus) void refresh(); }, [initialStatus]);
@@ -109,6 +108,15 @@ export default function AccountStatus({ initialStatus }: { initialStatus?: Visib
 
   async function continueWithGoogle() {
     await run(async () => { await signIn('google', { callbackUrl: '/account' }); });
+  }
+
+  async function resendVerification() {
+    await run(async () => {
+      const response = await fetch('/api/verify-email/resend', { method: 'POST' });
+      const result: { message?: string } = await response.json();
+      if (!response.ok) throw new Error(result.message ?? 'The verification email could not be sent.');
+      setNotice(result.message ?? 'A new verification link has been sent.');
+    });
   }
 
   async function resendVerification() {

@@ -2,12 +2,23 @@
 import { useState } from 'react';
 import { TabbedCard, BarChart, Donut, Field, Select } from '../shared';
 import { downloadCSV } from '../shared/utils/csv.ts';
-import { REVENUE_TREND, REVENUE_SOURCE } from '../data.ts';
 
 function AdminReports({ members, transactions, today, toast }){
   const [dateRange, setDateRange] = useState('Last 7 Days');
   const [category, setCategory] = useState('All');
   const [applied, setApplied] = useState(null);
+  const paid = transactions.filter(t => t.status === 'Paid');
+  const revenueTrend = Array.from({ length: 6 }, (_, index) => {
+    const date = new Date();
+    date.setMonth(date.getMonth() - (5 - index));
+    return { m: date.toLocaleDateString('en-US', { month: 'short' }),
+      v: paid.filter(t => { const paidDate = new Date(t.date); return paidDate.getMonth() === date.getMonth() && paidDate.getFullYear() === date.getFullYear(); })
+        .reduce((sum, t) => sum + t.amount, 0) };
+  });
+  const sourceTotals = new Map();
+  paid.forEach(t => sourceTotals.set(t.type, (sourceTotals.get(t.type) || 0) + t.amount));
+  const revenueSource = Array.from(sourceTotals, ([l, v], index) =>
+    ({ l, v, color: ['var(--signal-ink)', 'var(--amber)', 'var(--chart-blue)', 'var(--danger)'][index % 4] }));
 
   const exportCsv = () => {
     const rows = [
@@ -37,10 +48,10 @@ function AdminReports({ members, transactions, today, toast }){
     <>
       <div className="grid grid-2" style={{marginBottom:18}}>
         <TabbedCard title="Revenue Trend — Last 6 Months">
-          <BarChart data={REVENUE_TREND} valueKey="v" labelKey="m" prefix="₱" />
+          <BarChart data={revenueTrend} valueKey="v" labelKey="m" prefix="₱" />
         </TabbedCard>
         <TabbedCard title="Revenue by Source">
-          <Donut data={REVENUE_SOURCE} />
+          <Donut data={revenueSource} />
         </TabbedCard>
       </div>
       <div className="grid grid-2-1">

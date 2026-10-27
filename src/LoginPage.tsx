@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { getProviders, signIn } from 'next-auth/react';
+import { Eye, EyeOff } from 'lucide-react';
 import { Field, Modal } from './shared';
 import { dur, ease } from './motion';
 import TermsOfUse from './auth/TermsOfUse';
@@ -28,10 +29,12 @@ export default function LoginPage({ defaultTab = 'login', onBack }: LoginPagePro
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [regName, setRegName] = useState(emptyName);
   const [regEmail, setRegEmail] = useState('');
   const [regPhone, setRegPhone] = useState('');
   const [regPassword, setRegPassword] = useState('');
+  const [showRegisterPassword, setShowRegisterPassword] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [termsRead, setTermsRead] = useState(false);
@@ -57,10 +60,14 @@ export default function LoginPage({ defaultTab = 'login', onBack }: LoginPagePro
     if (Object.keys(errors).length) return;
     setPendingMethod('password');
     try {
+<<<<<<< HEAD
       const demoSettings = await fetch('/api/demo-session');
       const demoAccounts: { accounts?: { email: string }[] } = demoSettings.ok ? await demoSettings.json() : {};
       const isDemoAccount = demoAccounts.accounts?.some(account => account.email === email.trim().toLowerCase());
       const response = await fetch(isDemoAccount ? '/api/demo-session' : '/api/password-login', {
+=======
+      const response = await fetch('/api/password-login', {
+>>>>>>> 9f37355 (fixed login and verified user roles ui and added users in the database)
         method: 'POST', headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ email: email.trim(), password }),
       });
@@ -69,7 +76,11 @@ export default function LoginPage({ defaultTab = 'login', onBack }: LoginPagePro
         setError(result.message ?? result.error ?? 'Sign-in could not be completed. Please retry.');
         return;
       }
+<<<<<<< HEAD
       window.location.assign(isDemoAccount ? '/login' : result.next === '/account' ? '/account' : '/');
+=======
+      window.location.assign(result.next === '/account' ? '/account' : '/');
+>>>>>>> 9f37355 (fixed login and verified user roles ui and added users in the database)
     } catch {
       setError('Could not connect to sign-in. Check your connection and retry.');
     } finally {
@@ -167,7 +178,7 @@ export default function LoginPage({ defaultTab = 'login', onBack }: LoginPagePro
                 });
               }} errors={formErrors} />
               <Field label="Email" htmlFor="register-email">
-                <input id="register-email" className="form-control" type="email" required placeholder="you@example.com"
+                <input id="register-email" className="form-control" type="email" required autoComplete="username" placeholder="you@example.com"
                   aria-invalid={Boolean(formErrors['register-email'])}
                   aria-describedby={formErrors['register-email'] ? 'register-email-error' : undefined}
                   value={regEmail} onChange={(e) => { setRegEmail(e.target.value); clearFieldError('register-email'); }}
@@ -183,11 +194,19 @@ export default function LoginPage({ defaultTab = 'login', onBack }: LoginPagePro
                 {formErrors['register-phone'] && <p className="field-error" id="register-phone-error" role="alert">{formErrors['register-phone']}</p>}
               </Field>
               <Field label="Password" htmlFor="register-password">
-                <input id="register-password" className="form-control" type="password" required placeholder="At least 8 characters"
+                <div className="password-control">
+                <input id="register-password" className="form-control" type={showRegisterPassword ? 'text' : 'password'} required autoComplete="new-password" placeholder="At least 8 characters"
                   aria-invalid={Boolean(formErrors['register-password'])}
                   aria-describedby={formErrors['register-password'] ? 'register-password-error' : undefined}
                   value={regPassword} onChange={(e) => { setRegPassword(e.target.value); clearFieldError('register-password'); }}
                   onBlur={() => { if (regPassword.length < 8) setFormErrors((prev) => ({ ...prev, 'register-password': 'Use at least 8 characters.' })); }} />
+                <button type="button" className="password-visibility-toggle" aria-label={showRegisterPassword ? 'Hide password' : 'Show password'}
+                  aria-pressed={showRegisterPassword} aria-controls="register-password"
+                  onPointerDown={event => { event.preventDefault(); setShowRegisterPassword(value => !value); }}
+                  onClick={event => { if (event.detail === 0) setShowRegisterPassword(value => !value); }}>
+                  {showRegisterPassword ? <EyeOff size={19} aria-hidden="true" /> : <Eye size={19} aria-hidden="true" />}
+                </button>
+                </div>
                 {formErrors['register-password'] && <p className="field-error" id="register-password-error" role="alert">{formErrors['register-password']}</p>}
               </Field>
 
@@ -238,14 +257,26 @@ export default function LoginPage({ defaultTab = 'login', onBack }: LoginPagePro
                 {formErrors['login-email'] && <p className="field-error" id="login-email-error" role="alert">{formErrors['login-email']}</p>}
               </Field>
               <Field label="Password" htmlFor="login-password">
+                <div className="password-control">
                 <input
+<<<<<<< HEAD
                   id="login-password" className="form-control" type="password" required autoComplete="current-password"
+=======
+                  id="login-password" className="form-control" type={showLoginPassword ? 'text' : 'password'} required autoComplete="current-password"
+>>>>>>> 9f37355 (fixed login and verified user roles ui and added users in the database)
                   placeholder="••••••••"
                   aria-invalid={Boolean(formErrors['login-password'])}
                   aria-describedby={formErrors['login-password'] ? 'login-password-error' : undefined}
                   value={password} onChange={(e) => { setPassword(e.target.value); clearFieldError('login-password'); }}
                   onBlur={() => { if (!password || password.length > 128) setFormErrors((prev) => ({ ...prev, 'login-password': 'Enter your password.' })); }}
                 />
+                <button type="button" className="password-visibility-toggle" aria-label={showLoginPassword ? 'Hide password' : 'Show password'}
+                  aria-pressed={showLoginPassword} aria-controls="login-password"
+                  onPointerDown={event => { event.preventDefault(); setShowLoginPassword(value => !value); }}
+                  onClick={event => { if (event.detail === 0) setShowLoginPassword(value => !value); }}>
+                  {showLoginPassword ? <EyeOff size={19} aria-hidden="true" /> : <Eye size={19} aria-hidden="true" />}
+                </button>
+                </div>
                 {formErrors['login-password'] && <p className="field-error" id="login-password-error" role="alert">{formErrors['login-password']}</p>}
               </Field>
               <div style={{ textAlign: 'right', marginBottom: 12 }}>
@@ -264,6 +295,7 @@ export default function LoginPage({ defaultTab = 'login', onBack }: LoginPagePro
                 {pendingMethod === 'password' ? 'Signing in…' : 'Login'}
               </button>
             </form>)}
+<<<<<<< HEAD
           {!registering && <>
             <div className="auth-divider"><span>or continue with</span></div>
             <button type="button" className="auth-google-button" onClick={handleSignIn} disabled={!checked || !configured || Boolean(pendingMethod)} aria-describedby={!checked || !configured ? 'google-provider-note' : undefined}>
@@ -271,6 +303,13 @@ export default function LoginPage({ defaultTab = 'login', onBack }: LoginPagePro
             </button>
             {(!checked || !configured) && <p className="auth-provider-note" id="google-provider-note">{!checked ? 'Checking sign-in availability…' : 'Google sign-in is currently unavailable. Please contact the gym for assistance.'}</p>}
           </>}
+=======
+          <div className="auth-divider"><span>or continue with</span></div>
+          <button type="button" className="auth-google-button" onClick={handleSignIn} disabled={!checked || !configured || Boolean(pendingMethod)} aria-describedby={!checked || !configured ? 'google-provider-note' : undefined}>
+            <span className="google-mark" aria-hidden="true">G</span>{pendingMethod === 'google' ? 'Connecting to Google…' : registering ? 'Sign up with Google' : 'Continue with Google'}
+          </button>
+          {(!checked || !configured) && <p className="auth-provider-note" id="google-provider-note">{!checked ? 'Checking sign-in availability…' : `Google ${registering ? 'sign-up' : 'sign-in'} is currently unavailable. Please contact the gym for assistance.`}</p>}
+>>>>>>> 9f37355 (fixed login and verified user roles ui and added users in the database)
           {error && <p className="field-error auth-provider-error" role="alert">{error}</p>}
         </motion.div>
       </div>
