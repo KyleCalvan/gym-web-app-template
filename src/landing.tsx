@@ -14,12 +14,9 @@ import SiteFooter from './landing/SiteFooter.tsx';
 import BackToTop from './landing/BackToTop.tsx';
 
 export interface LandingProps {
-  onLogin: (role: 'member' | 'staff' | 'trainer' | 'admin') => void;
   plans: Plan[];
   promotions: Promotion[];
   trainers: Trainer[];
-  members: unknown[];
-  setMembers: unknown;
   onNavigate: (r: string) => void;
 }
 
