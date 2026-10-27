@@ -98,13 +98,16 @@ export async function POST(request: NextRequest) {
         result: 'success', requestId });
       const status = await getAccountStatus(account.id, session, tx);
       if (!status) throw new Error('Account unavailable');
-      const response = NextResponse.json({ next: status.restricted ? '/account' : '/' }, {
+      const memberOnly = status.roles.length === 1 && status.roles[0] === 'member';
+      const response = NextResponse.json({ next: status.restricted || memberOnly ? '/account' : '/' }, {
         headers: { 'x-request-id': requestId, 'cache-control': 'private, no-store' },
       });
       setSessionCookie(response, session);
       return response;
-    }));
-  } catch {
+    }, { timeout: 20_000 }));
+  } catch (error) {
+    console.error('Password sign-in failed.', { requestId,
+      code: error && typeof error === 'object' && 'code' in error ? error.code : undefined });
     return apiError(503, 'UNAVAILABLE', 'Sign-in is temporarily unavailable. Please retry.', requestId);
   }
 }

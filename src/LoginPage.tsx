@@ -4,6 +4,7 @@ import { getProviders, signIn } from 'next-auth/react';
 import { Field, Modal } from './shared';
 import { dur, ease } from './motion';
 import TermsOfUse from './auth/TermsOfUse';
+import { CURRENT_TERMS_VERSION } from './auth/terms';
 import { NameFields } from './shared/components/NameFields';
 import { emptyName, formatName } from './shared/nameParts';
 
@@ -56,34 +57,57 @@ export default function LoginPage({ defaultTab = 'login', onBack }: LoginPagePro
     if (Object.keys(errors).length) return;
     setPendingMethod('password');
     try {
-      const response = await fetch('/api/password-login', {
+      const demoSettings = await fetch('/api/demo-session');
+      const demoAccounts: { accounts?: { email: string }[] } = demoSettings.ok ? await demoSettings.json() : {};
+      const isDemoAccount = demoAccounts.accounts?.some(account => account.email === email.trim().toLowerCase());
+      const response = await fetch(isDemoAccount ? '/api/demo-session' : '/api/password-login', {
         method: 'POST', headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ email: email.trim(), password }),
       });
-      const result: { code?: string; message?: string; next?: string } = await response.json();
+      const result: { code?: string; message?: string; error?: string; next?: string } = await response.json();
       if (!response.ok) {
-        setError(result.message ?? 'Sign-in could not be completed. Please retry.');
+        setError(result.message ?? result.error ?? 'Sign-in could not be completed. Please retry.');
         return;
       }
-      window.location.assign(result.next === '/account' ? '/account' : '/');
+      window.location.assign(isDemoAccount ? '/login' : result.next === '/account' ? '/account' : '/');
     } catch {
       setError('Could not connect to sign-in. Check your connection and retry.');
     } finally {
       setPendingMethod(null);
     }
   };
-  const handleMemberRegister = (event: React.FormEvent) => {
+  const handleMemberRegister = async (event: React.FormEvent) => {
     event.preventDefault(); setError(null);
+    if (pendingMethod) return;
     const errors: Record<string, string> = {};
     if (!regName.firstName.trim()) errors['register-firstName'] = 'Enter your first name.';
     if (!regName.lastName.trim()) errors['register-lastName'] = 'Enter your last name.';
     if (formatName(regName).length > 120) errors['register-lastName'] = 'Keep your full name within 120 characters.';
     if (!EMAIL_PATTERN.test(regEmail.trim())) errors['register-email'] = 'Enter a valid email address.';
     if (!regPhone.trim()) errors['register-phone'] = 'Enter a phone number.';
-    if (regPassword.length < 8) errors['register-password'] = 'Use at least 8 characters.';
+    if (regPassword.length < 8 || regPassword.length > 128) errors['register-password'] = 'Use 8 to 128 characters.';
     if (!termsRead || !agreedToTerms) errors.terms = 'Read and accept the Terms of Use to continue.';
     setFormErrors(errors);
-    if (!Object.keys(errors).length) setError('Email and password registration is not connected yet. Continue with Google or contact the gym for assistance.');
+    if (Object.keys(errors).length) return;
+    setPendingMethod('password');
+    try {
+      const response = await fetch('/api/register', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ ...regName, email: regEmail.trim(), phone: regPhone.trim(), password: regPassword,
+          termsAccepted: agreedToTerms, termsVersion: CURRENT_TERMS_VERSION }),
+      });
+      const result: { code?: string; message?: string; next?: string } = await response.json();
+      if (!response.ok) {
+        if (result.code === 'ACCOUNT_EXISTS') setFormErrors(previous => ({ ...previous, 'register-email': result.message ?? 'This email is already registered.' }));
+        else setError(result.message ?? 'Registration could not be completed. Please retry.');
+        return;
+      }
+      window.location.assign(result.next?.startsWith('/account') ? result.next : '/account');
+    } catch {
+      setError('Could not connect to registration. Check your connection and retry.');
+    } finally {
+      setPendingMethod(null);
+    }
   };
 
   const registering = tab === 'register';
@@ -101,7 +125,7 @@ export default function LoginPage({ defaultTab = 'login', onBack }: LoginPagePro
     if (!configured || pendingMethod) return;
     setError(null); setPendingMethod('google');
     try {
-      const result = await signIn('google', { callbackUrl: window.location.origin, redirect: false });
+      const result = await signIn('google', { callbackUrl: `${window.location.origin}/account`, redirect: false });
       if (result?.error || !result?.url) {
         setError(OAUTH_ERRORS[result?.error ?? ''] ?? OAUTH_ERRORS.Default); setPendingMethod(null); return;
       }
@@ -190,9 +214,9 @@ export default function LoginPage({ defaultTab = 'login', onBack }: LoginPagePro
               <button
                 type="submit"
                 className="btn btn-signal btn-block"
-                disabled={!termsRead || !agreedToTerms}
+                disabled={!termsRead || !agreedToTerms || pendingMethod !== null}
               >
-                Create Account
+                {pendingMethod === 'password' ? 'Creating Account…' : 'Create Account'}
               </button>
               {!termsRead ? (
                 <p className="terms-hint">
@@ -240,11 +264,13 @@ export default function LoginPage({ defaultTab = 'login', onBack }: LoginPagePro
                 {pendingMethod === 'password' ? 'Signing in…' : 'Login'}
               </button>
             </form>)}
-          <div className="auth-divider"><span>or continue with</span></div>
-          <button type="button" className="auth-google-button" onClick={handleSignIn} disabled={!checked || !configured || Boolean(pendingMethod)} aria-describedby={!checked || !configured ? 'google-provider-note' : undefined}>
-            <span className="google-mark" aria-hidden="true">G</span>{pendingMethod === 'google' ? 'Connecting to Google…' : 'Continue with Google'}
-          </button>
-          {(!checked || !configured) && <p className="auth-provider-note" id="google-provider-note">{!checked ? 'Checking sign-in availability…' : 'Google sign-in is currently unavailable. Please contact the gym for assistance.'}</p>}
+          {!registering && <>
+            <div className="auth-divider"><span>or continue with</span></div>
+            <button type="button" className="auth-google-button" onClick={handleSignIn} disabled={!checked || !configured || Boolean(pendingMethod)} aria-describedby={!checked || !configured ? 'google-provider-note' : undefined}>
+              <span className="google-mark" aria-hidden="true">G</span>{pendingMethod === 'google' ? 'Connecting to Google…' : 'Continue with Google'}
+            </button>
+            {(!checked || !configured) && <p className="auth-provider-note" id="google-provider-note">{!checked ? 'Checking sign-in availability…' : 'Google sign-in is currently unavailable. Please contact the gym for assistance.'}</p>}
+          </>}
           {error && <p className="field-error auth-provider-error" role="alert">{error}</p>}
         </motion.div>
       </div>

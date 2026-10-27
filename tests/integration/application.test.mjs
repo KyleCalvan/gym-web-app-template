@@ -4,11 +4,13 @@ import { copyFile, mkdir, readFile, writeFile, unlink, rmdir } from 'node:fs/pro
 import path from 'node:path';
 import { startDatabase, startApplication, runNode, withDatabaseClient } from './harness.mjs';
 import { startGoogle } from './google.mjs';
+import { startSmtp } from './smtp.mjs';
 import { randomBytes, randomUUID, scryptSync } from 'node:crypto';
 
 let database;
 let application;
 let google;
+let smtp;
 
 test('plan mutations reject missing sessions with a structured request-correlated error', async () => {
   const response = await fetch(`${application.url}/api/gym-plans`, {
@@ -57,12 +59,14 @@ before(async () => {
   database = await startDatabase();
   google = await startGoogle();
   Object.assign(database.env, google.env);
+  smtp = await startSmtp();
+  Object.assign(database.env, smtp.env);
   database.env.INTEGRATION_CLOCK_FILE = path.join(database.directory, 'clock');
   database.env.INTEGRATION_SESSION_KEY = 'isolated-session-test-driver';
   await writeFile(database.env.INTEGRATION_CLOCK_FILE, '');
   const clockModule = new URL('./clock.cjs', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
   database.env.NODE_OPTIONS += ` --require="${decodeURIComponent(clockModule)}"`;
-  await runNode('scripts/prisma.mjs', ['generate'], database.env);
+  // Use the existing generated client for this isolated run while Windows holds its DLL open.
   await runNode('scripts/prisma.mjs', ['migrate', 'deploy'], database.env);
   const fixture = await readFile(new URL('./fixtures/legacy-account.sql', import.meta.url), 'utf8');
   await withDatabaseClient(database.env, (client) => client.query(fixture));
@@ -84,6 +88,7 @@ after(async () => {
   await application?.stop();
   await database?.stop();
   await google?.stop();
+  await smtp?.stop();
 });
 
 test('first Google callback establishes a durable verified Account without a second login', async () => {
@@ -158,8 +163,13 @@ test('Google Account holder completes profile and explicitly accepts current ter
   const pageResponse = await fetch(`${application.url}/account`, { headers: { cookie: signedIn.cookie } });
   assert.equal(pageResponse.status, 200, application.logs());
   const page = await pageResponse.text();
-  assert.match(page, /Your Assigned Roles/);
-  assert.match(page, /Membership information is unavailable here/);
+  assert.match(page, /class="app-shell"/);
+  assert.match(page, /Membership Plans/);
+  assert.match(page, /Coaching Sessions/);
+  assert.match(page, /Loading your member dashboard/);
+  const overview = await fetch(`${application.url}/api/member/overview`, { headers: { cookie: signedIn.cookie } });
+  assert.equal(overview.status, 200);
+  assert.equal((await overview.json()).membership, null);
   assert.doesNotMatch(page, /Maria Santos|Basic Membership|Premium Membership/);
 });
 
@@ -319,6 +329,7 @@ test('password login checks the stored hash and issues a shared database session
   assert.equal(foreign.status, 403);
   const signedIn = await login(email.toUpperCase(), password);
   assert.equal(signedIn.status, 200, application.logs());
+  assert.equal((await signedIn.json()).next, '/account');
   const cookie = responseCookieHeader(signedIn);
   assert.match(cookie, /^next-auth\.session-token=[A-Za-z0-9_-]{43}$/);
   assert.equal((await fetch(`${application.url}/api/me`, { headers: { cookie } }).then((r) => r.json())).account.id, accountId);
@@ -354,6 +365,88 @@ test('password login checks the stored hash and issues a shared database session
     'UPDATE "AuthUser" SET "passwordHash" = $1, "status" = $2 WHERE "id" = $3', [hash, 'disabled', otherAccount],
   ));
   assert.equal((await login(`${otherAccount}@example.test`, password)).status, 401);
+});
+
+test('registration creates only a member record and signs the new account in', async () => {
+  const email = `new-member-${randomUUID()}@example.test`;
+  const password = 'A long registration password 2026';
+  const body = { firstName: 'Ava', middleName: 'Marie', lastName: 'Reyes', suffix: 'Jr.',
+    email: email.toUpperCase(), phone: '+63 917 123 4567', password,
+    termsAccepted: true, termsVersion: '2026-10-21' };
+  const register = (data, origin = application.url) => fetch(`${application.url}/api/register`, {
+    method: 'POST', headers: { origin, 'content-type': 'application/json' }, body: JSON.stringify(data),
+  });
+
+  assert.equal((await register(body, 'https://attacker.example')).status, 403);
+  assert.equal((await register({ ...body, termsAccepted: false })).status, 400);
+  assert.equal((await register({ ...body, password: 'short' })).status, 400);
+  const created = await register(body);
+  assert.equal(created.status, 201, application.logs());
+  assert.equal((await created.json()).next, '/account?check-email=1');
+  const cookie = responseCookieHeader(created);
+  const rows = await withDatabaseClient(database.env, (client) => client.query(`
+    SELECT a.id, a."passwordHash", a."emailVerified", a."termsVersion", u.name, u.phone,
+      r.role, m."profileId", COUNT(ms.id)::int AS membership_count
+    FROM "AuthUser" a JOIN "User" u ON u.id = a."gymUserId"
+    JOIN "AssignedRole" r ON r."accountId" = a.id
+    JOIN "MemberProfile" m ON m."profileId" = r."profileId"
+    LEFT JOIN "Membership" ms ON ms."memberId" = m."profileId"
+    WHERE a.email = $1 GROUP BY a.id, u.id, r.role, m."profileId"
+  `, [email]));
+  assert.equal(rows.rows.length, 1);
+  assert.equal(rows.rows[0].name, 'Ava Marie Reyes Jr.');
+  assert.equal(rows.rows[0].phone, '+63 917 123 4567');
+  assert.equal(rows.rows[0].role, 'member');
+  assert.equal(rows.rows[0].membership_count, 0);
+  assert.equal(rows.rows[0].emailVerified, null);
+  assert.equal(rows.rows[0].termsVersion, '2026-10-21');
+  assert.match(rows.rows[0].passwordHash, /^scrypt:16384:8:1:/);
+  assert.ok(!rows.rows[0].passwordHash.includes(password));
+  const pendingSession = await fetch(`${application.url}/api/auth/session`, { headers: { cookie } }).then(r => r.json());
+  assert.equal(pendingSession.user.restricted, true);
+  assert.equal((await fetch(`${application.url}/api/member/overview`, { headers: { cookie } })).status, 403);
+  const message = smtp.messages.at(-1)?.replace(/=\r?\n/g, '').replace(/=3D/g, '=');
+  const link = message?.match(/http:\/\/127\.0\.0\.1:\d+\/api\/verify-email\?token=[A-Za-z0-9_-]{43}/)?.[0];
+  assert.ok(link, 'SMTP message contains a one-time verification link');
+  assert.equal((await fetch(`${application.url}/api/verify-email/resend`, {
+    method: 'POST', headers: { origin: application.url, cookie },
+  })).status, 429);
+  const deliveredCount = smtp.messages.length;
+  smtp.rejectNextRecipient();
+  await writeFile(database.env.INTEGRATION_CLOCK_FILE, String(Date.now() + 61_000));
+  try {
+    assert.equal((await fetch(`${application.url}/api/verify-email/resend`, {
+      method: 'POST', headers: { origin: application.url, cookie },
+    })).status, 503);
+  } finally { await writeFile(database.env.INTEGRATION_CLOCK_FILE, ''); }
+  assert.equal(smtp.messages.length, deliveredCount);
+  await writeFile(database.env.INTEGRATION_CLOCK_FILE, String(Date.now() + 122_000));
+  try {
+    assert.equal((await fetch(`${application.url}/api/verify-email/resend`, {
+      method: 'POST', headers: { origin: application.url, cookie },
+    })).status, 200);
+  } finally { await writeFile(database.env.INTEGRATION_CLOCK_FILE, ''); }
+  assert.equal(smtp.messages.length, deliveredCount + 1);
+  const resentMessage = smtp.messages.at(-1)?.replace(/=\r?\n/g, '').replace(/=3D/g, '=');
+  const resentLink = resentMessage?.match(/http:\/\/127\.0\.0\.1:\d+\/api\/verify-email\?token=[A-Za-z0-9_-]{43}/)?.[0];
+  assert.ok(resentLink && resentLink !== link);
+  const verified = await fetch(link, { redirect: 'manual' });
+  assert.equal(verified.status, 307);
+  assert.equal(verified.headers.get('location'), `${application.url}/?verified=1`);
+  const verifiedCookie = responseCookieHeader(verified);
+  assert.equal((await fetch(`${application.url}/api/auth/session`, { headers: { cookie: verifiedCookie } }).then(r => r.json())).user.role, 'member');
+  const overview = await fetch(`${application.url}/api/member/overview`, { headers: { cookie: verifiedCookie } });
+  assert.equal(overview.status, 200);
+  assert.equal((await overview.json()).membership, null);
+  assert.equal((await fetch(link, { redirect: 'manual' })).headers.get('location'), `${application.url}/account?verification=invalid`);
+  assert.equal((await fetch(resentLink, { redirect: 'manual' })).headers.get('location'), `${application.url}/account?verification=invalid`);
+  assert.equal((await register(body)).status, 409);
+  const signedIn = await fetch(`${application.url}/api/password-login`, {
+    method: 'POST', headers: { origin: application.url, 'content-type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+  assert.equal(signedIn.status, 200, application.logs());
+  assert.ok(responseCookieHeader(signedIn));
 });
 
 test('existing Google mappings survive while email-only claims and automatic provider additions are rejected', async () => {
@@ -887,4 +980,20 @@ test('HTTPS policy shares secure cookies with NextAuth and logout cannot be forg
     assert.equal(chunked.status, 200);
     assert.equal((await fetch(`${secure.url}/api/me`, { headers: { cookie: other.cookie } })).status, 401);
   } finally { await secure.stop(); }
+});
+
+test('anonymous NextAuth session remains available when database storage is down', async () => {
+  const unavailable = await startApplication({
+    ...database.env,
+    DATABASE_URL: 'postgresql://invalid:invalid@127.0.0.1:1/invalid?schema=public',
+  });
+  try {
+    const anonymous = await fetch(`${unavailable.url}/api/auth/session`);
+    assert.equal(anonymous.status, 200, unavailable.logs());
+    assert.deepEqual(await anonymous.json(), {});
+
+    const authenticated = await fetch(`${unavailable.url}/api/auth/session`, { headers: { cookie: adminCookie } });
+    assert.equal(authenticated.status, 503, unavailable.logs());
+    assert.equal((await authenticated.json()).code, 'UNAVAILABLE');
+  } finally { await unavailable.stop(); }
 });

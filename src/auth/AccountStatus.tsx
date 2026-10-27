@@ -9,6 +9,7 @@ import TermsOfUse from './TermsOfUse';
 import { NameFields } from '../shared/components/NameFields';
 import { splitName, formatName } from '../shared/nameParts';
 import { LoadingScreen } from '../shared/LoadingScreen';
+import MemberApp from '../member/MemberApp';
 import { clearAccountBrowserState, establishAccountBrowserState } from './browser-state';
 
 type Status = NonNullable<Awaited<ReturnType<typeof getAccountStatus>>>;
@@ -33,6 +34,7 @@ export default function AccountStatus({ initialStatus }: { initialStatus?: Visib
   const [pending, setPending] = useState(false);
   const pendingRef = useRef(false);
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
   const [profileName, setProfileName] = useState(() => splitName(initialStatus?.account.name ?? ''));
   const [phone, setPhone] = useState(initialStatus?.account.phone ?? '');
   const [accepted, setAccepted] = useState(false);
@@ -51,6 +53,12 @@ export default function AccountStatus({ initialStatus }: { initialStatus?: Visib
     }
   }, [status?.account.id]);
   useEffect(() => { if (!initialStatus) void refresh(); }, [initialStatus]);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('check-email') === '1') setNotice('Check your inbox for a verification link before entering the member dashboard.');
+    else if (params.get('delivery') === 'failed') setNotice('Your account was created, but the verification email could not be sent. Try resending it below.');
+    else if (params.has('verification')) setNotice('That verification link is invalid or expired. Request a new one below.');
+  }, []);
 
   async function run(task: () => Promise<void>) {
     if (pendingRef.current) return;
@@ -100,19 +108,34 @@ export default function AccountStatus({ initialStatus }: { initialStatus?: Visib
   }
 
   async function continueWithGoogle() {
-    await run(async () => { await signIn('google', { callbackUrl: '/' }); });
+    await run(async () => { await signIn('google', { callbackUrl: '/account' }); });
+  }
+
+  async function resendVerification() {
+    await run(async () => {
+      const response = await fetch('/api/verify-email/resend', { method: 'POST' });
+      const result: { message?: string } = await response.json();
+      if (!response.ok) throw new Error(result.message ?? 'The verification email could not be sent.');
+      setNotice(result.message ?? 'A new verification link has been sent.');
+    });
   }
 
   const roles = status?.restricted ? [] : status?.roles ?? [];
   const activeRole = selectedRole && roles.includes(selectedRole) ? selectedRole : roles[0] ?? null;
+  const memberDashboard = Boolean(status && !status.restricted && roles.length === 1 && roles[0] === 'member');
 
   if (!status && !error) return <LoadingScreen label="Loading your account" />;
+  if (status && memberDashboard) return <MemberApp name={status.account.name ?? 'Member'}
+    email={status.account.email ?? ''} phone={status.account.phone ?? ''}
+    profileId={status.profiles?.find(profile => profile.role === 'member')?.profileId ?? status.account.id}
+    onLogout={() => void logout()} pending={pending} />;
 
   return <main className="account-status" aria-busy={pending}>
     <p className="account-status-brand">VinAthletics</p>
     <h1>Your Account</h1>
     {pending && <p role="status">Updating Account…</p>}
     {error && <p role="alert">{error}</p>}
+    {notice && <p role="status">{notice}</p>}
     {status && <>
       <p>{status.account.name || 'Welcome'}</p>
       <p>Email: {status.account.email} <span>(read-only)</span></p>
@@ -121,6 +144,8 @@ export default function AccountStatus({ initialStatus }: { initialStatus?: Visib
       {status.restricted ? <>
         <h2>Next steps</h2>
         <ul>{status.nextSteps.map((step) => <li key={step}>{STEP_LABELS[step]}</li>)}</ul>
+        {status.nextSteps.includes('verify-email') && <button type="button" disabled={pending}
+          onClick={() => void resendVerification()}>Resend verification email</button>}
         {status.nextSteps.includes('complete-profile') && <form onSubmit={(event) => {
           event.preventDefault();
           const name = formatName(profileName);

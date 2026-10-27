@@ -181,7 +181,7 @@ function PlanComparisonTable({ currentPlan, plans, member, promotions, redemptio
 
 function MemberMembership({
   members, setMembers, plans, promotions, promotionRedemptions, setPromotions, setPromotionRedemptions,
-  setTransactions, currentUserId, today, toast, addAudit, preferredPaymentMethod = 'GCash',
+  setTransactions, currentUserId, today, toast, addAudit, preferredPaymentMethod = 'GCash', readOnly = false,
 }){
   const me = members.find(m => m.id === currentUserId) || members[0];
   const myRedemptions = useMemo(
@@ -435,11 +435,11 @@ function MemberMembership({
           {currentPlan?.description && <p className="member-current-plan-desc">{currentPlan.description}</p>}
         </div>
         <div className="member-current-plan-meta">
-          <Badge status={me?.status || 'Active'} />
+          {(!readOnly || me?.plan) && <Badge status={me?.status || 'Active'} />}
           <span className="member-plan-price">
             {currentDiscount
               ? <span className="price-with-discount"><s className="member-plan-price-old">{peso(currentPlan.price)}</s><strong>{peso(currentPriceToPay)}</strong><span className="member-plan-price-saved">Save {peso(currentDiscount.savings)}</span></span>
-              : <>{peso(currentPlan?.price || 0)}<small> / {currentPlan?.period || 'mo'}</small></>}
+              : readOnly && !currentPlan ? '—' : <>{peso(currentPlan?.price || 0)}<small> / {currentPlan?.period || 'mo'}</small></>}
           </span>
           {currentDiscount && <span className="member-plan-price-code mono">Code {currentDiscount.promo.code}</span>}
           {verificationStatus !== 'None' && <Badge status={verificationStatus === 'Verified' ? 'Active' : 'Pending'}>Student: {verificationStatus}</Badge>}

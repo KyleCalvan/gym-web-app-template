@@ -75,8 +75,13 @@ export async function establishGoogleAccount(profile: {
           where: { gymUserId_role: { gymUserId: account.gymUserId!, role: 'member' } },
           create: { gymUserId: account.gymUserId!, role: 'member' }, update: {},
         });
+        await tx.memberProfile.upsert({ where: { profileId: profile.id },
+          create: { profileId: profile.id }, update: {} });
         await tx.assignedRole.create({ data: { accountId: account.id, role: 'member', profileId: profile.id } });
       }
+      const existingMember = account.assignedRoles.find(assignment => assignment.role === 'member');
+      if (existingMember) await tx.memberProfile.upsert({ where: { profileId: existingMember.profileId },
+        create: { profileId: existingMember.profileId }, update: {} });
       if (!account.establishedAt || !account.emailVerified || account.emailVerifiedProvider !== 'google' || account.emailVerifiedSubject !== profile.sub) {
         const now = new Date();
         await tx.authUser.update({ where: { id: account.id }, data: {

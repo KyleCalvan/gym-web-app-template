@@ -289,6 +289,7 @@ export interface Conversation {
 // View props shared across every role's view component.
 // Each role's view receives this bag from <App/>.
 export interface ViewProps {
+  readOnly?: boolean;
   onProfilePhotoChange?: (url: string) => void;
   onNav: (id: string, action?: string) => void;
   initialAction?: string;

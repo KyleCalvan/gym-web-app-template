@@ -10,11 +10,13 @@ const requestId = () => authRequestContext.getStore()?.requestId ?? randomUUID()
 const DAY = 86_400_000;
 // The pg adapter qualifies ORM tables but does not set search_path for raw SQL.
 const schema = new URL(process.env.DATABASE_URL!).searchParams.get('schema') ?? 'public';
-const accountTable = Prisma.raw(`"${schema.replace(/"/g, '""')}"."AuthUser"`);
-const sessionTable = Prisma.raw(`"${schema.replace(/"/g, '""')}"."AuthSession"`);
+const quotedSchema = `"${schema.replace(/"/g, '""')}"`;
+// Schema is configuration-controlled and quoted as an identifier; IDs stay bound parameters.
+const accountLockSql = `SELECT "id" FROM ${quotedSchema}."AuthUser" WHERE "id" = $1 FOR UPDATE`;
+const sessionLockSql = `SELECT "id" FROM ${quotedSchema}."AuthSession" WHERE "sessionToken" = $1 FOR UPDATE`;
 
 async function lockAccount(tx: Transaction, accountId: string) {
-  await tx.$queryRaw`SELECT "id" FROM ${accountTable} WHERE "id" = ${accountId} FOR UPDATE`;
+  await tx.$queryRawUnsafe(accountLockSql, accountId);
 }
 
 function limits(roles: { role: string }[]) {
@@ -67,7 +69,7 @@ export async function lookupSession(tx: Transaction, sessionToken: string | unde
   if (!owner) return null;
   await lockAccount(tx, owner.userId);
   // Serialize lookup, rotation and revocation on the row. Polls never touch idle.
-  await tx.$queryRaw`SELECT "id" FROM ${sessionTable} WHERE "sessionToken" = ${sessionToken} FOR UPDATE`;
+  await tx.$queryRawUnsafe(sessionLockSql, sessionToken);
   const record = await tx.authSession.findUnique({ where: { sessionToken }, include: { user: { include: { assignedRoles: true } } } });
   if (!record) return null;
   if (record.user.status === 'disabled') {
@@ -88,6 +90,7 @@ export async function lookupSession(tx: Transaction, sessionToken: string | unde
 }
 
 export async function readSession(sessionToken: string | undefined) {
+  if (!sessionToken) return null;
   return prisma.$transaction((tx) => lookupSession(tx, sessionToken));
 }
 

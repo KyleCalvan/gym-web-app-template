@@ -1,4 +1,4 @@
-import { scrypt as callbackScrypt, timingSafeEqual } from 'node:crypto';
+import { randomBytes, scrypt as callbackScrypt, timingSafeEqual } from 'node:crypto';
 
 const COST = 16_384;
 const BLOCK_SIZE = 8;
@@ -9,6 +9,12 @@ const HASH_PATTERN = /^scrypt:16384:8:1:([A-Za-z0-9_-]{22}):([A-Za-z0-9_-]{86})$
 function derive(password: string, salt: Buffer) {
   return new Promise<Buffer>((resolve, reject) => callbackScrypt(password, salt, KEY_LENGTH,
     { N: COST, r: BLOCK_SIZE, p: PARALLELIZATION }, (error, key) => error ? reject(error) : resolve(key)));
+}
+
+export async function hashPassword(password: string) {
+  const salt = randomBytes(16);
+  const key = await derive(password, salt);
+  return `scrypt:${COST}:${BLOCK_SIZE}:${PARALLELIZATION}:${salt.toString('base64url')}:${key.toString('base64url')}`;
 }
 
 export async function verifyPassword(password: string, storedHash: string | null) {

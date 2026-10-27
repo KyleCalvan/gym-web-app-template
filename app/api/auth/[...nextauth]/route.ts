@@ -40,7 +40,11 @@ async function handler(request: NextRequest, context: { params: Promise<{ nextau
       }
       response.headers.set('x-request-id', requestId);
       return response;
-    } catch { return apiError(503, 'UNAVAILABLE', 'Authentication is temporarily unavailable.', requestId); }
+    } catch (error) {
+      console.error('Authentication request failed.', { requestId,
+        code: error && typeof error === 'object' && 'code' in error ? error.code : undefined });
+      return apiError(503, 'UNAVAILABLE', 'Authentication is temporarily unavailable.', requestId);
+    }
   });
 }
 export { handler as GET, handler as POST };

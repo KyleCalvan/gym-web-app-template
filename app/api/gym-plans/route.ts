@@ -107,7 +107,7 @@ async function lockedPlanTransaction<T>(action: (tx: Prisma.TransactionClient) =
     // The lock returns PostgreSQL void, which Prisma cannot deserialize.
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(${PLAN_LOCK_ID})`;
     return action(tx);
-  }, { isolationLevel: 'ReadCommitted' });
+  }, { isolationLevel: 'ReadCommitted', timeout: 20_000 });
 }
 
 async function readPlanCatalog() {

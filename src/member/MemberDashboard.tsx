@@ -6,7 +6,7 @@ import { formatPromotionDate, formatPromotionDiscount, getActivePromotionsForMem
 import { getBookingDatesError, getBookingToday, isBookingSlotAvailable } from './bookingDates.ts';
 import { peso } from '../data.ts';
 
-function MemberDashboard({ members, sessions, setSessions, bookings, setBookings, setTransactions, transactions, trainers, currentUserId, plans, promotions, setPromotions, promotionRedemptions, setPromotionRedemptions, onNav, toast, today, addAudit, preferredPaymentMethod }){
+function MemberDashboard({ members, sessions, setSessions, bookings, setBookings, setTransactions, transactions, trainers, currentUserId, plans, promotions, setPromotions, promotionRedemptions, setPromotionRedemptions, onNav, toast, today, addAudit, preferredPaymentMethod, onBook, paymentKnown = true, promotionsAvailable = true }){
   const me = members.find(m => m.id === currentUserId) || members[0];
   const dashboardToday = new Date();
   const todayISO = `${dashboardToday.getFullYear()}-${String(dashboardToday.getMonth() + 1).padStart(2, '0')}-${String(dashboardToday.getDate()).padStart(2, '0')}`;
@@ -101,21 +101,21 @@ function MemberDashboard({ members, sessions, setSessions, bookings, setBookings
           {upcoming.length === 0 ? (
             <div className="member-dashboard-empty">No upcoming sessions. Book a coaching session to get started.</div>
           ) : (
-            <Table columns={['Date','Time','Trainer','Session','Booking','Payment']} rows={upcoming} renderRow={s=>(
+            <Table columns={paymentKnown ? ['Date','Time','Trainer','Session','Booking','Payment'] : ['Date','Time','Trainer','Session','Booking']} rows={upcoming} renderRow={s=>(
               <tr key={s.id}>
                 <td className="mono">{formatPromotionDate(s.date)}</td>
                 <td className="mono">{s.time}</td>
                 <td>{s.trainer}</td>
                 <td>{s.type}</td>
                 <td><Badge status={s.status}/></td>
-                <td><Badge status={s.paid ? 'Paid' : 'Pending'}/></td>
+                {paymentKnown && <td><Badge status={s.paid ? 'Paid' : 'Pending'}/></td>}
               </tr>
             )} />
           )}
         </TabbedCard>
         <TabbedCard title="Quick Actions">
           <div className="member-dashboard-actions">
-            <button className="btn btn-signal btn-block" onClick={()=>setShowBook(true)}>Book a Session</button>
+            <button className="btn btn-signal btn-block" onClick={()=>onBook ? onBook() : setShowBook(true)}>Book a Session</button>
             <button className="btn btn-outline btn-block" onClick={()=>onNav && onNav('membership')}>Manage Membership</button>
             <button className="btn btn-outline btn-block" onClick={()=>onNav && onNav('payments')}>View Payments</button>
             <button className="btn btn-outline btn-block" onClick={()=>onNav && onNav('promotions')}>Browse Promotions</button>
@@ -127,8 +127,8 @@ function MemberDashboard({ members, sessions, setSessions, bookings, setBookings
         title="Current Promotions"
         right={<button className="btn btn-outline btn-sm" onClick={()=>onNav && onNav('promotions')}>View all</button>}
       >
-        {eligiblePromotions.length === 0 ? (
-          <div className="member-dashboard-empty">No active promotions are available for your current plan.</div>
+        {!promotionsAvailable || eligiblePromotions.length === 0 ? (
+          <div className="member-dashboard-empty">{promotionsAvailable ? 'No active promotions are available for your current plan.' : 'Promotions are not available online yet.'}</div>
         ) : (
           <div className="member-promo-preview-grid">
             {eligiblePromotions.map(p => (

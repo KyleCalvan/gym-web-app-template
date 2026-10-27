@@ -1,0 +1,159 @@
+'use client';
+
+import { useEffect, useRef, useState } from 'react';
+import Sidebar from '../shared/shell/Sidebar';
+import { Topbar } from '../shared/shell/Topbar';
+import { ProfileMenu } from '../shared/shell/ProfileMenu';
+import { useToast } from '../shared/hooks/useToast';
+import type { Member, Notification, NotifPrefs, Plan, Session, Transaction, ViewProps } from '../types';
+import MemberDashboard from './MemberDashboard';
+import { MEMBER_NAV, MEMBER_VIEWS } from './index';
+
+type Overview = {
+  joinedAt: string;
+  membership: { planName: string; status: string; endsAt: string } | null;
+  latestPayment: { amount: number; status: string; at: string } | null;
+  upcomingSessions: { id: string; startsAt: string; type: string; status: string; trainer: string | null }[];
+};
+
+function sessionDate(value: string) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Manila', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(new Date(value));
+  const part = (type: string) => parts.find(item => item.type === type)?.value ?? '';
+  return `${part('year')}-${part('month')}-${part('day')}`;
+}
+
+export default function MemberApp({ name, email, phone, profileId, onLogout, pending }: {
+  name: string; email: string; phone: string; profileId: string; onLogout: () => void; pending: boolean;
+}) {
+  const [overview, setOverview] = useState<Overview | null>(null);
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [error, setError] = useState('');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [view, setView] = useState('dashboard');
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [notifPrefs, setNotifPrefs] = useState<NotifPrefs>({ email: true, sms: false, reminders: true, promos: false });
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
+    if (typeof document === 'undefined') return 'dark';
+    return document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+  });
+  const [toastNode, fireToast] = useToast();
+  const pillRef = useRef<HTMLButtonElement>(null);
+
+  function refresh() {
+    setError('');
+    fetch('/api/member/overview', { cache: 'no-store' })
+      .then(async response => {
+        if (!response.ok) throw new Error('Your member overview could not be loaded.');
+        return response.json() as Promise<Overview>;
+      })
+      .then(setOverview)
+      .catch(() => setError('Your member overview could not be loaded. Please refresh.'));
+  }
+
+  useEffect(() => { refresh(); }, []);
+  useEffect(() => {
+    let active = true;
+    fetch('/api/gym-plans').then(async response => {
+      if (!response.ok) return;
+      const result: { plans?: Plan[] } = await response.json();
+      if (active && Array.isArray(result.plans)) setPlans(result.plans);
+    }).catch(() => {});
+    return () => { active = false; };
+  }, []);
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    try { localStorage.setItem('vinathletics-theme', theme); } catch { /* Theme remains active for this visit. */ }
+  }, [theme]);
+
+  function handleNav(nextView: string) {
+    setView(nextView);
+    setProfileOpen(false);
+    setNotificationsOpen(false);
+    setIsSidebarOpen(false);
+  }
+
+  const user = { id: profileId, name, role: 'Member' };
+  const member = {
+    id: profileId, name, email, phone,
+    joined: overview?.joinedAt ? new Intl.DateTimeFormat('en-PH', { dateStyle: 'medium', timeZone: 'Asia/Manila' }).format(new Date(overview.joinedAt)) : '',
+    plan: overview?.membership?.planName ?? '',
+    status: overview?.membership?.status ?? '',
+    membershipValidUntil: overview?.membership?.endsAt ?? null,
+  };
+  const sessions = overview?.upcomingSessions.map(session => ({
+    id: session.id, member: name, trainer: session.trainer ?? 'Trainer to be assigned',
+    date: sessionDate(session.startsAt),
+    time: new Intl.DateTimeFormat('en-PH', { timeZone: 'Asia/Manila', timeStyle: 'short' }).format(new Date(session.startsAt)),
+    type: session.type, status: session.status,
+  })) ?? [];
+  const transactions = overview?.latestPayment ? [{
+    id: 'latest-payment', member: name, type: 'Payment', amount: overview.latestPayment.amount,
+    status: overview.latestPayment.status, method: 'Not recorded',
+    date: new Intl.DateTimeFormat('en-PH', { dateStyle: 'medium', timeZone: 'Asia/Manila' }).format(new Date(overview.latestPayment.at)),
+  }] : [];
+
+  const ViewComp = MEMBER_VIEWS[view];
+  const ignoreChange = () => {};
+  const viewProps: ViewProps = {
+    role: 'member', currentUser: user, currentUserId: member.id, onNav: handleNav,
+    members: [member as Member], setMembers: ignoreChange,
+    trainers: [], setTrainers: ignoreChange,
+    plans, setPlans: ignoreChange,
+    transactions: transactions as Transaction[], setTransactions: ignoreChange,
+    sessions: sessions as Session[], setSessions: ignoreChange,
+    trainerAvailability: [], setTrainerAvailability: ignoreChange,
+    promotions: [], setPromotions: ignoreChange,
+    staff: [], setStaff: ignoreChange, admins: [], setAdmins: ignoreChange,
+    superadmins: [], setSuperadmins: ignoreChange,
+    notifications, setNotifications, bookings: sessions as Session[], setBookings: ignoreChange,
+    checkIns: { count: 0, today: '' }, setCheckIns: ignoreChange,
+    checkInHistory: [], setCheckInHistory: ignoreChange,
+    notifPrefs, setNotifPrefs, auditLog: [], setAuditLog: ignoreChange,
+    activeSessions: [], setActiveSessions: ignoreChange, currentSessionId: null,
+    toast: fireToast, today: '', addAudit: () => {},
+    promotionRedemptions: [], setPromotionRedemptions: ignoreChange,
+    preferredPaymentMethod: 'GCash', setPreferredPaymentMethod: ignoreChange,
+    qrDestinations: [], setQrDestinations: ignoreChange,
+    onDeleteAccount: ignoreChange, readOnly: true,
+  };
+
+  return <div className="app-shell" aria-busy={pending}>
+    <Sidebar role="member" brand="VinAthletics" user={user} nav={MEMBER_NAV} active={view}
+      onNav={handleNav} isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
+    <div className="app-main" style={{ flex: 1, minWidth: 0 }}>
+      <Topbar role="member" user={user} view={view} nav={MEMBER_NAV}
+        onNav={handleNav} toggleSidebar={() => setIsSidebarOpen(open => !open)}
+        onProfileMenu={() => { setNotificationsOpen(false); setProfileOpen(open => !open); }} pillRef={pillRef}
+        profileMenuOpen={profileOpen} notifications={notifications} setNotifications={setNotifications}
+        notificationsOpen={notificationsOpen} onToggleNotifications={() => { setProfileOpen(false); setNotificationsOpen(open => !open); }}
+        onCloseNotifications={() => setNotificationsOpen(false)} toast={fireToast} />
+      <div className="content">
+        {view === 'dashboard' && error && <p role="alert">{error} <button type="button" onClick={refresh}>Retry</button></p>}
+        {view === 'dashboard' && !overview && !error && <p role="status">Loading your member dashboard…</p>}
+        {view === 'dashboard' && overview && <MemberDashboard members={[member]} currentUserId={member.id}
+          sessions={sessions} bookings={sessions} transactions={transactions}
+          trainers={[]} plans={[]} promotions={[]} promotionRedemptions={[]}
+          setSessions={() => {}} setBookings={() => {}} setTransactions={() => {}}
+          setPromotions={() => {}} setPromotionRedemptions={() => {}}
+          onNav={handleNav} onBook={() => fireToast('Online booking is not available yet.')}
+          paymentKnown={false} promotionsAvailable={false}
+          toast={fireToast} today={''} addAudit={() => {}} preferredPaymentMethod={''} />}
+        {view !== 'dashboard' && ViewComp && <>
+          <p className="member-readonly-note" role="note">This page is a read-only preview. Changes and purchases are not saved yet.</p>
+          <div inert><ViewComp {...viewProps} /></div>
+        </>}
+      </div>
+    </div>
+    <ProfileMenu role="member" availableRoles={['member']} onSwitchRole={() => {}}
+      user={user} open={profileOpen} onClose={() => setProfileOpen(false)}
+      onProfile={() => handleNav('profile')} onLogout={onLogout}
+      notifPrefs={notifPrefs} setNotifPrefs={setNotifPrefs} theme={theme}
+      onToggleTheme={() => setTheme(current => current === 'dark' ? 'light' : 'dark')}
+      triggerRef={pillRef} />
+    {toastNode}
+  </div>;
+}

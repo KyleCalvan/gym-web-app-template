@@ -1,0 +1,44 @@
+import { NextRequest } from 'next/server';
+import { readSession } from '@/src/auth/sessions';
+import { requestSessionToken } from '@/src/auth/session-cookie';
+import { prisma } from '@/src/auth/prisma';
+
+export const runtime = 'nodejs';
+
+export async function GET(request: NextRequest) {
+  try {
+    const record = await readSession(requestSessionToken(request));
+    if (!record) return Response.json({ code: 'UNAUTHENTICATED' }, { status: 401 });
+    if (record.status.restricted || !record.status.roles.includes('member')) {
+      return Response.json({ code: 'FORBIDDEN' }, { status: 403 });
+    }
+    const assignment = await prisma.assignedRole.findUnique({
+      where: { accountId_role: { accountId: record.user.id, role: 'member' } },
+      include: { profile: { include: { member: true } } },
+    });
+    const member = assignment?.profile.member;
+    if (!member) return Response.json({ code: 'MEMBER_UNAVAILABLE' }, { status: 404 });
+    const [membership, latestPayment, upcomingSessions] = await Promise.all([
+      prisma.membership.findFirst({ where: { memberId: member.profileId },
+        orderBy: { createdAt: 'desc' }, select: { planName: true, status: true, endsAt: true } }),
+      prisma.paymentTransaction.findFirst({ where: { memberId: member.profileId },
+        orderBy: { createdAt: 'desc' }, select: { amount: true, status: true, createdAt: true } }),
+      prisma.coachingSession.findMany({ where: { memberId: member.profileId, startsAt: { gte: new Date() },
+        status: { in: ['Pending', 'Confirmed'] } }, orderBy: { startsAt: 'asc' }, take: 4,
+        select: { id: true, startsAt: true, type: true, status: true,
+          trainer: { select: { profile: { select: { gymUser: { select: { name: true } } } } } } },
+      }),
+    ]);
+    return Response.json({
+      joinedAt: member.joinedAt.toISOString(),
+      membership: membership ? { planName: membership.planName, status: membership.status,
+        endsAt: membership.endsAt.toISOString() } : null,
+      latestPayment: latestPayment ? { amount: Number(latestPayment.amount), status: latestPayment.status,
+        at: latestPayment.createdAt.toISOString() } : null,
+      upcomingSessions: upcomingSessions.map(session => ({ id: session.id, startsAt: session.startsAt.toISOString(),
+        type: session.type, status: session.status, trainer: session.trainer.profile.gymUser.name })),
+    });
+  } catch {
+    return Response.json({ code: 'UNAVAILABLE' }, { status: 503 });
+  }
+}

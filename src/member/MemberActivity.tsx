@@ -22,7 +22,7 @@ const nowHHMM = (): string => {
 
 function MemberActivity({
   members, setMembers, sessions, currentUserId,
-  checkInHistory, setCheckInHistory, setCheckIns, toast,
+  checkInHistory, setCheckInHistory, setCheckIns, toast, readOnly = false,
 }) {
   const me = members.find(m => m.id === currentUserId) || members[0];
   const myId = me?.id || '';
@@ -32,10 +32,11 @@ function MemberActivity({
     [checkInHistory, myId],
   );
   const isFrozen = me?.status === 'Frozen';
-  const [metrics, setMetrics] = useState(() => ({ weightKg: me?.weightKg ?? 72, heightCm: me?.heightCm ?? 172 }));
+  const [metrics, setMetrics] = useState(() => ({ weightKg: me?.weightKg ?? (readOnly ? 0 : 72), heightCm: me?.heightCm ?? (readOnly ? 0 : 172) }));
   const [editingMetrics, setEditingMetrics] = useState(false);
   const [metricDraft, setMetricDraft] = useState(metrics);
   const heightM = metrics.heightCm / 100;
+  const hasMetrics = metrics.weightKg > 0 && metrics.heightCm > 0;
   const bmi = heightM > 0 ? metrics.weightKg / (heightM * heightM) : 0;
   const bmiCategory = bmi < 18.5 ? { label: 'Underweight', tone: 'warn' }
     : bmi < 25 ? { label: 'Healthy', tone: 'ok' }
@@ -189,18 +190,18 @@ function MemberActivity({
         <div className="metrics-tracker">
           <div className="metric-tile">
             <div className="lbl">Weight</div>
-            <div className="val">{metrics.weightKg.toFixed(1)}<span className="metric-unit">kg</span></div>
-            <div className="sub">Saved profile metric</div>
+            <div className="val">{hasMetrics ? metrics.weightKg.toFixed(1) : '—'}{hasMetrics && <span className="metric-unit">kg</span>}</div>
+            <div className="sub">{hasMetrics ? 'Saved profile metric' : 'Not recorded'}</div>
           </div>
           <div className="metric-tile">
             <div className="lbl">Height</div>
-            <div className="val">{metrics.heightCm.toFixed(0)}<span className="metric-unit">cm</span></div>
-            <div className="sub">{(metrics.heightCm / 100).toFixed(2)} m</div>
+            <div className="val">{hasMetrics ? metrics.heightCm.toFixed(0) : '—'}{hasMetrics && <span className="metric-unit">cm</span>}</div>
+            <div className="sub">{hasMetrics ? `${(metrics.heightCm / 100).toFixed(2)} m` : 'Not recorded'}</div>
           </div>
           <div className={`metric-tile ${bmiCategory.tone}`}>
             <div className="lbl">BMI</div>
-            <div className="val">{bmi.toFixed(1)}</div>
-            <div className="sub">{bmiCategory.label}</div>
+            <div className="val">{hasMetrics ? bmi.toFixed(1) : '—'}</div>
+            <div className="sub">{hasMetrics ? bmiCategory.label : 'Not recorded'}</div>
           </div>
         </div>
         <div className="member-progress-goals">
