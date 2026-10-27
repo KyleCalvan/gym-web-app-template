@@ -121,8 +121,14 @@ export async function getAccountStatus(id: string, session?: { mfaVerifiedAt: Da
   if (!account.name?.trim() || !account.phone?.trim()) nextSteps.push('complete-profile');
   if (!account.termsAcceptedAt || account.termsVersion !== CURRENT_TERMS_VERSION) nextSteps.push('accept-terms');
   if (roles.length === 0) nextSteps.push('contact-support');
-  if (roles.some((role) => role !== 'member') && !account.mfaEnabledAt) nextSteps.push('set-up-two-step-verification');
-  if (account.mfaEnabledAt && (!session?.mfaVerifiedAt || session.mfaVerifiedAt < account.mfaEnabledAt
+  // Password sign-in is sufficient for staff while their two-step requirement is deferred.
+  // Accounts with another privileged role still require two-step verification.
+  const staffWithoutOtherPrivilegedRoles = roles.includes('staff')
+    && roles.every((role) => role === 'staff' || role === 'member');
+  if (!staffWithoutOtherPrivilegedRoles && roles.some((role) => role !== 'member') && !account.mfaEnabledAt)
+    nextSteps.push('set-up-two-step-verification');
+  if (!staffWithoutOtherPrivilegedRoles && account.mfaEnabledAt
+    && (!session?.mfaVerifiedAt || session.mfaVerifiedAt < account.mfaEnabledAt
     || session.mfaVerifiedAt > new Date())) nextSteps.push('complete-two-step-verification');
   return {
     account: { id: account.id, gymUserId: account.gymUserId, name: account.name, email: account.email,

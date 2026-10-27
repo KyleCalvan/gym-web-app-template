@@ -803,20 +803,29 @@ test('MFA assurance belongs to one session and only fully authorized administrat
   assert.equal((await stale.json()).code, 'FORBIDDEN');
 });
 
-test('staff registration, check-in, cash sale, and profile edits persist with staff authorization', async () => {
-  const accountId = await seedSessionAccount({ roles: ['staff'], mfa: true });
+test('password-signed-in staff can use registration, check-in, sales, and profile without two-step verification', async () => {
+  const accountId = await seedSessionAccount({ roles: ['staff'] });
   await withDatabaseClient(database.env, (client) => client.query(`
     INSERT INTO "StaffProfile" ("profileId")
     SELECT "profileId" FROM "AssignedRole" WHERE "accountId" = $1 AND role = 'staff'
   `, [accountId]));
-  const initial = await issueSession(accountId);
-  const send = (route, body, cookie = initial.cookie, method = 'POST') => fetch(`${application.url}/api/staff/${route}`, {
-    method, headers: { cookie, origin: application.url, 'content-type': 'application/json' }, body: JSON.stringify(body),
+  const password = 'Staff password for integration 2026';
+  const salt = randomBytes(16);
+  const hash = `scrypt:16384:8:1:${salt.toString('base64url')}:${scryptSync(password, salt, 64, { N: 16384, r: 8, p: 1 }).toString('base64url')}`;
+  await withDatabaseClient(database.env, (client) => client.query(
+    'UPDATE "AuthUser" SET "passwordHash" = $1 WHERE "id" = $2', [hash, accountId],
+  ));
+  const login = await fetch(`${application.url}/api/password-login`, {
+    method: 'POST', headers: { origin: application.url, 'content-type': 'application/json' },
+    body: JSON.stringify({ email: `${accountId}@example.test`, password }),
   });
-  assert.equal((await send('members', { name: 'Test Member' })).status, 403);
-  const rotation = await sessionCommand('rotate', { accountId, cookie: initial.cookie, mfaVerified: true });
-  assert.equal(rotation.status, 200);
-  const cookie = responseCookieHeader(rotation);
+  assert.equal(login.status, 200, application.logs());
+  const cookie = responseCookieHeader(login);
+  const send = (route, body, sessionCookie = cookie, method = 'POST') => fetch(`${application.url}/api/staff/${route}`, {
+    method, headers: { cookie: sessionCookie, origin: application.url, 'content-type': 'application/json' }, body: JSON.stringify(body),
+  });
+  assert.equal((await send('members', { name: 'Test Member' }, '')).status, 401);
+  assert.equal((await send('members', { name: 'Test Member' })).status, 400);
   const plan = { name: `Staff test plan ${randomUUID()}`, price: 1500 };
   await withDatabaseClient(database.env, (client) => client.query(`
     INSERT INTO "GymPlan" (name, price, period, "updatedAt") VALUES ($1, $2, 'mo', NOW())
@@ -833,7 +842,8 @@ test('staff registration, check-in, cash sale, and profile edits persist with st
   const reference = `PAY-20261028-${randomUUID().toUpperCase()}`;
   const saleInput = { reference, memberId: member.id, planNames: [plan.name], method: 'Cash', taxRate: '',
     taxMode: 'exclusive', cashReceived: 2000 };
-  assert.equal((await send('sales', { ...saleInput, cashReceived: 100 }, cookie)).status, 400);
+  const insufficientCash = await send('sales', { ...saleInput, cashReceived: 100 }, cookie);
+  assert.equal(insufficientCash.status, 400, application.logs());
   const sale = await send('sales', saleInput, cookie);
   assert.equal(sale.status, 201, application.logs());
   const saleBody = await sale.json();
