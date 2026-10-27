@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { useMemo, useState } from 'react';
-import { Badge, Dropdown, Field, Modal, TabbedCard, PaymentSimulationModal } from '../shared';
+import { Badge, Field, Modal, TabbedCard, PaymentSimulationModal } from '../shared';
 import { peso } from '../data.ts';
 import { motion } from 'framer-motion';
 import { Tag, X, Check, ArrowRight, Sparkles, AlertTriangle } from 'lucide-react';
@@ -14,13 +14,10 @@ import {
   promotionMeetsMinSpend,
 } from './promotionEligibility.ts';
 import { buildCancelConfirmation, comparePlans, planDurationMonths } from './planComparison.ts';
+import { hasActiveMembership } from './activeMembership.ts';
 import { createReceiptReference } from '../receipt.ts';
 import { createSimulatedTransaction, getConfiguredPaymentFee, updateSimulatedTransaction } from '../payments.ts';
 
-const PAYMENT_METHODS = [
-  { value: 'GCash', label: 'GCash' },
-  { value: 'Cash', label: 'Cash on-site' },
-];
 const PLAN_PAYMENT_METHOD = 'GCash';
 
 function PlanComparisonTable({ currentPlan, plans, member, promotions, redemptions, asOf }) {
@@ -182,8 +179,8 @@ function PlanComparisonTable({ currentPlan, plans, member, promotions, redemptio
 
 function MemberMembership({
   members, setMembers, plans, promotions, promotionRedemptions, setPromotions, setPromotionRedemptions,
-  setTransactions, currentUserId, today, toast, addAudit, preferredPaymentMethod = 'GCash', emptyDefaults = false,
-  onPlanCheckout, studentVerified = false,
+  setTransactions, currentUserId, today, toast, addAudit, emptyDefaults = false,
+  onPlanCheckout, onPlanCancel, studentVerified = false,
 }){
   const me = members.find(m => m.id === currentUserId) || members[0];
   const myRedemptions = useMemo(
@@ -217,10 +214,10 @@ function MemberMembership({
 
   const [showCancel, setShowCancel] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
+  const [cancelSubmitting, setCancelSubmitting] = useState(false);
   const [showChoose, setShowChoose] = useState(false);
   const [checkoutStarting, setCheckoutStarting] = useState(false);
   const [pickedPlan, setPickedPlan] = useState(me?.plan || 'Premium');
-  const [method, setMethod] = useState(preferredPaymentMethod);
   const [paymentFlow, setPaymentFlow] = useState(null);
   const [codeInput, setCodeInput] = useState('');
   const [redemptionStatus, setRedemptionStatus] = useState(null);
@@ -242,6 +239,7 @@ function MemberMembership({
     : `${remainingDays} day${remainingDays === 1 ? '' : 's'} remaining`;
 
   const currentPlan = plans.find(p => p.name === me?.plan);
+  const hasCurrentMembership = hasActiveMembership({ status: me?.status, endsAt: me?.membershipValidUntil });
   const currentDiscount = currentPlan ? bestDiscountFor(currentPlan.name, currentPlan.price) : null;
   const currentPriceToPay = currentDiscount ? currentDiscount.discountedPrice : (currentPlan?.price || 0);
   const isFrozen = me?.status === 'Frozen';
@@ -326,41 +324,14 @@ function MemberMembership({
     }
   };
 
-  // Renewal is preserved on the current-plan card and inside the "Choose plan" modal,
-  // so members can still extend their plan without a dedicated "Switch Plan" button.
-  const renew = () => {
-    const plan = currentPlan;
-    if (!plan) return;
-    if (onPlanCheckout) { void startTestCheckout(plan.name); return; }
-    const baseDate = expiryDate && remainingDays !== null && remainingDays >= 0 ? expiryDate : new Date();
-    const monthsToAdd = planDurationMonths(plan);
-    const nextExpiry = new Date(baseDate);
-    const originalDay = nextExpiry.getDate();
-    nextExpiry.setDate(1);
-    nextExpiry.setMonth(nextExpiry.getMonth() + monthsToAdd);
-    nextExpiry.setDate(Math.min(originalDay, new Date(nextExpiry.getFullYear(), nextExpiry.getMonth() + 1, 0).getDate()));
-    const membershipValidUntil = `${nextExpiry.getFullYear()}-${String(nextExpiry.getMonth() + 1).padStart(2, '0')}-${String(nextExpiry.getDate()).padStart(2, '0')}`;
-    const discount = currentDiscount;
-    const amount = discount ? discount.discountedPrice : plan.price;
-    const txnType = `Membership Renewal (${me.plan})` + (discount ? ` · code ${discount.promo.code}` : '');
-    beginPayment({
-      type: txnType,
-      amount,
-      onSuccess: () => {
-        setMembers(prev => prev.map(member => member.id === me.id ? { ...member, membershipValidUntil, status: 'Active' } : member));
-        addAudit?.('info', 'Membership renewed', `${me.plan}${discount ? ` · code ${discount.promo.code}` : ''}`);
-        toast(
-          discount
-            ? `Membership renewed through ${formatPromotionDate(membershipValidUntil)} — saved ${peso(discount.savings)} with ${discount.promo.code}`
-            : `Membership renewed through ${formatPromotionDate(membershipValidUntil)}`,
-        );
-      },
-    });
-  };
-
   const choosePlan = (e) => {
     e?.preventDefault?.();
-    if (pickedPlan === me.plan) { toast('That is already your current plan'); setShowChoose(false); return; }
+    if (hasCurrentMembership && pickedPlan !== me?.plan) {
+      toast('You already have an active plan. Choose another plan after it ends.');
+      setShowChoose(false);
+      return;
+    }
+    if (pickedPlan === me.plan && hasCurrentMembership) { toast('That is already your current plan'); setShowChoose(false); return; }
     if (pickedPlan.toLowerCase().includes('student') && !studentVerified && verificationStatus !== 'Verified') {
       if (onPlanCheckout) {
         toast('Student verification must be approved before checkout. Please contact the gym.');
@@ -397,7 +368,22 @@ function MemberMembership({
     });
   };
 
-  const confirmCancel = () => {
+  const confirmCancel = async () => {
+    if (!currentPlan || cancelSubmitting) return;
+    if (onPlanCancel) {
+      setCancelSubmitting(true);
+      try {
+        await onPlanCancel(cancelReason);
+        toast(`Your ${currentPlan.name} plan is cancelled. Access continues through the paid term.`);
+        setShowCancel(false);
+        setCancelReason('');
+      } catch (error) {
+        toast(error instanceof Error ? error.message : 'Plan cancellation could not be saved.');
+      } finally {
+        setCancelSubmitting(false);
+      }
+      return;
+    }
     const conf = buildCancelConfirmation(me, currentPlan, { reason: cancelReason });
     addAudit?.('warn', 'Plan cancellation requested', `${conf.planName} · ${conf.reason}`);
     setMembers(prev => prev.map(m => m.id === me.id ? { ...m, status: 'Expired' } : m));
@@ -408,7 +394,7 @@ function MemberMembership({
       member: me.name,
       type: `Plan Cancellation (${conf.planName})`,
       amount: 0,
-      method,
+      method: 'Cash',
       date: today,
       status: 'Refunded',
     }, ...prev]);
@@ -434,8 +420,6 @@ function MemberMembership({
     setShowVerify(false);
   };
 
-  const paymentOptions = useMemo(() => PAYMENT_METHODS.map((m) => ({ value: m.value, label: m.label })), []);
-
   const newPlan = plans.find((p) => p.name === pickedPlan);
   const chooseDiscount = newPlan ? bestDiscountFor(newPlan.name, newPlan.price) : null;
   const choosePrice = chooseDiscount ? chooseDiscount.discountedPrice : (newPlan?.price || 0);
@@ -459,9 +443,16 @@ function MemberMembership({
           {shownVerificationStatus !== 'None' && <Badge status={shownVerificationStatus === 'Verified' ? 'Active' : 'Pending'}>Student: {shownVerificationStatus}</Badge>}
         </div>
         {isFrozen && <div className="member-frozen-note">Your membership is frozen. Cancellation and plan changes are paused until an admin unfreezes your account.</div>}
+        {me?.membershipCancellationScheduled && hasCurrentMembership && (
+          <div className="member-cancellation-note" role="status">
+            Cancellation scheduled. Your access continues through {formatPromotionDate(me.membershipValidUntil)}.
+          </div>
+        )}
         <div className="member-current-plan-actions">
-          <button className="btn btn-signal btn-sm" onClick={renew} disabled={isFrozen || !currentPlan || checkoutStarting}>Renew at current terms</button>
-          <button className="btn btn-outline btn-sm" onClick={() => setShowCancel(true)} disabled={isFrozen || !currentPlan}>Cancel Plan</button>
+          <button className="btn btn-outline btn-sm" onClick={() => setShowCancel(true)}
+            disabled={isFrozen || !currentPlan || Boolean(me?.membershipCancellationScheduled) || (onPlanCancel && !hasCurrentMembership)}>
+            {me?.membershipCancellationScheduled ? 'Cancellation scheduled' : 'Cancel Plan'}
+          </button>
         </div>
       </section>
 
@@ -490,10 +481,15 @@ function MemberMembership({
       )}
 
       <TabbedCard title="Available plans">
-        <p className="muted" style={{margin:'0 0 14px', fontSize:13.5}}>Choose a plan to compare against your current coverage. Review pricing, included benefits, and terms before choosing.</p>
+        <p className="muted" style={{margin:'0 0 14px', fontSize:13.5}}>
+          {hasCurrentMembership
+            ? 'Your current plan is active. You can compare plans now and choose another after this plan ends.'
+            : 'Choose a plan to compare against your current coverage. Review pricing, included benefits, and terms before choosing.'}
+        </p>
         <div className="member-plan-grid" role="list">
           {plans.map((p) => {
-            const isCurrent = p.name === me?.plan;
+            const isCurrent = hasCurrentMembership && p.name === me?.plan;
+            const blockedByCurrentPlan = hasCurrentMembership && !isCurrent;
             const discount = bestDiscountFor(p.name, p.price);
             return (
               <div role="listitem" className={"plan-card" + (p.featured ? ' featured' : '') + (isCurrent ? ' is-current' : '')} key={p.name}>
@@ -524,10 +520,10 @@ function MemberMembership({
                 {p.terms && <p className="plan-card-terms"><span className="plan-card-label">Terms</span>{p.terms}</p>}
                 <button
                   className={"btn btn-sm btn-block " + (isCurrent ? 'btn-outline' : 'btn-signal')}
-                  disabled={isCurrent || p.status !== 'Active' || checkoutStarting}
+                  disabled={isCurrent || blockedByCurrentPlan || p.status !== 'Active' || checkoutStarting}
                   onClick={() => { setPickedPlan(p.name); setShowChoose(true); }}
                 >
-                  {isCurrent ? 'Current plan' : <><span>Choose {p.name}</span> <ArrowRight size={14} aria-hidden="true" /></>}
+                  {isCurrent ? 'Current plan' : blockedByCurrentPlan ? 'Available after current plan ends' : <><span>Choose {p.name}</span> <ArrowRight size={14} aria-hidden="true" /></>}
                 </button>
               </div>
             );
@@ -547,7 +543,7 @@ function MemberMembership({
       )}
 
       {showChoose && newPlan && (
-        <Modal title={newPlan.name === me.plan ? 'Renew membership' : `Choose ${newPlan.name}`} onClose={() => setShowChoose(false)}>
+        <Modal title={`Choose ${newPlan.name}`} onClose={() => setShowChoose(false)}>
           <div>
             <p style={{fontSize:14, color:'var(--steel)', marginBottom:12}}>{newPlan.description}</p>
             <form onSubmit={choosePlan}>
@@ -602,9 +598,7 @@ function MemberMembership({
               </div>
               <button type="submit" className="btn btn-signal btn-block" disabled={checkoutStarting}>
                 {checkoutStarting ? 'Opening PayMongo test checkout…' :
-                newPlan.name === me.plan
-                  ? <>Confirm renewal — {chooseDiscount ? <><s style={{opacity:.6, marginRight:6}}>{peso(newPlan.price)}</s>{peso(choosePrice)}</> : peso(newPlan.price)}</>
-                  : `Confirm plan change — ${chooseDiscount ? peso(choosePrice) : peso(newPlan.price)}`}
+                `Confirm plan choice — ${chooseDiscount ? peso(choosePrice) : peso(newPlan.price)}`}
               </button>
             </form>
           </div>
@@ -627,24 +621,21 @@ function MemberMembership({
                 rows={3}
                 value={cancelReason}
                 onChange={(e) => setCancelReason(e.target.value)}
+                maxLength={500}
                 placeholder="e.g. Moving, too expensive, need different schedule…"
               />
             </Field>
-            <Field label="Payment method on file (for any prorated refund)">
-              <Dropdown
-                value={method}
-                onChange={setMethod}
-                options={paymentOptions}
-                ariaLabel="Payment method on file"
-                fullWidth
-              />
+            <Field label="Refund method (if applicable)">
+              <input type="text" className="form-control" value="Cash on-site" readOnly aria-label="Refund method" />
             </Field>
             <div className="cancel-confirmation-actions">
-              <button type="button" className="btn btn-outline" onClick={() => setShowCancel(false)}>Keep plan</button>
-              <button type="button" className="btn btn-danger" onClick={confirmCancel}>Confirm cancellation</button>
+              <button type="button" className="btn btn-outline" onClick={() => setShowCancel(false)} disabled={cancelSubmitting}>Keep plan</button>
+              <button type="button" className="btn btn-danger" onClick={confirmCancel} disabled={cancelSubmitting}>
+                {cancelSubmitting ? 'Saving cancellation…' : 'Confirm cancellation'}
+              </button>
             </div>
             <p className="cancel-confirmation-note">
-              This is a plan cancellation, not a payment-method change. Switching how you pay is handled separately.
+              If a refund is approved, it will be handled on-site.
             </p>
           </div>
         </Modal>

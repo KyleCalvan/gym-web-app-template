@@ -11,7 +11,7 @@ import { MEMBER_NAV, MEMBER_VIEWS } from './index';
 
 type Overview = {
   joinedAt: string;
-  membership: { planName: string; status: string; endsAt: string } | null;
+  membership: { planName: string; status: string; endsAt: string; cancellationScheduled: boolean } | null;
   latestPayment: { amount: number; status: string; at: string } | null;
   studentVerificationStatus: string | null;
   upcomingSessions: { id: string; startsAt: string; type: string; status: string; trainer: string | null }[];
@@ -129,6 +129,16 @@ export default function MemberApp({ name, email, phone, profileId, onLogout, pen
     window.location.assign(data.checkoutUrl);
   }
 
+  async function cancelPlan(reason: string) {
+    const response = await fetch('/api/member/membership/cancel', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason }),
+    });
+    const data: { membership?: Overview['membership']; error?: string } = await response.json();
+    if (!response.ok || !data.membership) throw new Error(data.error || 'Plan cancellation could not be saved.');
+    setOverview(previous => previous ? { ...previous, membership: data.membership! } : previous);
+  }
+
   const user = { id: profileId, name, role: 'Member' };
   const member = {
     id: profileId, name, email, phone,
@@ -136,6 +146,7 @@ export default function MemberApp({ name, email, phone, profileId, onLogout, pen
     plan: overview?.membership?.planName ?? '',
     status: overview?.membership?.status ?? '',
     membershipValidUntil: overview?.membership?.endsAt ?? null,
+    membershipCancellationScheduled: overview?.membership?.cancellationScheduled ?? false,
   };
   const sessions = overview?.upcomingSessions.map(session => ({
     id: session.id, member: name, trainer: session.trainer ?? 'Trainer to be assigned',
@@ -172,6 +183,7 @@ export default function MemberApp({ name, email, phone, profileId, onLogout, pen
     preferredPaymentMethod: 'GCash', setPreferredPaymentMethod: ignoreChange,
     qrDestinations: [], setQrDestinations: ignoreChange,
     onDeleteAccount: ignoreChange, emptyDefaults: true, onPlanCheckout: startPlanCheckout,
+    onPlanCancel: cancelPlan,
     studentVerified: overview?.studentVerificationStatus === 'Verified',
   };
 

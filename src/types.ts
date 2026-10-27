@@ -26,6 +26,7 @@ export interface Member {
   joined: string;
   avatarUrl?: string;
   membershipValidUntil?: string | null;
+  membershipCancellationScheduled?: boolean;
   weightKg?: number;
   heightCm?: number;
   deletedAt?: string | null;
@@ -291,6 +292,7 @@ export interface Conversation {
 export interface ViewProps {
   emptyDefaults?: boolean;
   onPlanCheckout?: (planName: string) => Promise<void>;
+  onPlanCancel?: (reason: string) => Promise<void>;
   studentVerified?: boolean;
   onProfilePhotoChange?: (url: string) => void;
   onNav: (id: string, action?: string) => void;

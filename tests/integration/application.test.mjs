@@ -173,6 +173,91 @@ test('Google Account holder completes profile and explicitly accepts current ter
   assert.doesNotMatch(page, /Maria Santos|Basic Membership|Premium Membership/);
 });
 
+test('checkout rejects another plan while the member has an active membership', async () => {
+  const accountId = await seedSessionAccount();
+  const { cookie } = await issueSession(accountId);
+  const firstPlan = `Current-${randomUUID()}`;
+  const otherPlan = `Other-${randomUUID()}`;
+  await withDatabaseClient(database.env, async (client) => {
+    const { rows: [assignment] } = await client.query(
+      'SELECT "profileId" FROM "AssignedRole" WHERE "accountId" = $1 AND "role" = $2',
+      [accountId, 'member'],
+    );
+    await client.query('INSERT INTO "MemberProfile" ("profileId") VALUES ($1)', [assignment.profileId]);
+    await client.query('INSERT INTO "GymPlan" (name, price, period, "updatedAt") VALUES ($1, 1000, $3, NOW()), ($2, 1500, $3, NOW())',
+      [firstPlan, otherPlan, 'month']);
+    await client.query(`INSERT INTO "Membership" (id, "memberId", "planName", status, "startsAt", "endsAt", "updatedAt")
+      VALUES ($1, $2, $3, 'Active', NOW() - INTERVAL '1 day', NOW() + INTERVAL '1 month', NOW())`,
+    [randomUUID(), assignment.profileId, firstPlan]);
+  });
+  const response = await fetch(`${application.url}/api/member/checkout`, {
+    method: 'POST',
+    headers: { cookie, origin: application.url, 'content-type': 'application/json' },
+    body: JSON.stringify({ planName: otherPlan }),
+  });
+  assert.equal(response.status, 409, application.logs());
+  assert.match((await response.json()).error, /already have an active plan/);
+});
+
+test('member cancellation saves only the signed-in member’s plan and appears in their overview', async () => {
+  const accountId = await seedSessionAccount();
+  const otherAccountId = await seedSessionAccount();
+  const { cookie } = await issueSession(accountId);
+  const planName = `Cancel-${randomUUID()}`;
+  const membershipIds = [randomUUID(), randomUUID()];
+  const profiles = await withDatabaseClient(database.env, async (client) => {
+    const { rows } = await client.query(
+      'SELECT "accountId", "profileId" FROM "AssignedRole" WHERE "accountId" IN ($1, $2) AND role = $3',
+      [accountId, otherAccountId, 'member'],
+    );
+    await client.query('INSERT INTO "GymPlan" (name, price, period, "updatedAt") VALUES ($1, 1000, $2, NOW())',
+      [planName, 'month']);
+    for (const [index, account] of [accountId, otherAccountId].entries()) {
+      const profileId = rows.find(row => row.accountId === account).profileId;
+      await client.query('INSERT INTO "MemberProfile" ("profileId") VALUES ($1)', [profileId]);
+      await client.query(`INSERT INTO "Membership" (id, "memberId", "planName", status, "startsAt", "endsAt", "updatedAt")
+        VALUES ($1, $2, $3, 'Active', NOW() - INTERVAL '1 day', NOW() + INTERVAL '1 month', NOW())`,
+      [membershipIds[index], profileId, planName]);
+    }
+    return rows;
+  });
+  const cancel = (headers = { cookie, origin: application.url, 'content-type': 'application/json' }, reason = ' Moving away ') =>
+    fetch(`${application.url}/api/member/membership/cancel`, {
+      method: 'POST', headers, body: JSON.stringify({ reason }),
+    });
+  assert.equal((await cancel({ origin: application.url, 'content-type': 'application/json' })).status, 401);
+  assert.equal((await cancel({ cookie, origin: 'https://attacker.example', 'content-type': 'application/json' })).status, 403);
+  assert.equal((await cancel(undefined, 'x'.repeat(501))).status, 400);
+  const response = await cancel();
+  assert.equal(response.status, 200, application.logs());
+  const { membership } = await response.json();
+  assert.equal(membership.planName, planName);
+  assert.equal(membership.status, 'Active');
+  assert.equal(membership.cancellationScheduled, true);
+  const overview = await fetch(`${application.url}/api/member/overview`, { headers: { cookie } });
+  assert.equal(overview.status, 200, application.logs());
+  assert.equal((await overview.json()).membership.cancellationScheduled, true);
+  assert.equal((await cancel()).status, 409);
+  const checkout = await fetch(`${application.url}/api/member/checkout`, {
+    method: 'POST', headers: { cookie, origin: application.url, 'content-type': 'application/json' },
+    body: JSON.stringify({ planName }),
+  });
+  assert.equal(checkout.status, 409);
+  const persisted = await withDatabaseClient(database.env, async (client) => {
+    const { rows } = await client.query('SELECT id, status, "cancelledAt", "cancellationReason", "endsAt" FROM "Membership" WHERE id IN ($1, $2) ORDER BY id', membershipIds);
+    return rows;
+  });
+  const own = persisted.find(row => row.id === membershipIds[0]);
+  const other = persisted.find(row => row.id === membershipIds[1]);
+  assert.equal(own.cancellationReason, 'Moving away');
+  assert.ok(own.cancelledAt instanceof Date);
+  assert.ok(Math.abs(own.cancelledAt.getTime() - Date.now()) < 10_000);
+  assert.equal(own.status, 'Active');
+  assert.ok(own.endsAt > own.cancelledAt);
+  assert.equal(other.cancelledAt, null);
+  assert.equal(profiles.length, 2);
+});
+
 test('mandatory terms renewal keeps every other Account gate in force', async () => {
   const accountId = await seedSessionAccount();
   const { cookie } = await issueSession(accountId);

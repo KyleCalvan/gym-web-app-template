@@ -118,7 +118,7 @@
 .member-plan-price{font:600 clamp(26px,3vw,36px) var(--font-mono);color:var(--signal-ink);line-height:1.2;}
 .member-plan-price small{font:400 13px var(--font-body);color:var(--steel);}
 .member-current-plan-actions{grid-column:1 / -1;display:flex;gap:8px;}
-.member-frozen-note{grid-column:1 / -1;padding:10px 12px;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius);color:var(--ink-soft);font-size:13px;}
+.member-frozen-note,.member-cancellation-note{grid-column:1 / -1;padding:10px 12px;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius);color:var(--ink-soft);font-size:13px;}
 @media (max-width:600px){
   .member-current-plan{grid-template-columns:minmax(0,1fr);padding:16px;gap:10px;}
   .member-current-plan-meta{justify-content:flex-start;}

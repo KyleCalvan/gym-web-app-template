@@ -4,6 +4,7 @@ import { readSession } from '@/src/auth/sessions';
 import { requestSessionToken } from '@/src/auth/session-cookie';
 import { prisma } from '@/src/auth/prisma';
 import { createCheckout } from '@/src/paymongo/checkout';
+import { hasActiveMembership } from '@/src/member/activeMembership';
 
 export const runtime = 'nodejs';
 
@@ -37,9 +38,15 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: 'This plan is unavailable for checkout.' }, { status: 400 });
   }
   const currentMembership = await prisma.membership.findFirst({ where: { memberId },
-    orderBy: { createdAt: 'desc' }, select: { status: true } });
+    orderBy: { createdAt: 'desc' }, select: { planName: true, status: true, endsAt: true, cancelledAt: true } });
   if (currentMembership?.status === 'Frozen') {
     return Response.json({ error: 'Your membership is frozen. Contact the gym before changing plans.' }, { status: 409 });
+  }
+  if (hasActiveMembership(currentMembership) && currentMembership?.cancelledAt) {
+    return Response.json({ error: 'Your current plan is cancelled and remains active through the paid term.' }, { status: 409 });
+  }
+  if (hasActiveMembership(currentMembership) && currentMembership?.planName !== plan.name) {
+    return Response.json({ error: 'You already have an active plan. Choose another plan after it ends.' }, { status: 409 });
   }
   if (plan.category === 'Student') {
     const verification = await prisma.studentVerification.findFirst({ where: { memberId },
