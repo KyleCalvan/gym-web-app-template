@@ -804,7 +804,7 @@ test('MFA assurance belongs to one session and only fully authorized administrat
   assert.equal((await stale.json()).code, 'FORBIDDEN');
 });
 
-test('password-signed-in staff can use registration, check-in, sales, and profile without two-step verification', async () => {
+test('password-signed-in staff can use operations and change their photo, but cannot rewrite profile details', async () => {
   const accountId = await seedSessionAccount({ roles: ['staff'] });
   await withDatabaseClient(database.env, (client) => client.query(`
     INSERT INTO "StaffProfile" ("profileId")
@@ -875,9 +875,19 @@ test('password-signed-in staff can use registration, check-in, sales, and profil
   const duplicate = await send('check-ins', { memberId: member.id }, cookie);
   assert.equal(duplicate.status, 409);
   assert.equal((await duplicate.json()).code, 'ALREADY_CHECKED_IN');
-  const profileEmail = `${accountId}@example.test`;
-  const profile = await send('profile', { name: 'Updated Staff', email: profileEmail, phone: '09171234567', phoneSecondary: '' }, cookie, 'PATCH');
-  assert.equal(profile.status, 200, application.logs());
+  const attemptedDetails = { name: 'Updated Staff', email: 'changed@example.test',
+    phone: '09171234567', phoneSecondary: '09179876543' };
+  for (const [field, value] of Object.entries(attemptedDetails)) {
+    const blocked = await send('profile', { [field]: value }, cookie, 'PATCH');
+    assert.equal(blocked.status, 403, application.logs());
+    assert.equal((await blocked.json()).code, 'PROFILE_READ_ONLY');
+  }
+  const avatarUrl = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/vZkAAAAASUVORK5CYII=';
+  const mixed = await send('profile', { ...attemptedDetails, avatarUrl }, cookie, 'PATCH');
+  assert.equal(mixed.status, 403, application.logs());
+  const photo = await send('profile', { avatarUrl }, cookie, 'PATCH');
+  assert.equal(photo.status, 200, application.logs());
+  assert.equal((await photo.json()).profile.avatarUrl, avatarUrl);
   const stored = await withDatabaseClient(database.env, (client) => client.query(`
     SELECT (SELECT COUNT(*)::int FROM "Attendance" WHERE "memberId" = $1) AS checkins,
       (SELECT COUNT(*)::int FROM "Membership" WHERE "memberId" = $1) AS memberships,
@@ -885,13 +895,18 @@ test('password-signed-in staff can use registration, check-in, sales, and profil
       (SELECT COUNT(*)::int FROM "PaymentTransaction" WHERE reference = $4 AND "isSimulated" = true) AS gcash_tests,
       (SELECT COUNT(*)::int FROM "TransactionItem" WHERE "transactionId" =
         (SELECT id FROM "PaymentTransaction" WHERE reference = $2) AND "membershipId" IS NOT NULL) AS linked_items,
-      (SELECT name FROM "AuthUser" WHERE id = $3) AS staff_name
+      (SELECT name FROM "AuthUser" WHERE id = $3) AS staff_name,
+      (SELECT name FROM "User" WHERE id = (SELECT "gymUserId" FROM "AuthUser" WHERE id = $3)) AS profile_name,
+      (SELECT phone FROM "User" WHERE id = (SELECT "gymUserId" FROM "AuthUser" WHERE id = $3)) AS profile_phone,
+      (SELECT "phoneSecondary" FROM "User" WHERE id = (SELECT "gymUserId" FROM "AuthUser" WHERE id = $3)) AS profile_secondary,
+      (SELECT "avatarUrl" FROM "User" WHERE id = (SELECT "gymUserId" FROM "AuthUser" WHERE id = $3)) AS profile_photo
   `, [member.id, reference, accountId, gcashReference]));
   assert.deepEqual(stored.rows[0], { checkins: 1, memberships: 1, sales: 1, gcash_tests: 1,
-    linked_items: 1, staff_name: 'Updated Staff' });
+    linked_items: 1, staff_name: 'Session Member', profile_name: 'Session Member',
+    profile_phone: null, profile_secondary: null, profile_photo: avatarUrl });
   const staffPage = await fetch(`${application.url}/account`, { headers: { cookie } });
   assert.equal(staffPage.status, 200, application.logs());
-  assert.match(await staffPage.text(), /Updated Staff/);
+  assert.match(await staffPage.text(), /Session Member/);
   await withDatabaseClient(database.env, (client) => client.query(`
     UPDATE "RoleProfile" SET status = 'Inactive' WHERE id =
       (SELECT "profileId" FROM "AssignedRole" WHERE "accountId" = $1 AND role = 'staff')

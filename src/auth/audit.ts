@@ -5,7 +5,7 @@ type AuditAction = 'account.created' | 'account.established' | 'email.verified' 
   | 'session.created' | 'session.revoked' | 'session.revoked-all' | 'session.rotated'
   | 'business.authorization' | 'request.origin' | 'account.conflict'
   | 'account.profile-completed' | 'account.terms-accepted'
-  | 'staff.member-registered' | 'staff.member-checked-in' | 'staff.sale-simulated' | 'staff.sale-recorded' | 'staff.profile-updated';
+  | 'staff.member-registered' | 'staff.member-checked-in' | 'staff.sale-simulated' | 'staff.sale-recorded' | 'staff.photo-updated';
 
 // Deliberately accepts only identifiers and fixed outcomes, with no metadata bag
 // in which callers could accidentally persist credentials or provider tokens.

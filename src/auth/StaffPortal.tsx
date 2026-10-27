@@ -58,9 +58,9 @@ export default function StaffPortal({ data }: { data: StaffData }) {
         membershipValidUntil: membership.endsAt } : item));
     return transaction;
   };
-  const saveProfile: NonNullable<ViewProps['onStaffProfileSave']> = async (input) => {
-    const { profile } = await requestJson<{ profile: Pick<Staff, 'name' | 'email' | 'phone' | 'phoneSecondary' | 'avatarUrl'> }>(
-      '/api/staff/profile', input, 'PATCH');
+  const savePhoto: NonNullable<ViewProps['onStaffPhotoSave']> = async (avatarUrl) => {
+    const { profile } = await requestJson<{ profile: Pick<Staff, 'avatarUrl'> }>(
+      '/api/staff/profile', { avatarUrl }, 'PATCH');
     const updated = { ...staff, ...profile };
     setStaff(updated);
     return updated;
@@ -90,7 +90,7 @@ export default function StaffPortal({ data }: { data: StaffData }) {
     today: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
     toast: notify, addAudit: () => {},
     onStaffRegisterMember: registerMember, onStaffCheckIn: checkIn,
-    onStaffSale: recordSale, onStaffProfileSave: saveProfile,
+    onStaffSale: recordSale, onStaffPhotoSave: savePhoto,
   };
   return <AuthenticatedShell role="staff" roles={['staff']}
     user={{ name: staff.name, avatarUrl: staff.avatarUrl }}

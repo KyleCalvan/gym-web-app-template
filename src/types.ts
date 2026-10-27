@@ -293,8 +293,7 @@ export interface ViewProps {
   onStaffCheckIn?: (memberId: string) => Promise<void>;
   onStaffSale?: (input: { reference: string; memberId: string; planNames: string[];
     method: 'Cash' | 'GCash'; taxRate: string; taxMode: 'exclusive' | 'inclusive'; cashReceived?: number }) => Promise<Transaction>;
-  onStaffProfileSave?: (input: { name: string; email: string; phone: string;
-    phoneSecondary: string; avatarUrl?: string }) => Promise<Staff>;
+  onStaffPhotoSave?: (avatarUrl: string) => Promise<Staff>;
   readOnly?: boolean;
   onProfilePhotoChange?: (url: string) => void;
   onNav: (id: string, action?: string) => void;

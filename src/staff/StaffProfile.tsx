@@ -1,40 +1,21 @@
 import { useState } from 'react';
-import { Avatar, TabbedCard, Field, TextInput } from '../shared';
+import { Avatar, TabbedCard } from '../shared';
 import { onPickImage } from '../shared/imageUpload.ts';
 import { SecurityFlow } from '../shared/components/SecurityFlow';
 import ProfileSettingsPanel from '../shared/ProfileSettingsPanel';
 import type { ViewProps } from '../types.ts';
 
 function StaffProfile({ staff, setStaff, currentUserId, toast, addAudit, notifPrefs, setNotifPrefs, currentUser,
-  onProfilePhotoChange, onStaffProfileSave }: ViewProps) {
+  onProfilePhotoChange, onStaffPhotoSave }: ViewProps) {
   const me = staff.find(s => s.id === currentUserId) || staff[0];
-  const [info, setInfo] = useState({
-    name: me?.name || currentUser?.name || '',
-    email: me?.email || '',
-    phone: me?.phone || '',
-    phoneSecondary: me?.phoneSecondary || '',
-  });
-
   const [showSecurityFlow, setShowSecurityFlow] = useState(false);
-
-  const submitInfo = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      if (onStaffProfileSave) await onStaffProfileSave(info);
-      else {
-        setStaff(prev => prev.map(s => s.id === me.id ? {...s, ...info} : s));
-        addAudit?.('info', 'Profile updated', me?.id || 'staff');
-      }
-      toast('Profile updated');
-    } catch (error) { toast(error instanceof Error ? error.message : 'Could not update profile.'); }
-  };
 
   const handleAvatarFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     onPickImage(file, async url => {
-      if (onStaffProfileSave) {
-        try { await onStaffProfileSave({ ...info, avatarUrl: url }); toast('Photo updated'); }
+      if (onStaffPhotoSave) {
+        try { await onStaffPhotoSave(url); toast('Photo updated'); }
         catch (error) { toast(error instanceof Error ? error.message : 'Could not update photo.'); }
         return;
       }
@@ -79,19 +60,15 @@ function StaffProfile({ staff, setStaff, currentUserId, toast, addAudit, notifPr
             </div>
           }
           profile={
-          <form onSubmit={submitInfo}>
-            <div className="grid grid-2">
-              <Field label="Full Name"><TextInput required value={info.name} onChange={v=>setInfo(i=>({...i, name:v}))} /></Field>
-              <Field label="Email"><TextInput type="email" required value={info.email} onChange={v=>setInfo(i=>({...i, email:v}))} /></Field>
-              <Field label="Phone"><TextInput value={info.phone} onChange={v=>setInfo(i=>({...i, phone:v}))} /></Field>
-              <Field label="Phone (Secondary)"><TextInput value={info.phoneSecondary || ''} onChange={v=>setInfo(i=>({...i, phoneSecondary:v}))} /></Field>
+            <div className="profile-settings-account-grid">
+              <div className="profile-settings-account-item"><div className="eyebrow">Full Name</div><p>{me?.name || currentUser?.name || '—'}</p></div>
+              <div className="profile-settings-account-item"><div className="eyebrow">Email</div><p>{me?.email || '—'}</p></div>
+              <div className="profile-settings-account-item"><div className="eyebrow">Phone</div><p>{me?.phone || '—'}</p></div>
+              <div className="profile-settings-account-item"><div className="eyebrow">Phone (Secondary)</div><p>{me?.phoneSecondary || '—'}</p></div>
             </div>
-            <div style={{display:'flex', gap:12, marginTop:12}}>
-              <button className="btn btn-signal btn-sm" type="submit" style={{width: 'auto'}}>Save Changes</button>
-            </div>
-          </form>
           }
-          onOpenSecurity={() => onStaffProfileSave
+          profileIntro="Your profile details are managed by an administrator."
+          onOpenSecurity={() => onStaffPhotoSave
             ? toast('Security changes require the account security service and are not available here yet.')
             : setShowSecurityFlow(true)}
           notifPrefs={notifPrefs}
