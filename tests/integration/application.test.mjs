@@ -6,6 +6,7 @@ import { startDatabase, startApplication, runNode, withDatabaseClient } from './
 import { startGoogle } from './google.mjs';
 import { startSmtp } from './smtp.mjs';
 import { randomBytes, randomUUID, scryptSync } from 'node:crypto';
+import { PDFDocument } from 'pdf-lib';
 
 let database;
 let application;
@@ -852,6 +853,16 @@ test('password-signed-in staff can use registration, check-in, sales, and profil
   assert.equal(transaction.amount, plan.price);
   assert.equal(saleBody.membership.planName, plan.name);
   assert.equal((await send('sales', saleInput, cookie)).status, 200);
+  const pdfRequest = { transactionId: transaction.id, documentType: 'Invoice' };
+  assert.equal((await send('transactions/pdf', pdfRequest, '')).status, 401);
+  assert.equal((await send('transactions/pdf', { ...pdfRequest, transactionId: randomUUID() })).status, 404);
+  const invoice = await send('transactions/pdf', pdfRequest);
+  assert.equal(invoice.status, 200, application.logs());
+  assert.equal(invoice.headers.get('content-type'), 'application/pdf');
+  assert.match(invoice.headers.get('content-disposition'), /attachment; filename="VinAthletics-invoice-.*\.pdf"/);
+  const invoicePdf = await PDFDocument.load(await invoice.arrayBuffer());
+  assert.equal(invoicePdf.getPageCount(), 1);
+  assert.match(invoicePdf.getTitle(), /VinAthletics Invoice/);
   const gcashReference = `PAY-20261028-${randomUUID().toUpperCase()}`;
   const gcash = await send('sales', { ...saleInput, reference: gcashReference, method: 'GCash', cashReceived: undefined }, cookie);
   assert.equal(gcash.status, 201, application.logs());

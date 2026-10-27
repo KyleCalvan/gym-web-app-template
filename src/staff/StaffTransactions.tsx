@@ -2,14 +2,43 @@
 import { useState } from 'react';
 import { StatTile, TabbedCard, Table, Modal, ReceiptDocument } from '../shared';
 import { peso } from '../data.ts';
+import { getReceiptReference } from '../receipt.ts';
 
-function StaffTransactions({ transactions, members = [] }) {
+function StaffTransactions({ transactions, members = [], toast }) {
   const today = new Date().toLocaleDateString('en-US', {month:'short', day:'2-digit', year:'numeric'});
   const todays = (transactions || []).filter(t => t.date === today);
   const todayTotal = todays.filter(t=>t.status==='Paid' && !t.isSimulated).reduce((a,t)=>a+t.amount,0);
   const refunds = transactions.filter(t => t.status==='Refunded').length;
   const [viewTxn, setViewTxn] = useState(null);
   const [documentType, setDocumentType] = useState('Receipt');
+  const [downloading, setDownloading] = useState(false);
+
+  const downloadPdf = async () => {
+    if (!viewTxn || downloading) return;
+    setDownloading(true);
+    try {
+      const response = await fetch('/api/staff/transactions/pdf', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ transactionId: viewTxn.id, documentType }),
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Could not download the PDF.');
+      }
+      const url = URL.createObjectURL(await response.blob());
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `VinAthletics-${documentType.toLowerCase()}-${getReceiptReference(viewTxn).replace(/[^A-Za-z0-9_-]/g, '_')}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (error) {
+      toast(error instanceof Error ? error.message : 'Could not download the PDF.');
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   return (
     <>
@@ -40,7 +69,9 @@ function StaffTransactions({ transactions, members = [] }) {
             <ReceiptDocument transaction={viewTxn} member={members.find((member) => member.name === viewTxn.member)} documentType={documentType} />
             <div className="receipt-export-controls">
               <button className="btn btn-outline" onClick={()=>setViewTxn(null)}>Close</button>
-              <button className="btn btn-signal" onClick={()=>window.print()}>Download PDF</button>
+              <button className="btn btn-signal" onClick={downloadPdf} disabled={downloading}>
+                {downloading ? 'Preparing PDF…' : 'Download PDF'}
+              </button>
             </div>
           </div>
         </Modal>
