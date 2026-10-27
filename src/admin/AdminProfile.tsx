@@ -5,7 +5,7 @@ import { SecurityFlow } from '../shared/components/SecurityFlow';
 import ProfileSettingsPanel from '../shared/ProfileSettingsPanel';
 import type { ViewProps } from '../types.ts';
 
-function AdminProfile({ admins, setAdmins, currentUserId, toast, addAudit, notifPrefs, setNotifPrefs, currentUser, onProfilePhotoChange }: ViewProps) {
+function AdminProfile({ admins, setAdmins, currentUserId, toast, addAudit, notifPrefs, setNotifPrefs, currentUser, onProfilePhotoChange, onAdminAction }: ViewProps) {
   const me = admins.find(a => a.id === currentUserId) || admins[0];
   const [info, setInfo] = useState({
     name: me?.name || currentUser?.name || '',
@@ -16,21 +16,19 @@ function AdminProfile({ admins, setAdmins, currentUserId, toast, addAudit, notif
 
   const [showSecurityFlow, setShowSecurityFlow] = useState(false);
 
-  const submitInfo = (e: React.FormEvent) => {
+  const submitInfo = async (e: React.FormEvent) => {
     e.preventDefault();
-    setAdmins(prev => prev.map(a => a.id === me.id ? {...a, ...info} : a));
-    toast('Profile updated');
-    addAudit?.('info', 'Profile updated', me?.id || 'admin');
+    try { await onAdminAction?.('profile.update', info); toast('Profile updated'); }
+    catch (error) { toast(error instanceof Error ? error.message : 'Profile could not be saved.'); }
   };
 
   const handleAvatarFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     onPickImage(file, url => {
-      onProfilePhotoChange?.(url);
-      setAdmins(prev => prev.map(a => a.id === me.id ? {...a, avatarUrl: url} : a));
-      toast('Photo updated');
-      addAudit?.('info', 'Profile photo updated', me?.id || 'admin');
+      void Promise.resolve(onAdminAction?.('profile.update', { ...info, avatarUrl: url }))
+        .then(() => { onProfilePhotoChange?.(url); toast('Photo updated'); })
+        .catch((error) => toast(error instanceof Error ? error.message : 'Photo could not be saved.'));
     }, msg => toast(msg));
     e.target.value = '';
   };

@@ -6,7 +6,6 @@ import { Badge } from '../primitives/Badge';
 import { PasswordInput } from './PasswordInput';
 import { PasswordStrengthMeter } from './PasswordStrengthMeter';
 import { TwoFactorChallenge } from './TwoFactorChallenge';
-import { isTwoFactorEnabled, setTwoFactorEnabled } from './twoFactor';
 import type { Role } from '../../types.ts';
 
 interface SecurityFlowProps {
@@ -30,24 +29,37 @@ export function SecurityFlow({ isOpen, onClose, toast, role, accountEmail }: Sec
 
   useEffect(() => {
     if (!isOpen) return;
-    try {
-      setTwoFactorEnabledState(isTwoFactorEnabled(role));
-    } catch {
-      toast('Could not load two-step verification settings.');
-    }
+    let active = true;
+    fetch('/api/mfa', { cache: 'no-store' }).then(async response => {
+      if (!response.ok) throw new Error('Could not load two-step verification settings.');
+      return response.json() as Promise<{ enabled: boolean }>;
+    }).then(result => { if (active) setTwoFactorEnabledState(result.enabled); })
+      .catch(() => { if (active) toast('Could not load two-step verification settings.'); });
+    return () => { active = false; };
   }, [isOpen, role, toast]);
 
   if (!isOpen) return null;
 
   const handleTwoFactorVerified = () => {
-    try {
-      setTwoFactorEnabled(role, true, accountEmail);
-      setTwoFactorEnabledState(true);
-      setShowTwoFactorSetup(false);
-      toast('Two-step verification enabled.');
-    } catch {
-      toast('Could not save two-step verification settings.');
-    }
+    setTwoFactorEnabledState(true);
+    setShowTwoFactorSetup(false);
+    toast('Two-step verification enabled.');
+    window.location.assign('/account');
+  };
+
+  const sendSetup = async () => {
+    const response = await fetch('/api/mfa', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' });
+    const result: { secret?: string; message?: string } = await response.json();
+    if (!response.ok || !result.secret) throw new Error(result.message ?? 'Could not prepare two-step verification.');
+    return result.secret;
+  };
+
+  const verifySetup = async (code: string) => {
+    const response = await fetch('/api/mfa', { method: 'PATCH', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ mode: 'setup', code }) });
+    const result: { message?: string } = await response.json();
+    if (!response.ok) throw new Error(result.message ?? 'Could not verify the authenticator code.');
+    return true;
   };
 
   const handleTwoFactorToggle = () => {
@@ -55,13 +67,7 @@ export function SecurityFlow({ isOpen, onClose, toast, role, accountEmail }: Sec
       setShowTwoFactorSetup(true);
       return;
     }
-    try {
-      setTwoFactorEnabled(role, false);
-      setTwoFactorEnabledState(false);
-      toast('Two-step verification disabled.');
-    } catch {
-      toast('Could not save two-step verification settings.');
-    }
+    toast('To disable two-step verification, contact the gym administrator.');
   };
 
   const handleReset = () => {
@@ -90,6 +96,8 @@ export function SecurityFlow({ isOpen, onClose, toast, role, accountEmail }: Sec
         email={accountEmail}
         onCancel={() => setShowTwoFactorSetup(false)}
         onVerified={handleTwoFactorVerified}
+        onSendCode={sendSetup}
+        onVerifyCode={verifySetup}
       />
     );
   }

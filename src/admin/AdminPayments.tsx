@@ -3,16 +3,17 @@ import { useState } from 'react';
 import { StatTile, Badge, Table, Modal, Field, TabbedCard, ReceiptDocument } from '../shared';
 import { peso } from '../data.ts';
 
-function AdminPayments({ transactions, setTransactions, members = [], today, toast, addAudit }){
+function AdminPayments({ transactions, setTransactions, members = [], today, toast, addAudit, onAdminAction }){
   const [showRefund, setShowRefund] = useState(null);
   const [reason, setReason] = useState('');
   const [showReceipts, setShowReceipts] = useState(false);
   const [viewTxn, setViewTxn] = useState(null);
   const [documentType, setDocumentType] = useState('Receipt');
 
-  const confirmRefund = () => {
+  const confirmRefund = async () => {
     if (!showRefund) return;
-    setTransactions(prev => prev.map(t => t.id===showRefund.id ? {...t, status:'Refunded', reason} : t));
+    try { await onAdminAction('payment.refund', { id: showRefund.id, reason }); }
+    catch (error) { toast(error instanceof Error ? error.message : 'Refund could not be saved.'); return; }
     toast('Transaction ' + showRefund.id + ' refunded — ' + peso(showRefund.amount));
     addAudit?.('warn', 'Transaction refunded', showRefund.id + ' — ' + showRefund.member + ' (' + peso(showRefund.amount) + ')');
     setReason('');

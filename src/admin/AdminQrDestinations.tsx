@@ -3,11 +3,12 @@ import { Field, TabbedCard, TextInput } from '../shared';
 import { DEFAULT_QR_DESTINATIONS, validateQrDestination } from '../qrDestinations.ts';
 import type { QrDestination, ViewProps } from '../types.ts';
 
-function AdminQrDestinations({ qrDestinations = DEFAULT_QR_DESTINATIONS, setQrDestinations, toast, addAudit }: ViewProps) {
-  const [draft, setDraft] = useState(qrDestinations);
+function AdminQrDestinations({ qrDestinations = DEFAULT_QR_DESTINATIONS, setQrDestinations, toast, addAudit, onAdminAction }: ViewProps) {
+  const displayed = qrDestinations.length ? qrDestinations : DEFAULT_QR_DESTINATIONS;
+  const [draft, setDraft] = useState(displayed);
   const [error, setError] = useState('');
 
-  useEffect(() => setDraft(qrDestinations), [qrDestinations]);
+  useEffect(() => setDraft(qrDestinations.length ? qrDestinations : DEFAULT_QR_DESTINATIONS), [qrDestinations]);
 
   const updateDestination = (id: string, url: string) => {
     setDraft((previous) => previous.map((destination) => destination.id === id ? { ...destination, url } : destination));
@@ -27,7 +28,7 @@ function AdminQrDestinations({ qrDestinations = DEFAULT_QR_DESTINATIONS, setQrDe
     setDraft((previous) => previous.filter((destination) => destination.id !== id));
   };
 
-  const save = (event: React.FormEvent) => {
+  const save = async (event: React.FormEvent) => {
     event.preventDefault();
     const configured = draft.filter((destination) => destination.url.trim());
     if (configured.length === 0) {
@@ -49,17 +50,21 @@ function AdminQrDestinations({ qrDestinations = DEFAULT_QR_DESTINATIONS, setQrDe
         return;
       }
     }
-    setQrDestinations?.(draft.map((destination) => ({ ...destination, label: destination.label.trim(), url: destination.url.trim() })));
-    setError('');
-    toast('Gym QR destinations saved in this browser.');
-    addAudit?.('info', 'Gym QR destinations updated', `${configured.length} destinations`);
+    try {
+      await onAdminAction?.('qr.save', { destinations: configured.map((destination) => ({ ...destination,
+        label: destination.label.trim(), url: destination.url.trim() })) });
+      setError('');
+      toast('Gym QR destinations saved.');
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Gym QR destinations could not be saved.');
+    }
   };
 
   return (
     <TabbedCard title="Gym QR Destinations">
       <p className="gym-qr-admin-intro">
         Set the gym’s official public URLs. Only HTTPS destinations are accepted; the Facebook field must point to a Facebook-owned domain.
-        These settings are stored in this browser and can be changed by an administrator.
+        These settings are stored in the gym database and can be changed by an administrator.
       </p>
       <form onSubmit={save}>
         <div className="gym-qr-admin-fields">

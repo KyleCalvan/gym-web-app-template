@@ -49,7 +49,11 @@ export async function withBusinessAuthorization(request: NextRequest, roles: Gym
       response.headers.set('x-request-id', requestId);
       response.headers.set('cache-control', 'private, no-store');
       return response;
-    } catch {
+    } catch (error) {
+      console.error('Business operation failed.', { requestId,
+        name: error instanceof Error ? error.name : 'UnknownError',
+        code: error && typeof error === 'object' && 'code' in error ? error.code : undefined,
+        message: process.env.INTEGRATION_SESSION_KEY && error instanceof Error ? error.message.slice(0, 600) : undefined });
       // Rejected/failed outcomes must survive the rolled-back business write.
       try {
         await writeAudit(prisma, { actor: authRequestContext.getStore()?.accountId ?? null,

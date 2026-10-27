@@ -15,7 +15,11 @@ function getPromotionBucket(promotion: Promotion, today: string): Exclude<Promot
   return 'active';
 }
 
-function AdminPromotions({ promotions, setPromotions, plans, toast, addAudit, initialAction }: Pick<ViewProps, 'promotions' | 'setPromotions' | 'plans' | 'toast' | 'addAudit' | 'initialAction'>) {
+function AdminPromotions({ promotions, setPromotions, plans, toast, addAudit, onAdminAction, initialAction }: Pick<ViewProps, 'promotions' | 'setPromotions' | 'plans' | 'toast' | 'addAudit' | 'onAdminAction' | 'initialAction'>) {
+  const save = async (action: string, payload: Record<string, unknown>) => {
+    try { await onAdminAction?.(action, payload); return true; }
+    catch (error) { toast(error instanceof Error ? error.message : 'The promotion could not be saved.'); return false; }
+  };
   const [form, setForm] = useState({
     title:'', discountType:'Percentage', discountValue:'', validFrom:'', validUntil:'',
     applicablePlan:'Any Plan', description:'', maxRedemptions:'', minSpend:'', code:'',
@@ -36,20 +40,19 @@ function AdminPromotions({ promotions, setPromotions, plans, toast, addAudit, in
     [promotions, filter, today],
   );
 
-  const togglePublish = (id) => {
-    setPromotions(prev => prev.map(p => p.id===id ? {...p, status: p.status==='Published' ? 'Draft' : 'Published'} : p));
+  const togglePublish = async (id) => {
+    if (!await save('promotion.publish', { id })) return;
     toast('Promotion status updated');
   };
 
-  const submitNew = (e) => {
+  const submitNew = async (e) => {
     e.preventDefault();
     if (!form.title.trim() || !form.validFrom || !form.validUntil) { toast('Title and validity dates required'); return; }
     if (form.validFrom > form.validUntil) { toast('The end date must be on or after the start date'); return; }
-    const id = 'PROMO-0' + (promotions.length + 1);
     const validFrom = form.validFrom;
     const validUntil = form.validUntil;
     const newPromo = {
-      id, title: form.title.trim(),
+      title: form.title.trim(),
       discountType: form.discountType, discount: form.discountValue || 'Custom',
       description: form.description.trim(),
       validFrom, validUntil, plan: form.applicablePlan,
@@ -60,9 +63,8 @@ function AdminPromotions({ promotions, setPromotions, plans, toast, addAudit, in
       status: 'Draft',
       imageUrl: form.imageUrl.trim() || '/gym-interior.jpg',
     };
-    setPromotions(prev => [...prev, newPromo]);
+    if (!await save('promotion.create', newPromo)) return;
     toast('Promotion created — ' + newPromo.title);
-    addAudit?.('info', 'Promotion created', newPromo.title + ' (' + id + ')');
     setForm({title:'', discountType:'Percentage', discountValue:'', validFrom:'', validUntil:'', applicablePlan:'Any Plan', description:'', maxRedemptions:'', minSpend:'', code:'', imageUrl:''});
     setShowCreate(false);
   };
@@ -80,11 +82,11 @@ function AdminPromotions({ promotions, setPromotions, plans, toast, addAudit, in
       imageUrl: p.imageUrl || '',
     });
   };
-  const submitEdit = (e) => {
+  const submitEdit = async (e) => {
     e.preventDefault();
     if (!editForm.title.trim() || !editForm.validFrom || !editForm.validUntil) { toast('Title and validity dates are required'); return; }
     if (editForm.validFrom > editForm.validUntil) { toast('The end date must be on or after the start date'); return; }
-    setPromotions(prev => prev.map(p => p.id===editing.id ? {...p, ...editForm} : p));
+    if (!await save('promotion.update', { ...editing, ...editForm, id: editing.id })) return;
     toast('Promotion updated — ' + editForm.title);
     addAudit?.('info', 'Promotion updated', editForm.title + ' (' + editing.id + ')');
     setEditing(null); setEditForm(null);
@@ -92,9 +94,9 @@ function AdminPromotions({ promotions, setPromotions, plans, toast, addAudit, in
 
   ;
 
-  const deletePromotion = () => {
+  const deletePromotion = async () => {
     if (!pendingDelete) return;
-    setPromotions((prev) => prev.filter((promotion) => promotion.id !== pendingDelete.id));
+    if (!await save('promotion.delete', { id: pendingDelete.id })) return;
     addAudit?.('warn', 'Promotion deleted', `${pendingDelete.title} (${pendingDelete.id})`);
     toast(`Promotion deleted — ${pendingDelete.title}`);
     setPendingDelete(null);

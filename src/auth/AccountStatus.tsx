@@ -11,6 +11,7 @@ import { splitName, formatName } from '../shared/nameParts';
 import { LoadingScreen } from '../shared/LoadingScreen';
 import MemberApp from '../member/MemberApp';
 import { clearAccountBrowserState, establishAccountBrowserState } from './browser-state';
+import { TwoFactorChallenge } from '../shared/components/TwoFactorChallenge';
 
 type Status = NonNullable<Awaited<ReturnType<typeof getAccountStatus>>>;
 type VisibleStatus = Omit<Status, 'roles' | 'profiles'> & Partial<Pick<Status, 'roles' | 'profiles'>>;
@@ -39,6 +40,7 @@ export default function AccountStatus({ initialStatus }: { initialStatus?: Visib
   const [phone, setPhone] = useState(initialStatus?.account.phone ?? '');
   const [accepted, setAccepted] = useState(false);
   const [selectedRole, setSelectedRole] = useState<Status['roles'][number] | null>(null);
+  const [challengeOpen, setChallengeOpen] = useState(false);
   const seenAccountId = useRef(initialStatus?.account.id ?? null);
 
   useEffect(() => {
@@ -119,6 +121,14 @@ export default function AccountStatus({ initialStatus }: { initialStatus?: Visib
     });
   }
 
+  async function verifyAuthenticator(code: string) {
+    const response = await fetch('/api/mfa', { method: 'PATCH', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ mode: 'challenge', code }) });
+    const result: { message?: string } = await response.json();
+    if (!response.ok) throw new Error(result.message ?? 'Could not verify the authenticator code.');
+    return true;
+  }
+
   const roles = status?.restricted ? [] : status?.roles ?? [];
   const activeRole = selectedRole && roles.includes(selectedRole) ? selectedRole : roles[0] ?? null;
   const memberDashboard = Boolean(status && !status.restricted && roles.length === 1 && roles[0] === 'member');
@@ -145,6 +155,8 @@ export default function AccountStatus({ initialStatus }: { initialStatus?: Visib
         <ul>{status.nextSteps.map((step) => <li key={step}>{STEP_LABELS[step]}</li>)}</ul>
         {status.nextSteps.includes('verify-email') && <button type="button" disabled={pending}
           onClick={() => void resendVerification()}>Resend verification email</button>}
+        {status.nextSteps.includes('complete-two-step-verification') && <button type="button" disabled={pending}
+          onClick={() => setChallengeOpen(true)}>Verify authenticator</button>}
         {status.nextSteps.includes('complete-profile') && <form onSubmit={(event) => {
           event.preventDefault();
           const name = formatName(profileName);
@@ -190,5 +202,8 @@ export default function AccountStatus({ initialStatus }: { initialStatus?: Visib
       <button type="button" onClick={() => void refresh()} disabled={pending}>Refresh status</button>
       <button type="button" onClick={() => void logout()} disabled={pending}>Sign out</button>
     </div>
+    {challengeOpen && status?.nextSteps.includes('complete-two-step-verification') && <TwoFactorChallenge
+      mode="challenge" email={status.account.email ?? ''} onCancel={() => setChallengeOpen(false)}
+      onVerifyCode={verifyAuthenticator} onVerified={() => window.location.assign('/account')} />}
   </main>;
 }

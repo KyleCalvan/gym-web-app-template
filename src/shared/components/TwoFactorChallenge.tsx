@@ -8,11 +8,10 @@ interface TwoFactorChallengeProps {
   email: string;
   onCancel: () => void;
   onVerified: () => void;
-  onSendCode?: (email: string) => Promise<void>;
+  onSendCode?: (email: string) => Promise<string>;
   onVerifyCode?: (code: string) => Promise<boolean>;
 }
 
-const DEMO_CODE = '123456';
 const RESEND_SECONDS = 60;
 
 export function TwoFactorChallenge({
@@ -28,9 +27,10 @@ export function TwoFactorChallenge({
   const [isSending, setIsSending] = useState(true);
   const [isVerifying, setIsVerifying] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
+  const [setupSecret, setSetupSecret] = useState('');
   const [error, setError] = useState('');
   const inputs = useRef<Array<HTMLInputElement | null>>([]);
-  const initialSend = useRef<Promise<void> | null>(null);
+  const initialSend = useRef<Promise<string> | null>(null);
   const code = digits.join('');
 
   useEffect(() => {
@@ -46,9 +46,10 @@ export function TwoFactorChallenge({
 
     initialSend.current ??= onSendCode
       ? Promise.resolve().then(() => onSendCode(email))
-      : new Promise<void>(resolve => window.setTimeout(resolve, 450));
+      : Promise.resolve('');
     void initialSend.current
-      .then(() => {
+      .then((secret) => {
+        if (active) setSetupSecret(secret);
         if (active) setSecondsRemaining(RESEND_SECONDS);
       })
       .catch(sendError => {
@@ -110,8 +111,8 @@ export function TwoFactorChallenge({
     setIsSending(true);
     setError('');
     try {
-      if (onSendCode) await onSendCode(email);
-      else await new Promise<void>(resolve => window.setTimeout(resolve, 450));
+      if (!onSendCode) throw new Error('Two-step setup is unavailable.');
+      setSetupSecret(await onSendCode(email));
       setSecondsRemaining(RESEND_SECONDS);
       setDigits(Array(6).fill(''));
       inputs.current[0]?.focus();
@@ -127,7 +128,8 @@ export function TwoFactorChallenge({
     setIsVerifying(true);
     setError('');
     try {
-      const valid = onVerifyCode ? await onVerifyCode(code) : code === DEMO_CODE;
+      if (!onVerifyCode) throw new Error('Two-step verification is unavailable.');
+      const valid = await onVerifyCode(code);
       if (!valid) {
         setError('Invalid or expired code. Check the code and try again.');
         return;
@@ -144,18 +146,18 @@ export function TwoFactorChallenge({
 
   return (
     <Modal
-      title={isSetup ? 'Set Up Email Verification' : 'Two-Step Verification'}
+      title={isSetup ? 'Set Up Two-Step Verification' : 'Two-Step Verification'}
       onClose={onCancel}
       className="two-factor-modal"
     >
       <div className="two-factor-content">
-        <div className="two-factor-icon" aria-hidden="true">✉</div>
+        <div className="two-factor-icon" aria-hidden="true">◆</div>
         <p className="two-factor-description">
           {isSetup
-            ? 'Enter the 6-digit code to verify your email and enable two-step verification.'
-            : 'Enter the 6-digit code sent to your email to finish signing in.'}
+            ? 'Add the secret below to your authenticator app, then enter its 6-digit code.'
+            : 'Enter the 6-digit code from your authenticator app to finish signing in.'}
         </p>
-        <p className="two-factor-email">{email || 'your account email'}</p>
+        <p className="two-factor-email">{isSetup ? setupSecret || 'Preparing your secret…' : email || 'Your account'}</p>
 
         <div className="otp-inputs" role="group" aria-label="6-digit verification code">
           {digits.map((digit, index) => (
@@ -178,12 +180,9 @@ export function TwoFactorChallenge({
         </div>
 
         <div className="two-factor-feedback" aria-live="polite">
-          {isSending && <p className="two-factor-status">Sending verification code…</p>}
+          {isSending && <p className="two-factor-status">Preparing authenticator setup…</p>}
           {error && <p className="two-factor-error" role="alert">{error}</p>}
-          {isVerified && <p className="two-factor-success">Email verified successfully.</p>}
-          {!isSending && !error && !isVerified && (
-            <p className="two-factor-demo">Demo mode: use code 123456.</p>
-          )}
+          {isVerified && <p className="two-factor-success">Authenticator verified successfully.</p>}
         </div>
 
         <button
@@ -195,17 +194,17 @@ export function TwoFactorChallenge({
           {isVerifying ? 'Verifying…' : isVerified ? 'Verified' : 'Verify Code'}
         </button>
 
-        <div className="two-factor-resend">
-          <span>Didn’t receive a code?</span>
+        {isSetup && <div className="two-factor-resend">
+          <span>Need a new secret?</span>
           <button
             type="button"
             className="two-factor-link"
             disabled={secondsRemaining > 0 || isSending}
             onClick={() => void handleResend()}
           >
-            {isSending ? 'Sending…' : secondsRemaining > 0 ? `Resend in ${secondsRemaining}s` : 'Resend Code'}
+            {isSending ? 'Preparing…' : secondsRemaining > 0 ? `Retry in ${secondsRemaining}s` : 'Generate New Secret'}
           </button>
-        </div>
+        </div>}
 
         <div className="two-factor-actions">
           <button type="button" className="btn btn-outline btn-block" onClick={onCancel}>

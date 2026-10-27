@@ -289,6 +289,7 @@ export interface Conversation {
 // View props shared across every role's view component.
 // Each role's view receives this bag from <App/>.
 export interface ViewProps {
+  onAdminAction?: (action: string, payload: Record<string, unknown>) => Promise<void>;
   onStaffRegisterMember?: (input: { name: string; email: string; phone: string; planName: string }) => Promise<Member>;
   onStaffCheckIn?: (memberId: string) => Promise<void>;
   onStaffSale?: (input: { reference: string; memberId: string; planNames: string[];

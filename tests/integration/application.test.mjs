@@ -5,7 +5,7 @@ import path from 'node:path';
 import { startDatabase, startApplication, runNode, withDatabaseClient } from './harness.mjs';
 import { startGoogle } from './google.mjs';
 import { startSmtp } from './smtp.mjs';
-import { randomBytes, randomUUID, scryptSync } from 'node:crypto';
+import { createHmac, randomBytes, randomUUID, scryptSync } from 'node:crypto';
 
 let database;
 let application;
@@ -801,6 +801,75 @@ test('MFA assurance belongs to one session and only fully authorized administrat
   const stale = await mutate(assuredCookie, { action: 'deactivate', name: original.name });
   assert.equal(stale.status, 403);
   assert.equal((await stale.json()).code, 'FORBIDDEN');
+});
+
+test('manager actions persist member, trainer, staff, promotion, and QR records with an assured session', async () => {
+  const accountId = await seedSessionAccount({ roles: ['admin'], mfa: true });
+  const issued = await issueSession(accountId);
+  const blocked = await fetch(`${application.url}/api/admin/actions`, { method: 'POST',
+    headers: { cookie: issued.cookie, origin: application.url, 'content-type': 'application/json' },
+    body: JSON.stringify({ action: 'member.create', payload: { name: 'Manager Member', email: `${randomUUID()}@example.test`, phone: '09123456789' } }),
+  });
+  assert.equal(blocked.status, 403);
+  const rotation = await sessionCommand('rotate', { accountId, cookie: issued.cookie, mfaVerified: true });
+  assert.equal(rotation.status, 200);
+  const cookie = responseCookieHeader(rotation);
+  const send = (action, payload) => fetch(`${application.url}/api/admin/actions`, { method: 'POST',
+    headers: { cookie, origin: application.url, 'content-type': 'application/json' },
+    body: JSON.stringify({ action, payload }),
+  });
+  const memberEmail = `${randomUUID()}@example.test`;
+  assert.equal((await send('member.create', { name: 'Manager Member', email: memberEmail, phone: '09123456789' })).status, 200, application.logs());
+  assert.equal((await send('trainer.create', { name: 'Manager Trainer', specialty: 'Strength', certs: '', sessionPrice: 900, status: 'Active' })).status, 200, application.logs());
+  const staffEmail = `${randomUUID()}@example.test`;
+  assert.equal((await send('staff.create', { name: 'Manager Staff', email: staffEmail, phone: '09123456780', role: 'Front Desk', shift: 'Morning', status: 'Active' })).status, 200, application.logs());
+  const code = `MANAGER${randomUUID().slice(0, 8)}`;
+  assert.equal((await send('promotion.create', { title: 'Manager Promo', code, discountType: 'Fixed', discount: '100',
+    validFrom: '2026-10-28', validUntil: '2026-11-28', plan: 'Any Plan', maxRedemptions: 5, minSpend: 0 })).status, 200, application.logs());
+  assert.equal((await send('qr.save', { destinations: [{ id: 'facebook', label: 'Facebook', url: 'https://www.facebook.com/vinathletics' }] })).status, 200, application.logs());
+  const stored = await withDatabaseClient(database.env, (client) => client.query(`
+    SELECT (SELECT COUNT(*)::int FROM "MemberProfile" m JOIN "RoleProfile" r ON r.id=m."profileId" JOIN "User" u ON u.id=r."gymUserId" WHERE u.email=$1) AS members,
+      (SELECT COUNT(*)::int FROM "TrainerProfile" t JOIN "RoleProfile" r ON r.id=t."profileId" JOIN "User" u ON u.id=r."gymUserId" WHERE u.name='Manager Trainer') AS trainers,
+      (SELECT COUNT(*)::int FROM "StaffProfile" s JOIN "RoleProfile" r ON r.id=s."profileId" JOIN "User" u ON u.id=r."gymUserId" WHERE u.email=$2) AS staff,
+      (SELECT COUNT(*)::int FROM "Promotion" WHERE code=$3) AS promotions,
+      (SELECT COUNT(*)::int FROM "GymQrDestination" WHERE id='facebook') AS destinations
+  `, [memberEmail, staffEmail, code.toUpperCase()]));
+  assert.deepEqual(stored.rows[0], { members: 1, trainers: 1, staff: 1, promotions: 1, destinations: 1 });
+});
+
+test('authenticator enrollment and challenge unlock only the verified admin session', async () => {
+  const accountId = await seedSessionAccount({ roles: ['admin'] });
+  const issued = await issueSession(accountId);
+  const request = (method, cookie, body) => fetch(`${application.url}/api/mfa`, { method,
+    headers: { cookie, origin: application.url, 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  const setup = await request('POST', issued.cookie, {});
+  assert.equal(setup.status, 200, application.logs());
+  const { secret } = await setup.json();
+  assert.match(secret, /^[A-Z2-7]{32}$/);
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  let bits = 0, value = 0;
+  const bytes = [];
+  for (const letter of secret) {
+    value = (value << 5) | alphabet.indexOf(letter);
+    bits += 5;
+    if (bits >= 8) { bytes.push((value >>> (bits - 8)) & 255); bits -= 8; }
+  }
+  const counter = Buffer.alloc(8);
+  counter.writeBigUInt64BE(BigInt(Math.floor(Date.now() / 30_000)));
+  const digest = createHmac('sha1', Buffer.from(bytes)).update(counter).digest();
+  const code = String((digest.readUInt32BE(digest.at(-1) & 15) & 0x7fffffff) % 1_000_000).padStart(6, '0');
+  const invalid = await request('PATCH', issued.cookie, { mode: 'setup', code: '000000' });
+  assert.equal(invalid.status, 401);
+  const verified = await request('PATCH', issued.cookie, { mode: 'setup', code });
+  assert.equal(verified.status, 200, application.logs());
+  const assuredCookie = responseCookieHeader(verified);
+  assert.equal((await fetch(`${application.url}/api/me`, { headers: { cookie: assuredCookie } }).then((r) => r.json())).restricted, false);
+  const other = await issueSession(accountId);
+  assert.equal((await fetch(`${application.url}/api/me`, { headers: { cookie: other.cookie } }).then((r) => r.json())).restricted, true);
+  const challenged = await request('PATCH', other.cookie, { mode: 'challenge', code });
+  assert.equal(challenged.status, 200, application.logs());
+  const otherAssured = responseCookieHeader(challenged);
+  assert.equal((await fetch(`${application.url}/api/me`, { headers: { cookie: otherAssured } }).then((r) => r.json())).restricted, false);
 });
 
 test('staff registration, check-in, cash sale, and profile edits persist with staff authorization', async () => {

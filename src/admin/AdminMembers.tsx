@@ -6,7 +6,11 @@ import { StatTile, Badge, Table, Modal, Field, TextInput, Select, TabbedCard, Av
 import { peso } from '../data.ts';
 import { createSimulatedTransaction, getConfiguredPaymentFee, updateSimulatedTransaction } from '../payments.ts';
 
-function AdminMembers({ members, setMembers, plans, setTransactions, today, toast, addAudit, preferredPaymentMethod = 'GCash', initialAction }){
+function AdminMembers({ members, setMembers, plans, setTransactions, today, toast, addAudit, onAdminAction, preferredPaymentMethod = 'GCash', initialAction }){
+  const save = async (action, payload) => {
+    try { await onAdminAction(action, payload); return true; }
+    catch (error) { toast(error instanceof Error ? error.message : 'The member change could not be saved.'); return false; }
+  };
   const [q, setQ] = useState('');
   const [statusF, setStatusF] = useState('All');
   const [showRegister, setShowRegister] = useState(initialAction === 'register-member');
@@ -15,13 +19,11 @@ function AdminMembers({ members, setMembers, plans, setTransactions, today, toas
   const [renewing, setRenewing] = useState(false);
 
   const [reg, setReg] = useState({...emptyName(), email:'', phone:'', plan:'Basic'});
-  const submitRegister = (e) => {
+  const submitRegister = async (e) => {
     e.preventDefault();
     if (!reg.firstName.trim() || !reg.lastName.trim() || !reg.email.trim()) { toast('Name and email are required'); return; }
-    const id = 'M-' + (1042 + members.length);
-    setMembers(prev => [...prev, {...reg, name:formatName(reg), id, status:'Active', joined: today}]);
-    toast('Member registered — ' + formatName(reg) + ' (' + id + ')');
-    addAudit?.('info', 'Member registered', formatName(reg) + ' (' + id + ')');
+    if (!await save('member.create', { name: formatName(reg), email: reg.email, phone: reg.phone })) return;
+    toast('Member registered — ' + formatName(reg));
     setReg({...emptyName(), email:'', phone:'', plan:'Basic'});
     setShowRegister(false);
   };
@@ -31,9 +33,9 @@ function AdminMembers({ members, setMembers, plans, setTransactions, today, toas
     setEdit({...splitName(selected), email:selected.email, phone:selected.phone, plan:selected.plan});
     setEditing(true);
   };
-  const submitEdit = (e) => {
+  const submitEdit = async (e) => {
     e.preventDefault();
-    setMembers(prev => prev.map(m => m.id===selected.id ? {...m, ...edit, name:formatName(edit)} : m));
+    if (!await save('member.update', { id: selected.id, name: formatName(edit), email: edit.email, phone: edit.phone })) return;
     setSelected(s => ({...s, ...edit, name:formatName(edit)}));
     setEditing(false);
     toast('Member updated — ' + formatName(edit));
@@ -48,32 +50,20 @@ function AdminMembers({ members, setMembers, plans, setTransactions, today, toas
     const plan = plans.find(p=>p.name===renewPlan);
     const amount = plan ? plan.price : 0;
     const fees = getConfiguredPaymentFee(renewMethod, amount);
-    const transaction = createSimulatedTransaction({
-      member: selected.name,
-      type: 'Membership Renewal (' + renewPlan + ')',
-      amount,
-      method: renewMethod,
-      date: today,
-      fees,
-    });
-    setTransactions(prev => [transaction, ...prev]);
-    setPayment({ transactionId: transaction.id, memberId: selected.id, memberName: selected.name, plan: renewPlan, method: renewMethod, amount, fees });
+    setPayment({ memberId: selected.id, memberName: selected.name, plan: renewPlan, method: renewMethod, amount, fees });
     setRenewing(false);
   };
 
-  const updatePaymentState = (paymentState) => {
-    setTransactions(prev => prev.map(tx => tx.id === payment?.transactionId
-      ? updateSimulatedTransaction(tx, paymentState)
-      : tx));
-  };
+  const updatePaymentState = () => {};
 
-  const completePayment = (paymentState) => {
+  const completePayment = async (paymentState) => {
+    if (!await save('renewal.simulate', { memberId: payment.memberId, planName: payment.plan,
+      method: payment.method, outcome: paymentState })) return false;
     if (paymentState !== 'Successful') {
       toast('Simulated payment failed. Membership was not changed.');
       return;
     }
     const updatedMember = { ...selected, status: 'Active', plan: payment.plan };
-    setMembers(prev => prev.map(m => m.id === payment.memberId ? updatedMember : m));
     setSelected(updatedMember);
     toast('Simulated test renewal completed — no real payment was processed (' + peso(payment.amount) + ').');
     addAudit?.('info', 'Membership renewed', payment.memberName + ' → ' + payment.plan);
@@ -86,17 +76,17 @@ function AdminMembers({ members, setMembers, plans, setTransactions, today, toas
   // Freeze / Unfreeze flow — modal-deferred so the destructive action has a confirmation step.
   const [pendingFreeze, setPendingFreeze] = useState(null);
   const [pendingUnfreeze, setPendingUnfreeze] = useState(null);
-  const applyFreeze = () => {
+  const applyFreeze = async () => {
     if (!pendingFreeze) return;
-    setMembers(prev => prev.map(m => m.id===pendingFreeze.id ? {...m, status:'Frozen'} : m));
+    if (!await save('member.freeze', { id: pendingFreeze.id })) return;
     setSelected(s => s && s.id===pendingFreeze.id ? {...s, status:'Frozen'} : s);
     toast('Account frozen — ' + pendingFreeze.name);
     addAudit?.('warn', 'Account frozen', pendingFreeze.name + ' (' + pendingFreeze.id + ')');
     setPendingFreeze(null);
   };
-  const applyUnfreeze = () => {
+  const applyUnfreeze = async () => {
     if (!pendingUnfreeze) return;
-    setMembers(prev => prev.map(m => m.id===pendingUnfreeze.id ? {...m, status:'Active'} : m));
+    if (!await save('member.unfreeze', { id: pendingUnfreeze.id })) return;
     setSelected(s => s && s.id===pendingUnfreeze.id ? {...s, status:'Active'} : s);
     toast('Account unfrozen — ' + pendingUnfreeze.name);
     addAudit?.('info', 'Account unfrozen', pendingUnfreeze.name + ' (' + pendingUnfreeze.id + ')');
@@ -105,10 +95,10 @@ function AdminMembers({ members, setMembers, plans, setTransactions, today, toas
 
   // Soft-delete (Remove) flow — admins send the member to archive; super admin handles restore/permanent delete.
   const [pendingRemove, setPendingRemove] = useState(null);
-  const applyRemove = () => {
+  const applyRemove = async () => {
     if (!pendingRemove) return;
     const now = new Date().toISOString();
-    setMembers(prev => prev.map(m => m.id===pendingRemove.id ? {...m, deletedAt: now} : m));
+    if (!await save('member.archive', { id: pendingRemove.id })) return;
     toast('Member removed — ' + pendingRemove.name);
     addAudit?.('warn', 'Member removed (soft)', pendingRemove.name + ' (' + pendingRemove.id + ')');
     setPendingRemove(null);
@@ -116,13 +106,13 @@ function AdminMembers({ members, setMembers, plans, setTransactions, today, toas
   };
 
   const filtered = members
-    .filter(m => !m.deletedAt && Number(String(m?.id || '').replace(/\D/g, '')) >= 1042)
+    .filter(m => !m.deletedAt)
     .filter(m =>
       (statusF==='All' || m.status===statusF) &&
       (m.name.toLowerCase().includes(q.toLowerCase()) || m.id.toLowerCase().includes(q.toLowerCase()))
     );
 
-  const liveMembers = members.filter(m => !m.deletedAt && Number(String(m?.id || '').replace(/\D/g, '')) >= 1042);
+  const liveMembers = members.filter(m => !m.deletedAt);
   const counts = {
     active: liveMembers.filter(m=>m.status==='Active').length,
     expiring: liveMembers.filter(m=>m.status==='Expiring').length,
