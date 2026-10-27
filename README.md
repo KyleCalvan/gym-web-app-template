@@ -24,6 +24,9 @@ npm run dev
 Open http://localhost:3000. Google sign-in additionally requires the credentials
 described below. For a production build, run `npm run build` and `npm start`.
 
+For a protected online team preview, follow the
+[preview deployment guide](docs/preview-deployment.md).
+
 ## Database tooling and checks
 
 The sole schema and migration history live in `backend/prisma/`. Root and backend
