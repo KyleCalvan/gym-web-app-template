@@ -561,7 +561,7 @@ function MemberMembership({
                 <input type="text" className="form-control" value={PLAN_PAYMENT_METHOD} readOnly aria-label="Payment method" />
               </Field>
               {onPlanCheckout && <p role="note" className="muted">PayMongo test checkout only. No real payment will be charged. This pays for one plan term; automatic renewal is not enabled.</p>}
-              <div className="member-promo-redeem-box" aria-label="Redeem a promotion code for this plan">
+              {!onPlanCheckout && <div className="member-promo-redeem-box" aria-label="Redeem a promotion code for this plan">
                 <div className="member-promo-redeem-intro">
                   <Tag size={18} aria-hidden="true" />
                   <div>
@@ -596,7 +596,7 @@ function MemberMembership({
                     {redemptionStatus.message}
                   </div>
                 )}
-              </div>
+              </div>}
               <button type="submit" className="btn btn-signal btn-block" disabled={checkoutStarting}>
                 {checkoutStarting ? 'Opening PayMongo test checkout…' :
                 `Confirm plan choice — ${chooseDiscount ? peso(choosePrice) : peso(newPlan.price)}`}

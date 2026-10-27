@@ -44,7 +44,7 @@ export function getEligiblePromotions(
 ): Promotion[] {
   const today = normalizeDate(asOf);
   const memberPlan = normalizePlan(member?.plan);
-  if (!today || !memberPlan) return [];
+  if (!today) return [];
 
   return promotions
     .filter((promotion) => {

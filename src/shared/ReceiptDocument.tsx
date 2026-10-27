@@ -12,15 +12,16 @@ interface ReceiptMember {
 interface ReceiptDocumentProps {
   transaction: Transaction;
   member?: ReceiptMember | null;
-  documentType?: 'Receipt' | 'Invoice';
+  documentType?: 'Receipt' | 'Invoice' | 'Payment Record';
 }
 
 export function ReceiptDocument({ transaction, member, documentType = 'Receipt' }: ReceiptDocumentProps) {
   const fees = Number(transaction.fees) || 0;
   const total = Number(transaction.amount) + fees;
+  const reference = transaction.receiptNumber || transaction.transactionReference || getReceiptReference(transaction);
 
   return (
-    <article className="receipt-document" aria-label={`${documentType} ${getReceiptReference(transaction)}`}>
+    <article className="receipt-document" aria-label={`${documentType} ${reference}`}>
       <header className="receipt-brand">
         <img src="/logo.jpg" alt="" className="receipt-logo" />
         <div>
@@ -32,8 +33,8 @@ export function ReceiptDocument({ transaction, member, documentType = 'Receipt' 
           </address>
         </div>
         <div className="receipt-number">
-          <span>{documentType} no.</span>
-          <strong>{getReceiptReference(transaction)}</strong>
+          <span>{transaction.receiptNumber ? `${documentType} no.` : 'Payment reference'}</span>
+          <strong>{reference}</strong>
         </div>
       </header>
 
@@ -90,7 +91,7 @@ export function ReceiptDocument({ transaction, member, documentType = 'Receipt' 
 
       <footer className="receipt-footer">
         {transaction.isSimulated && <strong>SIMULATED TEST TRANSACTION — NO REAL PAYMENT WAS PROCESSED.<br /></strong>}
-        Thank you for choosing VinAthletics. Please retain this receipt for your records.
+        Thank you for choosing VinAthletics. Please retain this {documentType === 'Payment Record' ? 'payment record' : 'document'} for your records.
       </footer>
     </article>
   );

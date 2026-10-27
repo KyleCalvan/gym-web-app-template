@@ -173,6 +173,47 @@ test('Google Account holder completes profile and explicitly accepts current ter
   assert.doesNotMatch(page, /Maria Santos|Basic Membership|Premium Membership/);
 });
 
+test('member payment history is private and the preferred method persists', async () => {
+  const accountId = await seedSessionAccount();
+  const otherAccountId = await seedSessionAccount();
+  const { cookie } = await issueSession(accountId);
+  const paymentReference = `PAY-${randomUUID()}`;
+  await withDatabaseClient(database.env, async (client) => {
+    const { rows } = await client.query('SELECT "accountId", "profileId" FROM "AssignedRole" WHERE "accountId" IN ($1, $2) AND role = $3',
+      [accountId, otherAccountId, 'member']);
+    for (const row of rows) {
+      await client.query('INSERT INTO "MemberProfile" ("profileId") VALUES ($1)', [row.profileId]);
+    }
+    const ownId = rows.find(row => row.accountId === accountId).profileId;
+    const otherId = rows.find(row => row.accountId === otherAccountId).profileId;
+    await client.query(`INSERT INTO "PaymentTransaction" (id, reference, "memberId", "customerName", type, method, status, "paymentState", amount, fees)
+      VALUES ($1, $2, $3, 'Session Member', 'Coaching session', 'GCash', 'Paid', 'Successful', 110, 10),
+             ($4, $5, $6, 'Other Member', 'Private purchase', 'Cash', 'Paid', 'Successful', 250, 0)`,
+    [randomUUID(), paymentReference, ownId, randomUUID(), `PAY-${randomUUID()}`, otherId]);
+  });
+  assert.equal((await fetch(`${application.url}/api/member/payments`)).status, 401);
+  const response = await fetch(`${application.url}/api/member/payments`, { headers: { cookie } });
+  assert.equal(response.status, 200, application.logs());
+  const history = await response.json();
+  assert.equal(history.preferredPaymentMethod, 'GCash');
+  assert.equal(history.transactions.length, 1);
+  assert.equal(history.transactions[0].transactionReference, paymentReference);
+  assert.equal(history.transactions[0].amount, 100);
+  assert.equal(history.transactions[0].fees, 10);
+  const change = (method, origin = application.url) => fetch(`${application.url}/api/member/payments`, {
+    method: 'PATCH', headers: { cookie, origin, 'content-type': 'application/json' },
+    body: JSON.stringify({ preferredPaymentMethod: method }),
+  });
+  assert.equal((await change('Cash', 'https://attacker.example')).status, 403);
+  assert.equal((await change('Card')).status, 400);
+  assert.equal((await change('Cash')).status, 200);
+  const saved = await fetch(`${application.url}/api/member/payments`, { headers: { cookie } }).then(response => response.json());
+  assert.equal(saved.preferredPaymentMethod, 'Cash');
+  assert.equal(saved.transactions.length, 1);
+  const overview = await fetch(`${application.url}/api/member/overview`, { headers: { cookie } }).then(response => response.json());
+  assert.equal(overview.latestPayment.type, 'Coaching session');
+});
+
 test('checkout rejects another plan while the member has an active membership', async () => {
   const accountId = await seedSessionAccount();
   const { cookie } = await issueSession(accountId);
@@ -872,6 +913,56 @@ async function issueSession(accountId, app = application) {
   assert.equal(response.status, 200, app.logs());
   return { cookie: responseCookieHeader(response), response };
 }
+
+test('admin QR uploads and gym links persist for the intended member only', async () => {
+  const adminId = await seedSessionAccount({ roles: ['admin'], mfa: true });
+  const firstId = await seedSessionAccount();
+  const secondId = await seedSessionAccount();
+  const profileIds = await withDatabaseClient(database.env, async (client) => {
+    const ids = [];
+    for (const accountId of [firstId, secondId]) {
+      const { rows: [assignment] } = await client.query('SELECT "profileId" FROM "AssignedRole" WHERE "accountId" = $1 AND "role" = $2', [accountId, 'member']);
+      await client.query('INSERT INTO "MemberProfile" ("profileId") VALUES ($1)', [assignment.profileId]);
+      ids.push(assignment.profileId);
+    }
+    return ids;
+  });
+  const adminSession = await issueSession(adminId);
+  const rotation = await sessionCommand('rotate', { accountId: adminId, cookie: adminSession.cookie, mfaVerified: true });
+  assert.equal(rotation.status, 200);
+  const adminCookie = responseCookieHeader(rotation);
+  const firstCookie = (await issueSession(firstId)).cookie;
+  const secondCookie = (await issueSession(secondId)).cookie;
+  const links = [{ id: 'facebook', label: 'Gym Facebook page', url: 'https://www.facebook.com/vinathletics' }];
+  const saveLinks = (cookie, destinations = links) => fetch(`${application.url}/api/gym-qr`, {
+    method: 'PUT', headers: { cookie, origin: application.url, 'content-type': 'application/json' },
+    body: JSON.stringify({ destinations }),
+  });
+  assert.equal((await saveLinks(firstCookie)).status, 403);
+  assert.equal((await saveLinks(adminCookie, [{ ...links[0], url: 'https://facebook.com.attacker.example' }])).status, 400);
+  assert.equal((await saveLinks(adminCookie)).status, 200);
+  assert.deepEqual((await fetch(`${application.url}/api/member/qr`, { headers: { cookie: firstCookie } }).then(r => r.json())).destinations, links);
+
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9fJpEAAAAASUVORK5CYII=', 'base64');
+  const form = new FormData();
+  form.set('profileId', profileIds[0]);
+  form.set('image', new Blob([png], { type: 'image/png' }), 'member.png');
+  const upload = (cookie) => fetch(`${application.url}/api/admin/member-qr`, {
+    method: 'PUT', headers: { cookie, origin: application.url }, body: form,
+  });
+  assert.equal((await upload(firstCookie)).status, 403);
+  assert.equal((await upload(adminCookie)).status, 200, application.logs());
+  const first = await fetch(`${application.url}/api/member/qr`, { headers: { cookie: firstCookie } }).then(r => r.json());
+  const second = await fetch(`${application.url}/api/member/qr`, { headers: { cookie: secondCookie } }).then(r => r.json());
+  assert.equal(typeof first.memberQrUpdatedAt, 'string');
+  assert.equal(second.memberQrUpdatedAt, null);
+  const firstImage = await fetch(`${application.url}/api/member/qr?image=1`, { headers: { cookie: firstCookie } });
+  assert.equal(firstImage.status, 200);
+  assert.equal(firstImage.headers.get('content-type'), 'image/png');
+  assert.deepEqual(Buffer.from(await firstImage.arrayBuffer()), png);
+  assert.equal((await fetch(`${application.url}/api/member/qr?image=1`, { headers: { cookie: secondCookie } })).status, 404);
+  assert.equal((await fetch(`${application.url}/api/admin/member-qr`, { headers: { cookie: firstCookie } })).status, 403);
+});
 
 function responseCookieHeader(response) {
   return response.headers.getSetCookie().map((cookie) => cookie.split(';')[0]).join('; ');

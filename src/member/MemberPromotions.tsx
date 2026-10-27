@@ -2,24 +2,21 @@
 import { useMemo, useState } from 'react';
 import { Badge, TabbedCard } from '../shared';
 import { ArrowUpRight, Copy, Gift } from 'lucide-react';
-import { peso } from '../data.ts';
 import {
-  computeDiscountedPrice,
   formatPromotionDate,
   formatPromotionDiscount,
   getActivePromotionsForMember,
   getEligiblePromotions,
-  promotionAppliesToPlan,
   promotionTargetsAllPlans,
 } from './promotionEligibility.ts';
 
 function MemberPromotions({
-  promotions, members, currentUserId, toast, promotionRedemptions,
+  promotions, members, currentUserId, toast, promotionRedemptions, today,
 }) {
   const me = members.find((member) => member.id === currentUserId) || members[0];
   const eligiblePromotions = useMemo(
-    () => getEligiblePromotions(promotions || [], me),
-    [promotions, me?.plan],
+    () => getEligiblePromotions(promotions || [], me, today || new Date()),
+    [promotions, me?.plan, today],
   );
   const [selectedId, setSelectedId] = useState(null);
   const selected = eligiblePromotions.find((promotion) => promotion.id === selectedId) || eligiblePromotions[0];
@@ -29,8 +26,8 @@ function MemberPromotions({
     [promotionRedemptions, me?.id],
   );
   const activePromotions = useMemo(
-    () => getActivePromotionsForMember(promotions || [], myRedemptions, me),
-    [promotions, myRedemptions, me?.plan],
+    () => getActivePromotionsForMember(promotions || [], myRedemptions, me, today || new Date()),
+    [promotions, myRedemptions, me?.plan, today],
   );
 
   const copyCode = async (code) => {
@@ -44,17 +41,15 @@ function MemberPromotions({
   };
 
   return (
-    <TabbedCard title="Promotions for your plan">
+    <TabbedCard title="Available promotions">
       {activePromotions.length > 0 && (
-        <div className="member-promo-active" aria-label="Your active discounts">
+        <div className="member-promo-active" aria-label="Your redeemed offers">
           <div className="member-promo-active-head">
-            <h3>Your active discounts</h3>
-            <span>These apply automatically on eligible purchases.</span>
+            <h3>Your redeemed offers</h3>
+            <span>Present these codes to gym staff when making a purchase.</span>
           </div>
           <ul className="member-promo-active-list">
             {activePromotions.map((promo) => {
-              const samplePlanPrice = (me?.plan && promotionAppliesToPlan(promo, me.plan)) ? 2499 : null;
-              const sampleDiscount = samplePlanPrice ? computeDiscountedPrice(promo, samplePlanPrice) : null;
               return (
                 <li key={promo.id} className="member-promo-active-item">
                   <div className="member-promo-active-main">
@@ -69,11 +64,6 @@ function MemberPromotions({
                         ? 'All membership plans and trainer sessions'
                         : `${promo.plan} plan`}
                     </span>
-                    {sampleDiscount !== null && samplePlanPrice !== null && (
-                      <span className="member-promo-active-savings">
-                        Saves you up to {peso(samplePlanPrice - sampleDiscount)} on a {peso(samplePlanPrice)} purchase
-                      </span>
-                    )}
                   </div>
                 </li>
               );
@@ -85,7 +75,7 @@ function MemberPromotions({
       {eligiblePromotions.length === 0 ? (
         <div className="member-promo-empty">
           <Gift size={28} aria-hidden="true" />
-          <h3>No active promotions for your plan</h3>
+          <h3>No active promotions available to you</h3>
           <p>Published offers will appear here while their dates and eligibility requirements are valid.</p>
         </div>
       ) : (
@@ -137,7 +127,7 @@ function MemberPromotions({
                   </>
                 )}
               </div>
-              <p className="member-promo-disclaimer">Enter this code under My Membership to redeem it. Eligibility and minimum-spend rules are checked there.</p>
+              <p className="member-promo-disclaimer">Online code redemption is not available yet. Ask gym staff how to use this offer.</p>
             </article>
           )}
         </div>

@@ -22,10 +22,11 @@ export async function GET(request: NextRequest) {
       prisma.membership.findFirst({ where: { memberId: member.profileId },
         orderBy: { createdAt: 'desc' }, select: { planName: true, status: true, endsAt: true, cancelledAt: true } }),
       prisma.paymentTransaction.findFirst({ where: { memberId: member.profileId },
-        orderBy: { createdAt: 'desc' }, select: { amount: true, status: true, createdAt: true } }),
+        orderBy: { createdAt: 'desc' }, select: { type: true, amount: true, status: true, createdAt: true, paidAt: true } }),
       prisma.coachingSession.findMany({ where: { memberId: member.profileId, startsAt: { gte: new Date() },
         status: { in: ['Pending', 'Confirmed'] } }, orderBy: { startsAt: 'asc' }, take: 4,
-        select: { id: true, startsAt: true, type: true, status: true,
+        select: { id: true, startsAt: true, type: true, status: true, amount: true,
+          transactionItem: { select: { transaction: { select: { status: true } } } },
           trainer: { select: { profile: { select: { gymUser: { select: { name: true } } } } } } },
       }),
       prisma.studentVerification.findFirst({ where: { memberId: member.profileId },
@@ -37,11 +38,13 @@ export async function GET(request: NextRequest) {
         status: ['Active', 'Expiring'].includes(membership.status) && membership.endsAt <= new Date()
           ? 'Expired' : membership.status,
         endsAt: membership.endsAt.toISOString(), cancellationScheduled: membership.cancelledAt !== null } : null,
-      latestPayment: latestPayment ? { amount: Number(latestPayment.amount), status: latestPayment.status,
-        at: latestPayment.createdAt.toISOString() } : null,
+      latestPayment: latestPayment ? { type: latestPayment.type, amount: Number(latestPayment.amount), status: latestPayment.status,
+        at: (latestPayment.paidAt ?? latestPayment.createdAt).toISOString() } : null,
       studentVerificationStatus: studentVerification?.status ?? null,
       upcomingSessions: upcomingSessions.map(session => ({ id: session.id, startsAt: session.startsAt.toISOString(),
-        type: session.type, status: session.status, trainer: session.trainer.profile.gymUser.name })),
+        type: session.type, status: session.status, amount: Number(session.amount),
+        paymentStatus: session.transactionItem?.transaction.status ?? null,
+        trainer: session.trainer.profile.gymUser.name })),
     });
   } catch {
     return Response.json({ code: 'UNAVAILABLE' }, { status: 503 });

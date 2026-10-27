@@ -116,6 +116,7 @@ export interface Session {
   status: SessionStatus;
   paid: boolean;
   amount: number;
+  paymentStatus?: TxnStatus | null;
   rated?: boolean;
   rating?: number;
 }
@@ -348,8 +349,11 @@ export interface ViewProps {
   setPromotionRedemptions?: Setter<PromotionRedemption[]>;
   preferredPaymentMethod?: string;
   setPreferredPaymentMethod?: Setter<string>;
+  onSavePaymentMethod?: (method: 'GCash' | 'Cash') => Promise<void>;
+  transactionsAreMine?: boolean;
   qrDestinations?: QrDestination[];
   setQrDestinations?: Setter<QrDestination[]>;
+  memberQrUrl?: string | null;
   // Lets a member permanently remove their own account. App-level because the
   // session can't outlive the record it's signed in as.
   onDeleteAccount?: (userId: string) => void;

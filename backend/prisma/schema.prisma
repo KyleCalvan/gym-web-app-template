@@ -210,6 +210,9 @@ model MemberProfile {
   weightKg               Decimal?              @db.Decimal(6, 2)
   heightCm               Decimal?              @db.Decimal(5, 2)
   preferredPaymentMethod PaymentMethod         @default(GCash)
+  qrImage                Bytes?
+  qrMimeType             String?
+  qrUpdatedAt            DateTime?             @db.Timestamptz(3)
   memberships            Membership[]
   transactions           PaymentTransaction[]
   coachingSessions       CoachingSession[]

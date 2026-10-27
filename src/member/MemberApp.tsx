@@ -5,16 +5,17 @@ import Sidebar from '../shared/shell/Sidebar';
 import { Topbar } from '../shared/shell/Topbar';
 import { ProfileMenu } from '../shared/shell/ProfileMenu';
 import { useToast } from '../shared/hooks/useToast';
-import type { Member, Notification, NotifPrefs, Plan, Session, Trainer, TrainerAvailability, Transaction, ViewProps } from '../types';
+import type { Member, Notification, NotifPrefs, Plan, Promotion, PromotionRedemption, QrDestination, Session, Trainer, TrainerAvailability, Transaction, TxnStatus, ViewProps } from '../types';
 import MemberDashboard from './MemberDashboard';
 import { MEMBER_NAV, MEMBER_VIEWS } from './index';
 
 type Overview = {
   joinedAt: string;
   membership: { planName: string; status: string; endsAt: string; cancellationScheduled: boolean } | null;
-  latestPayment: { amount: number; status: string; at: string } | null;
+  latestPayment: { type: string; amount: number; status: string; at: string } | null;
   studentVerificationStatus: string | null;
-  upcomingSessions: { id: string; startsAt: string; type: string; status: string; trainer: string | null }[];
+  upcomingSessions: { id: string; startsAt: string; type: string; status: string;
+    amount: number; paymentStatus: TxnStatus | null; trainer: string | null }[];
 };
 
 function sessionDate(value: string) {
@@ -33,6 +34,22 @@ export default function MemberApp({ name, email, phone, profileId, onLogout, pen
   const [trainers, setTrainers] = useState<Trainer[]>([]);
   const [trainerAvailability, setTrainerAvailability] = useState<TrainerAvailability[]>([]);
   const [bookingSlots, setBookingSlots] = useState<NonNullable<ViewProps['bookingSlots']>>([]);
+  const [promotions, setPromotions] = useState<Promotion[]>([]);
+  const [promotionRedemptions, setPromotionRedemptions] = useState<PromotionRedemption[]>([]);
+  const [promotionsAsOf, setPromotionsAsOf] = useState('');
+  const [paymentHistory, setPaymentHistory] = useState<Transaction[]>([]);
+  const [preferredPaymentMethod, setPreferredPaymentMethod] = useState<'GCash' | 'Cash'>('GCash');
+  const [paymentsLoading, setPaymentsLoading] = useState(false);
+  const [paymentsError, setPaymentsError] = useState('');
+  const [paymentRefresh, setPaymentRefresh] = useState(0);
+  const [qrDestinations, setQrDestinations] = useState<QrDestination[]>([]);
+  const [memberQrUrl, setMemberQrUrl] = useState<string | null>(null);
+  const [qrError, setQrError] = useState('');
+  const [qrLoading, setQrLoading] = useState(false);
+  const [qrRefresh, setQrRefresh] = useState(0);
+  const [promotionError, setPromotionError] = useState('');
+  const [promotionsLoading, setPromotionsLoading] = useState(true);
+  const [promotionRefresh, setPromotionRefresh] = useState(0);
   const [error, setError] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [view, setView] = useState('dashboard');
@@ -58,7 +75,7 @@ export default function MemberApp({ name, email, phone, profileId, onLogout, pen
       .catch(() => setError('Your member overview could not be loaded. Please refresh.'));
   }
 
-  useEffect(() => { refresh(); }, []);
+  useEffect(() => { if (view === 'dashboard') refresh(); }, [view]);
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const result = params.get('checkout');
@@ -139,11 +156,77 @@ export default function MemberApp({ name, email, phone, profileId, onLogout, pen
     return () => { active = false; };
   }, [view]);
   useEffect(() => {
+    if (view !== 'promotions' && view !== 'dashboard') return;
+    let active = true;
+    setPromotionsLoading(true);
+    setPromotionError('');
+    fetch('/api/member/promotions', { cache: 'no-store' }).then(async response => {
+      if (!response.ok) throw new Error('Promotions could not be loaded.');
+      return response.json() as Promise<{ asOf: string; promotions: Promotion[]; promotionRedemptions: PromotionRedemption[] }>;
+    }).then(result => {
+      if (!active) return;
+      setPromotions(result.promotions);
+      setPromotionRedemptions(result.promotionRedemptions);
+      setPromotionsAsOf(result.asOf);
+    }).catch(() => {
+      if (active) setPromotionError('Promotions could not be loaded. Please try again.');
+    }).finally(() => { if (active) setPromotionsLoading(false); });
+    return () => { active = false; };
+  }, [view, promotionRefresh]);
+  useEffect(() => {
+    if (view !== 'promotions' && view !== 'dashboard') return;
+    const refreshOnFocus = () => setPromotionRefresh(count => count + 1);
+    window.addEventListener('focus', refreshOnFocus);
+    return () => window.removeEventListener('focus', refreshOnFocus);
+  }, [view]);
+  useEffect(() => {
+    if (view !== 'payments') return;
+    let active = true;
+    setPaymentsLoading(true);
+    setPaymentsError('');
+    fetch('/api/member/payments', { cache: 'no-store' }).then(async response => {
+      if (!response.ok) throw new Error('Payment history could not be loaded.');
+      return response.json() as Promise<{ transactions: Transaction[]; preferredPaymentMethod: 'GCash' | 'Cash' }>;
+    }).then(result => {
+      if (!active) return;
+      setPaymentHistory(result.transactions);
+      setPreferredPaymentMethod(result.preferredPaymentMethod);
+    }).catch(() => {
+      if (active) setPaymentsError('Payment history could not be loaded. Please try again.');
+    }).finally(() => { if (active) setPaymentsLoading(false); });
+    return () => { active = false; };
+  }, [view, paymentRefresh]);
+  useEffect(() => {
+    if (view !== 'chat') return;
+    let active = true;
+    setQrLoading(true);
+    setQrError('');
+    fetch('/api/member/qr', { cache: 'no-store' }).then(async response => {
+      if (!response.ok) throw new Error('Gym links and QR could not be loaded.');
+      return response.json() as Promise<{ destinations: QrDestination[]; memberQrUpdatedAt: string | null }>;
+    }).then(result => {
+      if (!active) return;
+      setQrDestinations(result.destinations);
+      setMemberQrUrl(result.memberQrUpdatedAt
+        ? `/api/member/qr?image=1&version=${encodeURIComponent(result.memberQrUpdatedAt)}` : null);
+    }).catch(() => { if (active) setQrError('Gym links and QR could not be loaded. Please retry.'); })
+      .finally(() => { if (active) setQrLoading(false); });
+    return () => { active = false; };
+  }, [view, qrRefresh]);
+  useEffect(() => {
+    if (view !== 'chat') return;
+    const refreshOnFocus = () => setQrRefresh(count => count + 1);
+    window.addEventListener('focus', refreshOnFocus);
+    return () => window.removeEventListener('focus', refreshOnFocus);
+  }, [view]);
+  useEffect(() => {
     document.documentElement.dataset.theme = theme;
     try { localStorage.setItem('vinathletics-theme', theme); } catch { /* Theme remains active for this visit. */ }
   }, [theme]);
 
   function handleNav(nextView: string) {
+    if (nextView === 'payments') setPaymentsLoading(true);
+    if (nextView === 'promotions') setPromotionsLoading(true);
     setView(nextView);
     setProfileOpen(false);
     setNotificationsOpen(false);
@@ -207,6 +290,16 @@ export default function MemberApp({ name, email, phone, profileId, onLogout, pen
     setOverview(previous => previous ? { ...previous, membership: data.membership! } : previous);
   }
 
+  async function savePreferredPaymentMethod(method: 'GCash' | 'Cash') {
+    const response = await fetch('/api/member/payments', {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ preferredPaymentMethod: method }),
+    });
+    if (!response.ok) throw new Error('Payment preference could not be saved. Please try again.');
+    const result: { preferredPaymentMethod: 'GCash' | 'Cash' } = await response.json();
+    setPreferredPaymentMethod(result.preferredPaymentMethod);
+  }
+
   const user = { id: profileId, name, role: 'Member' };
   const member = {
     id: profileId, name, email, phone,
@@ -221,9 +314,11 @@ export default function MemberApp({ name, email, phone, profileId, onLogout, pen
     date: sessionDate(session.startsAt),
     time: new Intl.DateTimeFormat('en-PH', { timeZone: 'Asia/Manila', timeStyle: 'short' }).format(new Date(session.startsAt)),
     type: session.type, status: session.status,
+    amount: session.amount, paid: session.paymentStatus === 'Paid',
+    paymentStatus: session.paymentStatus,
   })) ?? [];
-  const transactions = overview?.latestPayment ? [{
-    id: 'latest-payment', member: name, type: 'Payment', amount: overview.latestPayment.amount,
+  const overviewTransactions = overview?.latestPayment ? [{
+    id: 'latest-payment', member: name, type: overview.latestPayment.type, amount: overview.latestPayment.amount,
     status: overview.latestPayment.status, method: 'Not recorded',
     date: new Intl.DateTimeFormat('en-PH', { dateStyle: 'medium', timeZone: 'Asia/Manila' }).format(new Date(overview.latestPayment.at)),
   }] : [];
@@ -235,10 +330,10 @@ export default function MemberApp({ name, email, phone, profileId, onLogout, pen
     members: [member as Member], setMembers: ignoreChange,
     trainers, setTrainers: ignoreChange,
     plans, setPlans: ignoreChange,
-    transactions: transactions as Transaction[], setTransactions: ignoreChange,
+    transactions: view === 'payments' ? paymentHistory : overviewTransactions as Transaction[], setTransactions: ignoreChange,
     sessions: sessions as Session[], setSessions: ignoreChange,
     trainerAvailability, setTrainerAvailability: ignoreChange, bookingSlots,
-    promotions: [], setPromotions: ignoreChange,
+    promotions: view === 'promotions' ? promotions : [], setPromotions: ignoreChange,
     staff: [], setStaff: ignoreChange, admins: [], setAdmins: ignoreChange,
     superadmins: [], setSuperadmins: ignoreChange,
     notifications, setNotifications, bookings: sessions as Session[], setBookings: ignoreChange,
@@ -246,10 +341,11 @@ export default function MemberApp({ name, email, phone, profileId, onLogout, pen
     checkInHistory: [], setCheckInHistory: ignoreChange,
     notifPrefs, setNotifPrefs, auditLog: [], setAuditLog: ignoreChange,
     activeSessions: [], setActiveSessions: ignoreChange, currentSessionId: null,
-    toast: fireToast, today: '', addAudit: () => {},
-    promotionRedemptions: [], setPromotionRedemptions: ignoreChange,
-    preferredPaymentMethod: 'GCash', setPreferredPaymentMethod: ignoreChange,
-    qrDestinations: [], setQrDestinations: ignoreChange,
+    toast: fireToast, today: promotionsAsOf, addAudit: () => {},
+    promotionRedemptions: view === 'promotions' ? promotionRedemptions : [], setPromotionRedemptions: ignoreChange,
+    preferredPaymentMethod, setPreferredPaymentMethod: ignoreChange,
+    onSavePaymentMethod: savePreferredPaymentMethod, transactionsAreMine: true,
+    qrDestinations, memberQrUrl, setQrDestinations: ignoreChange,
     onDeleteAccount: ignoreChange, emptyDefaults: true, onPlanCheckout: startPlanCheckout,
     onPlanCancel: cancelPlan,
     onCoachingCheckout: startCoachingCheckout,
@@ -272,14 +368,23 @@ export default function MemberApp({ name, email, phone, profileId, onLogout, pen
         {view === 'dashboard' && error && <p role="alert">{error} <button type="button" onClick={refresh}>Retry</button></p>}
         {view === 'dashboard' && !overview && !error && <p role="status">Loading your member dashboard…</p>}
         {view === 'dashboard' && overview && <MemberDashboard members={[member]} currentUserId={member.id}
-          sessions={sessions} bookings={sessions} transactions={transactions}
-          trainers={[]} trainerAvailability={[]} bookingSlots={[]} plans={[]} promotions={[]} promotionRedemptions={[]}
+          sessions={sessions} bookings={sessions} transactions={overviewTransactions}
+          trainers={[]} trainerAvailability={[]} bookingSlots={[]} plans={[]}
+          promotions={promotions} promotionRedemptions={promotionRedemptions}
           setSessions={() => {}} setBookings={() => {}} setTransactions={() => {}}
           setPromotions={() => {}} setPromotionRedemptions={() => {}}
-          onNav={handleNav} onBook={() => fireToast('Online booking is not available yet.')}
-          paymentKnown={false} promotionsAvailable={false}
-          toast={fireToast} today={''} addAudit={() => {}} preferredPaymentMethod={''} />}
-        {view !== 'dashboard' && ViewComp && <ViewComp {...viewProps} />}
+          onNav={handleNav} onBook={() => handleNav('coaching')}
+          paymentKnown promotionsLoading={promotionsLoading} promotionsError={promotionError}
+          toast={fireToast} today={promotionsAsOf} addAudit={() => {}} preferredPaymentMethod={preferredPaymentMethod} />}
+        {view === 'promotions' && promotionError && <p role="alert">{promotionError} <button type="button" onClick={() => setPromotionRefresh(count => count + 1)}>Retry</button></p>}
+        {view === 'promotions' && promotionsLoading && <p role="status">Loading promotions…</p>}
+        {view === 'payments' && paymentsError && <p role="alert">{paymentsError} <button type="button" onClick={() => setPaymentRefresh(count => count + 1)}>Retry</button></p>}
+        {view === 'payments' && paymentsLoading && <p role="status">Loading payment history…</p>}
+        {view === 'chat' && qrError && <p role="alert">{qrError} <button type="button" onClick={() => setQrRefresh(count => count + 1)}>Retry</button></p>}
+        {view === 'chat' && qrLoading && <p role="status">Loading gym links and QR…</p>}
+        {view !== 'dashboard' && ViewComp && !(view === 'promotions' && (promotionsLoading || promotionError))
+          && !(view === 'payments' && (paymentsLoading || paymentsError))
+          && !(view === 'chat' && (qrLoading || qrError)) && <ViewComp {...viewProps} />}
       </div>
     </div>
     <ProfileMenu role="member" availableRoles={['member']} onSwitchRole={() => {}}
