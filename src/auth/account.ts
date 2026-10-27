@@ -48,7 +48,10 @@ export async function establishGoogleAccount(profile: {
       // fresh-authentication flow. Never let NextAuth auto-link a new subject.
       if (context?.accountId && context.accountId !== account?.id) throw new IdentityDenied();
       if (account?.status === 'disabled') throw new IdentityDenied();
-      if (account && account.email !== email) throw new IdentityConflict();
+      // A verified member email change does not change the linked Google subject.
+      const hasVerifiedChangedEmail = account?.emailVerifiedProvider === 'member-email-change'
+        && account.emailVerifiedSubject === account.email;
+      if (account && account.email !== email && !hasVerifiedChangedEmail) throw new IdentityConflict();
       if (!account) {
         const existingAuth = await tx.authUser.findUnique({ where: { email } });
         const existingGym = await tx.user.findUnique({ where: { email } });
@@ -82,7 +85,8 @@ export async function establishGoogleAccount(profile: {
       const existingMember = account.assignedRoles.find(assignment => assignment.role === 'member');
       if (existingMember) await tx.memberProfile.upsert({ where: { profileId: existingMember.profileId },
         create: { profileId: existingMember.profileId }, update: {} });
-      if (!account.establishedAt || !account.emailVerified || account.emailVerifiedProvider !== 'google' || account.emailVerifiedSubject !== profile.sub) {
+      if (!account.establishedAt || !account.emailVerified || (!hasVerifiedChangedEmail
+        && (account.emailVerifiedProvider !== 'google' || account.emailVerifiedSubject !== profile.sub))) {
         const now = new Date();
         await tx.authUser.update({ where: { id: account.id }, data: {
           establishedAt: account.establishedAt ?? now, emailVerified: now,

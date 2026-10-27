@@ -64,6 +64,16 @@ export default function MemberApp({ name, email, phone, profileId, onLogout, pen
   const [toastNode, fireToast] = useToast();
   const pillRef = useRef<HTMLButtonElement>(null);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const emailChange = params.get('email-change');
+    if (!emailChange) return;
+    fireToast(emailChange === 'updated' ? 'Your email address has been updated.'
+      : 'The email verification link is invalid or expired. Please request a new one.');
+    params.delete('email-change');
+    window.history.replaceState(null, '', `${window.location.pathname}${params.size ? `?${params}` : ''}`);
+  }, [fireToast]);
+
   function refresh() {
     setError('');
     fetch('/api/member/overview', { cache: 'no-store' })
@@ -300,6 +310,15 @@ export default function MemberApp({ name, email, phone, profileId, onLogout, pen
     setPreferredPaymentMethod(result.preferredPaymentMethod);
   }
 
+  async function saveMemberEmail(updatedEmail: string) {
+    const response = await fetch('/api/member/email', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: updatedEmail }),
+    });
+    const result: { message?: string } = await response.json();
+    if (!response.ok) throw new Error(result.message || 'Verification email could not be sent.');
+  }
+
   const user = { id: profileId, name, role: 'Member' };
   const member = {
     id: profileId, name, email, phone,
@@ -345,6 +364,7 @@ export default function MemberApp({ name, email, phone, profileId, onLogout, pen
     promotionRedemptions: view === 'promotions' ? promotionRedemptions : [], setPromotionRedemptions: ignoreChange,
     preferredPaymentMethod, setPreferredPaymentMethod: ignoreChange,
     onSavePaymentMethod: savePreferredPaymentMethod, transactionsAreMine: true,
+    onSaveMemberEmail: saveMemberEmail,
     qrDestinations, memberQrUrl, setQrDestinations: ignoreChange,
     onDeleteAccount: ignoreChange, emptyDefaults: true, onPlanCheckout: startPlanCheckout,
     onPlanCancel: cancelPlan,

@@ -15,7 +15,7 @@ export function verificationMailConfigured() {
   return smtpConfig() !== null;
 }
 
-export async function sendVerificationEmail(email: string, token: string) {
+async function sendMail(email: string, subject: string, text: string) {
   const config = smtpConfig();
   if (!config) throw new Error('SMTP verification email is not configured');
   const transport = nodemailer.createTransport({
@@ -24,13 +24,24 @@ export async function sendVerificationEmail(email: string, token: string) {
     auth: { user: config.user, pass: config.password },
     connectionTimeout: 10_000, greetingTimeout: 10_000, socketTimeout: 10_000,
   });
-  const link = verificationUrl(token);
   const result = await transport.sendMail({
     from: config.from, to: email,
-    subject: 'Verify your VinAthletics account',
-    text: `Open this link to verify your email and access your member dashboard:\n\n${link}\n\nThis link expires in 24 hours. If you did not register, ignore this message.`,
+    subject, text,
   });
   if (!result.accepted.some(address => (typeof address === 'string' ? address : address.address).toLowerCase() === email)) {
     throw new Error('SMTP server did not accept the verification recipient');
   }
+}
+
+export async function sendVerificationEmail(email: string, token: string) {
+  const link = verificationUrl(token);
+  return sendMail(email, 'Verify your VinAthletics account',
+    `Open this link to verify your email and access your member dashboard:\n\n${link}\n\nThis link expires in 24 hours. If you did not register, ignore this message.`);
+}
+
+export async function sendEmailChangeVerification(email: string, token: string) {
+  const url = new URL('/api/member/email', process.env.NEXTAUTH_URL ?? 'http://localhost:3000');
+  url.searchParams.set('token', token);
+  return sendMail(email, 'Confirm your new VinAthletics email address',
+    `Open this link to confirm your new email address:\n\n${url}\n\nThis link expires in 24 hours. If you did not request this change, ignore this message.`);
 }

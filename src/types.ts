@@ -299,6 +299,7 @@ export interface ViewProps {
   onCoachingCheckoutCancel?: (reference: string) => Promise<'Pending' | 'Paid' | 'Failed'>;
   studentVerified?: boolean;
   onProfilePhotoChange?: (url: string) => void;
+  onSaveMemberEmail?: (email: string) => Promise<void>;
   onNav: (id: string, action?: string) => void;
   initialAction?: string;
   role: Role;
