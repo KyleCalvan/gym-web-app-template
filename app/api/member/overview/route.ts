@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     });
     const member = assignment?.profile.member;
     if (!member) return Response.json({ code: 'MEMBER_UNAVAILABLE' }, { status: 404 });
-    const [membership, latestPayment, upcomingSessions] = await Promise.all([
+    const [membership, latestPayment, upcomingSessions, studentVerification] = await Promise.all([
       prisma.membership.findFirst({ where: { memberId: member.profileId },
         orderBy: { createdAt: 'desc' }, select: { planName: true, status: true, endsAt: true } }),
       prisma.paymentTransaction.findFirst({ where: { memberId: member.profileId },
@@ -28,6 +28,8 @@ export async function GET(request: NextRequest) {
         select: { id: true, startsAt: true, type: true, status: true,
           trainer: { select: { profile: { select: { gymUser: { select: { name: true } } } } } } },
       }),
+      prisma.studentVerification.findFirst({ where: { memberId: member.profileId },
+        orderBy: { submittedAt: 'desc' }, select: { status: true } }),
     ]);
     return Response.json({
       joinedAt: member.joinedAt.toISOString(),
@@ -35,6 +37,7 @@ export async function GET(request: NextRequest) {
         endsAt: membership.endsAt.toISOString() } : null,
       latestPayment: latestPayment ? { amount: Number(latestPayment.amount), status: latestPayment.status,
         at: latestPayment.createdAt.toISOString() } : null,
+      studentVerificationStatus: studentVerification?.status ?? null,
       upcomingSessions: upcomingSessions.map(session => ({ id: session.id, startsAt: session.startsAt.toISOString(),
         type: session.type, status: session.status, trainer: session.trainer.profile.gymUser.name })),
     });

@@ -307,6 +307,7 @@ enum PaymentState {
 model PaymentTransaction {
   id                   String                @id @default(cuid())
   reference            String                @unique
+  paymongoCheckoutId   String?               @unique
   receiptNumber        String?               @unique
   // A null member identifies a Walk-in Customer; retain the receipt name snapshot.
   memberId             String?

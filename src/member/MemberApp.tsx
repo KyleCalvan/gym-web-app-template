@@ -13,6 +13,7 @@ type Overview = {
   joinedAt: string;
   membership: { planName: string; status: string; endsAt: string } | null;
   latestPayment: { amount: number; status: string; at: string } | null;
+  studentVerificationStatus: string | null;
   upcomingSessions: { id: string; startsAt: string; type: string; status: string; trainer: string | null }[];
 };
 
@@ -56,6 +57,48 @@ export default function MemberApp({ name, email, phone, profileId, onLogout, pen
 
   useEffect(() => { refresh(); }, []);
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const result = params.get('checkout');
+    const reference = params.get('reference');
+    if (!result || !reference) return;
+    setView('membership');
+    if (result === 'cancelled') {
+      window.history.replaceState(null, '', '/account');
+      fireToast('Checkout was not completed. Your membership has not changed.');
+      return;
+    }
+    let cancelled = false;
+    async function verify() {
+      for (let attempt = 0; attempt < 5 && !cancelled; attempt += 1) {
+        try {
+          const response = await fetch(`/api/member/checkout/status?reference=${encodeURIComponent(reference!)}`, { cache: 'no-store' });
+          const data: { status?: string; error?: string } = await response.json();
+          if (cancelled) return;
+          if (!response.ok) throw new Error(data.error || 'Payment could not be verified.');
+          if (data.status === 'Paid') {
+            window.history.replaceState(null, '', '/account');
+            refresh();
+            fireToast('Test payment confirmed. Your membership is active.');
+            return;
+          }
+          if (data.status === 'Failed') {
+            fireToast('Checkout failed. Your membership has not changed.');
+            return;
+          }
+        } catch (error) {
+          if (attempt === 4) {
+            fireToast(error instanceof Error ? error.message : 'Payment could not be verified.');
+            return;
+          }
+        }
+        if (attempt < 4) await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+      if (!cancelled) fireToast('Payment is still pending. Refresh this page to check again.');
+    }
+    void verify();
+    return () => { cancelled = true; };
+  }, []);
+  useEffect(() => {
     let active = true;
     fetch('/api/gym-plans').then(async response => {
       if (!response.ok) return;
@@ -74,6 +117,16 @@ export default function MemberApp({ name, email, phone, profileId, onLogout, pen
     setProfileOpen(false);
     setNotificationsOpen(false);
     setIsSidebarOpen(false);
+  }
+
+  async function startPlanCheckout(planName: string) {
+    const response = await fetch('/api/member/checkout', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ planName }),
+    });
+    const data: { checkoutUrl?: string; error?: string } = await response.json();
+    if (!response.ok || !data.checkoutUrl) throw new Error(data.error || 'Checkout could not start.');
+    window.location.assign(data.checkoutUrl);
   }
 
   const user = { id: profileId, name, role: 'Member' };
@@ -118,7 +171,8 @@ export default function MemberApp({ name, email, phone, profileId, onLogout, pen
     promotionRedemptions: [], setPromotionRedemptions: ignoreChange,
     preferredPaymentMethod: 'GCash', setPreferredPaymentMethod: ignoreChange,
     qrDestinations: [], setQrDestinations: ignoreChange,
-    onDeleteAccount: ignoreChange, readOnly: true,
+    onDeleteAccount: ignoreChange, emptyDefaults: true, onPlanCheckout: startPlanCheckout,
+    studentVerified: overview?.studentVerificationStatus === 'Verified',
   };
 
   return <div className="app-shell" aria-busy={pending}>
@@ -142,10 +196,7 @@ export default function MemberApp({ name, email, phone, profileId, onLogout, pen
           onNav={handleNav} onBook={() => fireToast('Online booking is not available yet.')}
           paymentKnown={false} promotionsAvailable={false}
           toast={fireToast} today={''} addAudit={() => {}} preferredPaymentMethod={''} />}
-        {view !== 'dashboard' && ViewComp && <>
-          <p className="member-readonly-note" role="note">This page is a read-only preview. Changes and purchases are not saved yet.</p>
-          <div inert><ViewComp {...viewProps} /></div>
-        </>}
+        {view !== 'dashboard' && ViewComp && <ViewComp {...viewProps} />}
       </div>
     </div>
     <ProfileMenu role="member" availableRoles={['member']} onSwitchRole={() => {}}

@@ -21,6 +21,7 @@ const PAYMENT_METHODS = [
   { value: 'GCash', label: 'GCash' },
   { value: 'Cash', label: 'Cash on-site' },
 ];
+const PLAN_PAYMENT_METHOD = 'GCash';
 
 function PlanComparisonTable({ currentPlan, plans, member, promotions, redemptions, asOf }) {
   return (
@@ -181,7 +182,8 @@ function PlanComparisonTable({ currentPlan, plans, member, promotions, redemptio
 
 function MemberMembership({
   members, setMembers, plans, promotions, promotionRedemptions, setPromotions, setPromotionRedemptions,
-  setTransactions, currentUserId, today, toast, addAudit, preferredPaymentMethod = 'GCash', readOnly = false,
+  setTransactions, currentUserId, today, toast, addAudit, preferredPaymentMethod = 'GCash', emptyDefaults = false,
+  onPlanCheckout, studentVerified = false,
 }){
   const me = members.find(m => m.id === currentUserId) || members[0];
   const myRedemptions = useMemo(
@@ -216,6 +218,7 @@ function MemberMembership({
   const [showCancel, setShowCancel] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [showChoose, setShowChoose] = useState(false);
+  const [checkoutStarting, setCheckoutStarting] = useState(false);
   const [pickedPlan, setPickedPlan] = useState(me?.plan || 'Premium');
   const [method, setMethod] = useState(preferredPaymentMethod);
   const [paymentFlow, setPaymentFlow] = useState(null);
@@ -227,6 +230,7 @@ function MemberMembership({
   const [idPreview, setIdPreview] = useState(null);
   const [formPreview, setFormPreview] = useState(null);
   const [verificationStatus, setVerificationStatus] = useState('None');
+  const shownVerificationStatus = studentVerified ? 'Verified' : verificationStatus;
 
   const expiryDate = me?.membershipValidUntil ? new Date(`${me.membershipValidUntil.slice(0, 10)}T00:00:00`) : null;
   const remainingDays = expiryDate && !Number.isNaN(expiryDate.getTime())
@@ -278,17 +282,17 @@ function MemberMembership({
   };
 
   const beginPayment = ({ type, amount, onSuccess }) => {
-    const fees = getConfiguredPaymentFee(method, amount);
+    const fees = getConfiguredPaymentFee(PLAN_PAYMENT_METHOD, amount);
     const transaction = createSimulatedTransaction({
       member: me.name,
       type,
       amount,
-      method,
+      method: PLAN_PAYMENT_METHOD,
       date: today,
       fees,
     });
     setTransactions(prev => [transaction, ...prev]);
-    setPaymentFlow({ transactionId: transaction.id, method, amount, fees, onSuccess });
+    setPaymentFlow({ transactionId: transaction.id, method: PLAN_PAYMENT_METHOD, amount, fees, onSuccess });
   };
 
   const updatePaymentState = (paymentState) => {
@@ -311,11 +315,23 @@ function MemberMembership({
     setPaymentFlow(null);
   };
 
+  const startTestCheckout = async (planName) => {
+    if (checkoutStarting) return;
+    setCheckoutStarting(true);
+    try {
+      await onPlanCheckout(planName);
+    } catch (error) {
+      toast(error instanceof Error ? error.message : 'Checkout could not start.');
+      setCheckoutStarting(false);
+    }
+  };
+
   // Renewal is preserved on the current-plan card and inside the "Choose plan" modal,
   // so members can still extend their plan without a dedicated "Switch Plan" button.
   const renew = () => {
     const plan = currentPlan;
     if (!plan) return;
+    if (onPlanCheckout) { void startTestCheckout(plan.name); return; }
     const baseDate = expiryDate && remainingDays !== null && remainingDays >= 0 ? expiryDate : new Date();
     const monthsToAdd = planDurationMonths(plan);
     const nextExpiry = new Date(baseDate);
@@ -345,11 +361,16 @@ function MemberMembership({
   const choosePlan = (e) => {
     e?.preventDefault?.();
     if (pickedPlan === me.plan) { toast('That is already your current plan'); setShowChoose(false); return; }
-    if (pickedPlan.toLowerCase().includes('student') && verificationStatus !== 'Verified') {
+    if (pickedPlan.toLowerCase().includes('student') && !studentVerified && verificationStatus !== 'Verified') {
+      if (onPlanCheckout) {
+        toast('Student verification must be approved before checkout. Please contact the gym.');
+        return;
+      }
       setShowVerify(true); setShowChoose(false); return;
     }
     const newPlan = plans.find(p => p.name === pickedPlan);
     if (!newPlan) return;
+    if (onPlanCheckout) { void startTestCheckout(newPlan.name); return; }
     const discount = bestDiscountFor(newPlan.name, newPlan.price);
     const amount = discount ? discount.discountedPrice : newPlan.price;
     const monthsToAdd = planDurationMonths(newPlan);
@@ -413,13 +434,6 @@ function MemberMembership({
     setShowVerify(false);
   };
 
-  const planOptions = useMemo(() => (plans || []).map((p) => ({
-    value: p.name,
-    label: p.name,
-    description: `${peso(p.price)} / ${p.period} · ${p.sessionLimit === 'unlimited' ? 'Unlimited' : `${p.sessionLimit} sessions`} / mo`,
-    badge: p.name === currentPlan?.name ? 'Current' : (p.featured ? 'Popular' : undefined),
-  })), [plans, currentPlan]);
-
   const paymentOptions = useMemo(() => PAYMENT_METHODS.map((m) => ({ value: m.value, label: m.label })), []);
 
   const newPlan = plans.find((p) => p.name === pickedPlan);
@@ -435,19 +449,19 @@ function MemberMembership({
           {currentPlan?.description && <p className="member-current-plan-desc">{currentPlan.description}</p>}
         </div>
         <div className="member-current-plan-meta">
-          {(!readOnly || me?.plan) && <Badge status={me?.status || 'Active'} />}
+          {(!emptyDefaults || me?.plan) && <Badge status={me?.status || 'Active'} />}
           <span className="member-plan-price">
             {currentDiscount
               ? <span className="price-with-discount"><s className="member-plan-price-old">{peso(currentPlan.price)}</s><strong>{peso(currentPriceToPay)}</strong><span className="member-plan-price-saved">Save {peso(currentDiscount.savings)}</span></span>
-              : readOnly && !currentPlan ? '—' : <>{peso(currentPlan?.price || 0)}<small> / {currentPlan?.period || 'mo'}</small></>}
+              : emptyDefaults && !currentPlan ? '—' : <>{peso(currentPlan?.price || 0)}<small> / {currentPlan?.period || 'mo'}</small></>}
           </span>
           {currentDiscount && <span className="member-plan-price-code mono">Code {currentDiscount.promo.code}</span>}
-          {verificationStatus !== 'None' && <Badge status={verificationStatus === 'Verified' ? 'Active' : 'Pending'}>Student: {verificationStatus}</Badge>}
+          {shownVerificationStatus !== 'None' && <Badge status={shownVerificationStatus === 'Verified' ? 'Active' : 'Pending'}>Student: {shownVerificationStatus}</Badge>}
         </div>
         {isFrozen && <div className="member-frozen-note">Your membership is frozen. Cancellation and plan changes are paused until an admin unfreezes your account.</div>}
         <div className="member-current-plan-actions">
-          <button className="btn btn-signal btn-sm" onClick={renew} disabled={isFrozen}>Renew at current terms</button>
-          <button className="btn btn-outline btn-sm" onClick={() => setShowCancel(true)} disabled={isFrozen}>Cancel Plan</button>
+          <button className="btn btn-signal btn-sm" onClick={renew} disabled={isFrozen || !currentPlan || checkoutStarting}>Renew at current terms</button>
+          <button className="btn btn-outline btn-sm" onClick={() => setShowCancel(true)} disabled={isFrozen || !currentPlan}>Cancel Plan</button>
         </div>
       </section>
 
@@ -510,7 +524,7 @@ function MemberMembership({
                 {p.terms && <p className="plan-card-terms"><span className="plan-card-label">Terms</span>{p.terms}</p>}
                 <button
                   className={"btn btn-sm btn-block " + (isCurrent ? 'btn-outline' : 'btn-signal')}
-                  disabled={isCurrent}
+                  disabled={isCurrent || p.status !== 'Active' || checkoutStarting}
                   onClick={() => { setPickedPlan(p.name); setShowChoose(true); }}
                 >
                   {isCurrent ? 'Current plan' : <><span>Choose {p.name}</span> <ArrowRight size={14} aria-hidden="true" /></>}
@@ -544,23 +558,12 @@ function MemberMembership({
                 </div>
               )}
               <Field label="Plan">
-                <Dropdown
-                  value={pickedPlan}
-                  onChange={setPickedPlan}
-                  options={planOptions}
-                  ariaLabel="Select a plan"
-                  fullWidth
-                />
+                <input type="text" className="form-control" value={newPlan.name} readOnly aria-label="Selected plan" />
               </Field>
               <Field label="Payment method">
-                <Dropdown
-                  value={method}
-                  onChange={setMethod}
-                  options={paymentOptions}
-                  ariaLabel="Select a payment method"
-                  fullWidth
-                />
+                <input type="text" className="form-control" value={PLAN_PAYMENT_METHOD} readOnly aria-label="Payment method" />
               </Field>
+              {onPlanCheckout && <p role="note" className="muted">PayMongo test checkout only. No real payment will be charged. This pays for one plan term; automatic renewal is not enabled.</p>}
               <div className="member-promo-redeem-box" aria-label="Redeem a promotion code for this plan">
                 <div className="member-promo-redeem-intro">
                   <Tag size={18} aria-hidden="true" />
@@ -575,7 +578,8 @@ function MemberMembership({
                     className="form-control mono"
                     placeholder="Enter promotion code"
                     value={codeInput}
-                    onChange={(event) => { setCodeInput(event.target.value); setRedemptionStatus(null); }}
+                    maxLength={10}
+                    onChange={(event) => { setCodeInput(event.target.value.slice(0, 10)); setRedemptionStatus(null); }}
                     aria-label="Promotion code"
                   />
                   <button type="button" className="btn btn-signal" onClick={handleRedeemPromotion} disabled={!codeInput.trim()}>
@@ -596,8 +600,9 @@ function MemberMembership({
                   </div>
                 )}
               </div>
-              <button type="submit" className="btn btn-signal btn-block">
-                {newPlan.name === me.plan
+              <button type="submit" className="btn btn-signal btn-block" disabled={checkoutStarting}>
+                {checkoutStarting ? 'Opening PayMongo test checkout…' :
+                newPlan.name === me.plan
                   ? <>Confirm renewal — {chooseDiscount ? <><s style={{opacity:.6, marginRight:6}}>{peso(newPlan.price)}</s>{peso(choosePrice)}</> : peso(newPlan.price)}</>
                   : `Confirm plan change — ${chooseDiscount ? peso(choosePrice) : peso(newPlan.price)}`}
               </button>

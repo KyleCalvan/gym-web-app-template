@@ -22,7 +22,7 @@ const nowHHMM = (): string => {
 
 function MemberActivity({
   members, setMembers, sessions, currentUserId,
-  checkInHistory, setCheckInHistory, setCheckIns, toast, readOnly = false,
+  checkInHistory, setCheckInHistory, setCheckIns, toast, emptyDefaults = false,
 }) {
   const me = members.find(m => m.id === currentUserId) || members[0];
   const myId = me?.id || '';
@@ -32,7 +32,7 @@ function MemberActivity({
     [checkInHistory, myId],
   );
   const isFrozen = me?.status === 'Frozen';
-  const [metrics, setMetrics] = useState(() => ({ weightKg: me?.weightKg ?? (readOnly ? 0 : 72), heightCm: me?.heightCm ?? (readOnly ? 0 : 172) }));
+  const [metrics, setMetrics] = useState(() => ({ weightKg: me?.weightKg ?? (emptyDefaults ? 0 : 72), heightCm: me?.heightCm ?? (emptyDefaults ? 0 : 172) }));
   const [editingMetrics, setEditingMetrics] = useState(false);
   const [metricDraft, setMetricDraft] = useState(metrics);
   const heightM = metrics.heightCm / 100;
