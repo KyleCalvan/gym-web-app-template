@@ -8,6 +8,7 @@ import TermsOfUse from './auth/TermsOfUse';
 import { CURRENT_TERMS_VERSION } from './auth/terms';
 import { NameFields } from './shared/components/NameFields';
 import { emptyName, formatName } from './shared/nameParts';
+import { normalizeRegistrationPhone } from './auth/registration-phone';
 
 const OAUTH_ERRORS: Record<string, string> = {
   AccountConflict: 'Your Google identity needs review. Contact the gym to resolve the account link before trying again.',
@@ -60,14 +61,7 @@ export default function LoginPage({ defaultTab = 'login', onBack }: LoginPagePro
     if (Object.keys(errors).length) return;
     setPendingMethod('password');
     try {
-<<<<<<< HEAD
-      const demoSettings = await fetch('/api/demo-session');
-      const demoAccounts: { accounts?: { email: string }[] } = demoSettings.ok ? await demoSettings.json() : {};
-      const isDemoAccount = demoAccounts.accounts?.some(account => account.email === email.trim().toLowerCase());
-      const response = await fetch(isDemoAccount ? '/api/demo-session' : '/api/password-login', {
-=======
       const response = await fetch('/api/password-login', {
->>>>>>> 9f37355 (fixed login and verified user roles ui and added users in the database)
         method: 'POST', headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ email: email.trim(), password }),
       });
@@ -76,11 +70,7 @@ export default function LoginPage({ defaultTab = 'login', onBack }: LoginPagePro
         setError(result.message ?? result.error ?? 'Sign-in could not be completed. Please retry.');
         return;
       }
-<<<<<<< HEAD
-      window.location.assign(isDemoAccount ? '/login' : result.next === '/account' ? '/account' : '/');
-=======
       window.location.assign(result.next === '/account' ? '/account' : '/');
->>>>>>> 9f37355 (fixed login and verified user roles ui and added users in the database)
     } catch {
       setError('Could not connect to sign-in. Check your connection and retry.');
     } finally {
@@ -95,7 +85,7 @@ export default function LoginPage({ defaultTab = 'login', onBack }: LoginPagePro
     if (!regName.lastName.trim()) errors['register-lastName'] = 'Enter your last name.';
     if (formatName(regName).length > 120) errors['register-lastName'] = 'Keep your full name within 120 characters.';
     if (!EMAIL_PATTERN.test(regEmail.trim())) errors['register-email'] = 'Enter a valid email address.';
-    if (!regPhone.trim()) errors['register-phone'] = 'Enter a phone number.';
+    if (!normalizeRegistrationPhone(regPhone)) errors['register-phone'] = 'Enter a phone number with 7 to 15 digits.';
     if (regPassword.length < 8 || regPassword.length > 128) errors['register-password'] = 'Use 8 to 128 characters.';
     if (!termsRead || !agreedToTerms) errors.terms = 'Read and accept the Terms of Use to continue.';
     setFormErrors(errors);
@@ -109,7 +99,12 @@ export default function LoginPage({ defaultTab = 'login', onBack }: LoginPagePro
       });
       const result: { code?: string; message?: string; next?: string } = await response.json();
       if (!response.ok) {
-        if (result.code === 'ACCOUNT_EXISTS') setFormErrors(previous => ({ ...previous, 'register-email': result.message ?? 'This email is already registered.' }));
+        if (result.code === 'ACCOUNT_EXISTS' || result.code === 'INVALID_EMAIL')
+          setFormErrors(previous => ({ ...previous, 'register-email': result.message ?? 'Enter a valid email address.' }));
+        else if (result.code === 'INVALID_PHONE')
+          setFormErrors(previous => ({ ...previous, 'register-phone': result.message ?? 'Enter a phone number with 7 to 15 digits.' }));
+        else if (result.code === 'INVALID_PASSWORD')
+          setFormErrors(previous => ({ ...previous, 'register-password': result.message ?? 'Use a password of 8 to 128 characters.' }));
         else setError(result.message ?? 'Registration could not be completed. Please retry.');
         return;
       }
@@ -190,7 +185,7 @@ export default function LoginPage({ defaultTab = 'login', onBack }: LoginPagePro
                   aria-invalid={Boolean(formErrors['register-phone'])}
                   aria-describedby={formErrors['register-phone'] ? 'register-phone-error' : undefined}
                   value={regPhone} onChange={(e) => { setRegPhone(e.target.value); clearFieldError('register-phone'); }}
-                  onBlur={() => { if (!regPhone.trim()) setFormErrors((prev) => ({ ...prev, 'register-phone': 'Enter a phone number.' })); }} />
+                  onBlur={() => { if (!normalizeRegistrationPhone(regPhone)) setFormErrors((prev) => ({ ...prev, 'register-phone': 'Enter a phone number with 7 to 15 digits.' })); }} />
                 {formErrors['register-phone'] && <p className="field-error" id="register-phone-error" role="alert">{formErrors['register-phone']}</p>}
               </Field>
               <Field label="Password" htmlFor="register-password">
@@ -259,11 +254,7 @@ export default function LoginPage({ defaultTab = 'login', onBack }: LoginPagePro
               <Field label="Password" htmlFor="login-password">
                 <div className="password-control">
                 <input
-<<<<<<< HEAD
-                  id="login-password" className="form-control" type="password" required autoComplete="current-password"
-=======
                   id="login-password" className="form-control" type={showLoginPassword ? 'text' : 'password'} required autoComplete="current-password"
->>>>>>> 9f37355 (fixed login and verified user roles ui and added users in the database)
                   placeholder="••••••••"
                   aria-invalid={Boolean(formErrors['login-password'])}
                   aria-describedby={formErrors['login-password'] ? 'login-password-error' : undefined}
@@ -295,21 +286,11 @@ export default function LoginPage({ defaultTab = 'login', onBack }: LoginPagePro
                 {pendingMethod === 'password' ? 'Signing in…' : 'Login'}
               </button>
             </form>)}
-<<<<<<< HEAD
-          {!registering && <>
-            <div className="auth-divider"><span>or continue with</span></div>
-            <button type="button" className="auth-google-button" onClick={handleSignIn} disabled={!checked || !configured || Boolean(pendingMethod)} aria-describedby={!checked || !configured ? 'google-provider-note' : undefined}>
-              <span className="google-mark" aria-hidden="true">G</span>{pendingMethod === 'google' ? 'Connecting to Google…' : 'Continue with Google'}
-            </button>
-            {(!checked || !configured) && <p className="auth-provider-note" id="google-provider-note">{!checked ? 'Checking sign-in availability…' : 'Google sign-in is currently unavailable. Please contact the gym for assistance.'}</p>}
-          </>}
-=======
           <div className="auth-divider"><span>or continue with</span></div>
           <button type="button" className="auth-google-button" onClick={handleSignIn} disabled={!checked || !configured || Boolean(pendingMethod)} aria-describedby={!checked || !configured ? 'google-provider-note' : undefined}>
             <span className="google-mark" aria-hidden="true">G</span>{pendingMethod === 'google' ? 'Connecting to Google…' : registering ? 'Sign up with Google' : 'Continue with Google'}
           </button>
           {(!checked || !configured) && <p className="auth-provider-note" id="google-provider-note">{!checked ? 'Checking sign-in availability…' : `Google ${registering ? 'sign-up' : 'sign-in'} is currently unavailable. Please contact the gym for assistance.`}</p>}
->>>>>>> 9f37355 (fixed login and verified user roles ui and added users in the database)
           {error && <p className="field-error auth-provider-error" role="alert">{error}</p>}
         </motion.div>
       </div>

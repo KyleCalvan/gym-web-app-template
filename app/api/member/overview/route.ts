@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     const [membership, latestPayment, upcomingSessions] = await Promise.all([
       prisma.membership.findFirst({ where: { memberId: member.profileId },
         orderBy: { createdAt: 'desc' }, select: { planName: true, status: true, endsAt: true } }),
-      prisma.paymentTransaction.findFirst({ where: { memberId: member.profileId },
+      prisma.paymentTransaction.findFirst({ where: { memberId: member.profileId, isSimulated: false },
         orderBy: { createdAt: 'desc' }, select: { amount: true, status: true, createdAt: true } }),
       prisma.coachingSession.findMany({ where: { memberId: member.profileId, startsAt: { gte: new Date() },
         status: { in: ['Pending', 'Confirmed'] } }, orderBy: { startsAt: 'asc' }, take: 4,

@@ -3,8 +3,8 @@ import { StatTile, TabbedCard, Table, Badge } from '../shared';
 import { peso } from '../data.ts';
 
 function StaffDashboard({ checkIns, members, transactions }) {
-  const liveTransactions = (transactions || []).filter((t) => !t.isSimulated);
-  const todayRevenue = liveTransactions.filter(t => t.date === new Date().toLocaleDateString('en-US', {month:'short', day:'2-digit', year:'numeric'}) && t.status==='Paid').reduce((a,t)=>a+t.amount,0);
+  const recentTransactions = transactions || [];
+  const todayRevenue = recentTransactions.filter(t => !t.isSimulated && t.date === new Date().toLocaleDateString('en-US', {month:'short', day:'2-digit', year:'numeric'}) && t.status==='Paid').reduce((a,t)=>a+t.amount,0);
   const liveMembers = members.filter(m => !m.deletedAt);
   const newThisMonth = liveMembers.filter(m => {
     const d = new Date(m.joined);
@@ -21,8 +21,8 @@ function StaffDashboard({ checkIns, members, transactions }) {
         <StatTile label="Today's Revenue" value={peso(todayRevenue)}/>
       </div>
       <TabbedCard title="Recent Transactions">
-        <Table columns={['ID','Member','Type','Amount','Status']} rows={liveTransactions.slice(0,4)} renderRow={t=>(
-          <tr key={t.id}><td className="mono">{t.id}</td><td>{t.member}</td><td>{t.type}</td><td className="mono">{peso(t.amount)}</td><td><Badge status={t.status}/></td></tr>
+        <Table columns={['ID','Member','Type','Amount','Status']} rows={recentTransactions.slice(0,4)} renderRow={t=>(
+          <tr key={t.id}><td className="mono">{t.id}</td><td>{t.member}</td><td>{t.type}{t.isSimulated && <small className="payment-simulated-tag">GCash test payment</small>}</td><td className="mono">{peso(t.amount)}</td><td><Badge status={t.status}/></td></tr>
         )} />
       </TabbedCard>
     </>

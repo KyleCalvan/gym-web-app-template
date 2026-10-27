@@ -12,6 +12,7 @@ import { createSession } from '@/src/auth/sessions';
 import { CURRENT_TERMS_VERSION } from '@/src/auth/terms';
 import { issueEmailVerification } from '@/src/auth/email-verification';
 import { sendVerificationEmail, verificationMailConfigured } from '@/src/auth/verification-mail';
+import { normalizeRegistrationPhone } from '@/src/auth/registration-phone';
 
 export const runtime = 'nodejs';
 
@@ -37,14 +38,15 @@ export async function POST(request: NextRequest) {
   }
   const name = [firstName, middleName, lastName, suffix].map(value => (value as string).trim()).filter(Boolean).join(' ');
   const normalizedEmail = normalizeEmail(email as string);
-  const contactPhone = (phone as string).trim();
-  if (!(firstName as string).trim() || !(lastName as string).trim() || name.length > 120
-    || normalizedEmail.length > 254 || !/^\S+@\S+\.\S+$/.test(normalizedEmail)
-    || contactPhone.length > 25 || !/^[+\d()\s.-]+$/.test(contactPhone)
-    || (contactPhone.match(/\d/g)?.length ?? 0) < 7
-    || (password as string).length < 8 || (password as string).length > 128) {
-    return apiError(400, 'INVALID_REQUEST', 'Enter a valid name, email, phone, and password of 8 to 128 characters.', requestId);
-  }
+  const contactPhone = normalizeRegistrationPhone(phone as string);
+  if (!(firstName as string).trim() || !(lastName as string).trim() || name.length > 120)
+    return apiError(400, 'INVALID_NAME', 'Enter your first and last name, up to 120 characters total.', requestId);
+  if (normalizedEmail.length > 254 || !/^\S+@\S+\.\S+$/.test(normalizedEmail))
+    return apiError(400, 'INVALID_EMAIL', 'Enter a valid email address.', requestId);
+  if (!contactPhone)
+    return apiError(400, 'INVALID_PHONE', 'Enter a phone number with 7 to 15 digits.', requestId);
+  if ((password as string).length < 8 || (password as string).length > 128)
+    return apiError(400, 'INVALID_PASSWORD', 'Use a password of 8 to 128 characters.', requestId);
   if (termsVersion !== CURRENT_TERMS_VERSION || termsAccepted !== true) {
     return apiError(400, 'TERMS_REQUIRED', 'Read and accept the current Terms of Use.', requestId);
   }

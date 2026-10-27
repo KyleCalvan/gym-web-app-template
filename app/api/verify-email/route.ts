@@ -36,11 +36,7 @@ export async function GET(request: NextRequest) {
       } });
       await writeAudit(tx, { actor: account.id, action: 'email.verified', target: account.id, result: 'success', requestId });
       const session = await createSession(tx, { accountId: account.id });
-<<<<<<< HEAD
-      const response = NextResponse.redirect(destination('/?verified=1'));
-=======
       const response = NextResponse.redirect(destination('/account?verified=1'));
->>>>>>> 9f37355 (fixed login and verified user roles ui and added users in the database)
       response.headers.set('cache-control', 'private, no-store');
       response.headers.set('referrer-policy', 'no-referrer');
       setSessionCookie(response, session);

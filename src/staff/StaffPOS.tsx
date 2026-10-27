@@ -1,18 +1,21 @@
 import { useMemo, useState } from 'react';
 import { Search, ShoppingCart, Trash2, UserRound } from 'lucide-react';
-import { TabbedCard, Field, Select, PaymentSimulationModal } from '../shared';
+import { TabbedCard, Field, Select } from '../shared';
 import { formatMoney as peso } from '../shared/utils/money';
 import { calculatePosPricing, type TaxMode } from './posPricing';
-import { createSimulatedTransaction, getConfiguredPaymentFee, updateSimulatedTransaction } from '../payments.ts';
-import type { Member, PaymentState, Plan, Setter, Transaction } from '../types.ts';
+import { createReceiptReference } from '../receipt';
+import { getConfiguredPaymentFee } from '../payments';
+import type { Member, Plan, Transaction } from '../types.ts';
+import StaffCashPaymentModal from './StaffCashPaymentModal';
+import StaffGcashSimulationModal from './StaffGcashSimulationModal';
 
 interface StaffPOSProps {
-  setTransactions: Setter<Transaction[]>;
   members: Member[];
   plans: Plan[];
   toast: (message: string) => void;
   preferredPaymentMethod?: string;
-  readOnly?: boolean;
+  onStaffSale?: (input: { reference: string; memberId: string; planNames: string[];
+    method: 'Cash' | 'GCash'; taxRate: string; taxMode: TaxMode; cashReceived?: number }) => Promise<Transaction>;
 }
 
 interface POSCartItem {
@@ -22,20 +25,24 @@ interface POSCartItem {
   price: number;
 }
 
-interface POSPayment {
-  transactionId: string;
-  method: string;
+interface CheckoutPayment {
+  reference: string;
+  method: 'Cash' | 'GCash';
   amount: number;
   fees: number;
+  memberId: string;
+  planNames: string[];
+  taxRate: string;
+  taxMode: TaxMode;
 }
 
-function StaffPOS({ setTransactions, members, plans, toast, preferredPaymentMethod = 'GCash', readOnly = false }: StaffPOSProps) {
+function StaffPOS({ members, plans, toast, onStaffSale }: StaffPOSProps) {
   const [cart, setCart] = useState<POSCartItem[]>([]);
-  const [method, setMethod] = useState(preferredPaymentMethod);
+  const [method, setMethod] = useState<'Cash' | 'GCash'>('Cash');
   const [memberId, setMemberId] = useState(members.find((member) => !member.deletedAt)?.id || '');
   const [memberSearch, setMemberSearch] = useState('');
   const [memberStatus, setMemberStatus] = useState('All');
-  const [payment, setPayment] = useState<POSPayment | null>(null);
+  const [payment, setPayment] = useState<CheckoutPayment | null>(null);
 
   const items = useMemo(
     () => (plans || [])
@@ -51,17 +58,10 @@ function StaffPOS({ setTransactions, members, plans, toast, preferredPaymentMeth
     catch (cause) { return { ...calculatePosPricing(total, '', taxMode), error: cause instanceof Error ? cause.message : 'Check the tax settings.' }; }
   }, [total, taxRate, taxMode]);
   const feeResult = useMemo(() => {
-    try {
-      return { fees: getConfiguredPaymentFee(method, pricing.total), error: '' };
-    } catch (error) {
-      return {
-        fees: 0,
-        error: error instanceof Error ? error.message : 'Configured payment fee is invalid.',
-      };
-    }
+    try { return { fees: getConfiguredPaymentFee(method, pricing.total), error: '' }; }
+    catch (cause) { return { fees: 0, error: cause instanceof Error ? cause.message : 'Check the payment fee.' }; }
   }, [method, pricing.total]);
-  const fees = feeResult.fees;
-  const feeError = feeResult.error;
+  const { fees, error: feeError } = feeResult;
   const member = members.find((entry) => entry.id === memberId && !entry.deletedAt) || null;
   const filteredMembers = useMemo(() => {
     const query = memberSearch.trim().toLocaleLowerCase();
@@ -90,37 +90,36 @@ const addPlan = (item: POSCartItem) => {
   };
 
   const charge = () => {
-    if (readOnly) { toast('Point of Sale is not yet connected to the database.'); return; }
+    if (!onStaffSale) { toast('Point of Sale is unavailable. Please retry.'); return; }
     if (cart.length === 0) { toast('Cart is empty'); return; }
     if (!cart.every((item) => items.some((available) => available.id === item.id && available.price === item.price))) {
       toast('A plan in the cart is no longer available. Review the cart before checkout.');
       return;
     }
     if (memberId && !member) { toast('Select an active member or choose walk-in customer.'); return; }
-    if (feeError || pricing.error) { toast(feeError || pricing.error); return; }
-
-    const memberName = member?.name || 'Walk-in';
-    const today = new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
-    const type = `Membership: ${cart.map((item) => item.planName).join(', ')}`;
-    const transaction = createSimulatedTransaction({ member: memberName, type, amount: pricing.total, method, date: today, fees });
-    if (pricing.configured) transaction.taxDetails = { subtotal: pricing.subtotal, base: pricing.base, rate: pricing.rate, amount: pricing.tax, mode: taxMode };
-    setTransactions((previous) => [transaction, ...previous]);
-    setPayment({ transactionId: transaction.id, method, amount: pricing.total, fees });
+    if (pricing.error || feeError) { toast(pricing.error || feeError); return; }
+    const receipt = createReceiptReference();
+    setPayment({ reference: `PAY-${receipt.slice(3)}`, method, amount: pricing.total, fees,
+      memberId, planNames: cart.map((item) => item.planName), taxRate, taxMode });
   };
 
-  const updatePaymentState = (paymentState: PaymentState) => {
-    setTransactions((previous) => previous.map((transaction) => transaction.id === payment?.transactionId
-      ? updateSimulatedTransaction(transaction, paymentState)
-      : transaction));
+  const confirmCash = async (cashReceived: number) => {
+    if (!onStaffSale || !payment) throw new Error('The sale is no longer available.');
+    const transaction = await onStaffSale({ reference: payment.reference, memberId: payment.memberId,
+      planNames: payment.planNames, method: 'Cash', taxRate: payment.taxRate,
+      taxMode: payment.taxMode, cashReceived });
+    setCart([]);
+    toast('Cash payment recorded.');
+    return transaction;
   };
 
-  const completePayment = (paymentState: 'Successful' | 'Failed') => {
-    if (paymentState === 'Successful') {
-      toast('Simulated test sale completed — no real payment was processed.');
-      setCart([]);
-    } else {
-      toast('Simulated payment failed. Sale was not completed.');
-    }
+  const simulateGcash = async () => {
+    if (!onStaffSale || !payment) throw new Error('The sale is no longer available.');
+    const transaction = await onStaffSale({ reference: payment.reference, memberId: payment.memberId,
+      planNames: payment.planNames, method: 'GCash', taxRate: payment.taxRate, taxMode: payment.taxMode });
+    setCart([]);
+    toast('GCash test payment recorded. No real payment was collected.');
+    return transaction;
   };
 
   return (
@@ -222,8 +221,8 @@ const addPlan = (item: POSCartItem) => {
           </div>
 
           <Field label="Payment method">
-            <Select value={method} onChange={setMethod} aria-label="Payment method">
-              <option>GCash</option><option>Cash</option>
+            <Select value={method} onChange={(value) => setMethod(value as 'Cash' | 'GCash')} aria-label="Payment method">
+              <option value="Cash">Cash</option><option value="GCash">GCash (simulation)</option>
             </Select>
           </Field>
 
@@ -269,27 +268,27 @@ const addPlan = (item: POSCartItem) => {
               <div className="staff-pos-grand-total"><span>Total</span><strong>{peso(pricing.total + fees)}</strong></div>
             </div>
             {feeError && <p className="staff-pos-fee-error" role="alert">{feeError}</p>}
-            {method.toLowerCase() === 'gcash' && (
-              <p className="staff-pos-fee-note">GCash fees shown here use the configured test value only.</p>
-            )}
           </section>
 
           <button
             type="button"
             className="btn btn-signal btn-block staff-pos-charge"
             onClick={charge}
-            disabled={cart.length === 0 || Boolean(feeError || pricing.error)}
+            disabled={cart.length === 0 || Boolean(pricing.error || feeError)}
           >
-            Charge {peso(pricing.total + fees)}
+            {method === 'Cash' ? 'Charge' : 'Simulate'} {peso(pricing.total + fees)}
           </button>
         </TabbedCard>
       </div>
-      {payment && <PaymentSimulationModal
-        method={payment.method}
+      {payment?.method === 'Cash' && <StaffCashPaymentModal
+        amount={payment.amount}
+        onConfirm={confirmCash}
+        onClose={() => setPayment(null)}
+      />}
+      {payment?.method === 'GCash' && <StaffGcashSimulationModal
         amount={payment.amount}
         fees={payment.fees}
-        onStateChange={updatePaymentState}
-        onComplete={completePayment}
+        onSimulate={simulateGcash}
         onClose={() => setPayment(null)}
       />}
     </>

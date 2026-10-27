@@ -35,7 +35,7 @@ export default async function AccountPage() {
       prisma.coachingSession.findMany({ where: { memberId: memberProfileId }, orderBy: { startsAt: 'desc' }, take: 20,
         select: { id: true, startsAt: true, type: true, status: true,
           trainer: { select: { profile: { select: { gymUser: { select: { name: true } } } } } } } }),
-      prisma.paymentTransaction.findMany({ where: { memberId: memberProfileId }, orderBy: { createdAt: 'desc' }, take: 20,
+      prisma.paymentTransaction.findMany({ where: { memberId: memberProfileId, isSimulated: false }, orderBy: { createdAt: 'desc' }, take: 20,
         select: { id: true, type: true, amount: true, status: true, createdAt: true } }),
       prisma.promotion.findMany({ where: { status: 'Published', deletedAt: null,
         validFrom: { lte: new Date() }, validUntil: { gte: new Date() },

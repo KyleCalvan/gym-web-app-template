@@ -5,8 +5,8 @@ import { peso } from '../data.ts';
 
 function StaffTransactions({ transactions, members = [] }) {
   const today = new Date().toLocaleDateString('en-US', {month:'short', day:'2-digit', year:'numeric'});
-  const todays = (transactions || []).filter(t => t.date === today && !t.isSimulated);
-  const todayTotal = todays.filter(t=>t.status==='Paid').reduce((a,t)=>a+t.amount,0);
+  const todays = (transactions || []).filter(t => t.date === today);
+  const todayTotal = todays.filter(t=>t.status==='Paid' && !t.isSimulated).reduce((a,t)=>a+t.amount,0);
   const refunds = transactions.filter(t => t.status==='Refunded').length;
   const [viewTxn, setViewTxn] = useState(null);
   const [documentType, setDocumentType] = useState('Receipt');

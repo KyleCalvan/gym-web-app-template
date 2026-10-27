@@ -2,28 +2,30 @@
 import { useState } from 'react';
 import { TabbedCard, Table, Badge, Modal, Field, TextInput, Select, Avatar } from '../shared';
 
-function StaffMembers({ members, setMembers, plans, setCheckIns, today, toast, addAudit }) {
+function StaffMembers({ members, plans, toast, onStaffRegisterMember, onStaffCheckIn }) {
   const [q, setQ] = useState('');
   const [statusF, setStatusF] = useState('All');
   const [showRegister, setShowRegister] = useState(false);
-  const [reg, setReg] = useState({name:'', email:'', phone:'', plan:'Premium'});
+  const defaultPlan = plans.find((plan) => plan.status === 'Active')?.name || plans[0]?.name || '';
+  const [reg, setReg] = useState({name:'', email:'', phone:'', plan: defaultPlan});
 
-  const submitRegister = (e) => {
+  const submitRegister = async (e) => {
     e.preventDefault();
     if (!reg.name.trim() || !reg.email.trim()) { toast('Name and email are required'); return; }
-    const id = 'M-' + (1042 + members.length);
-    setMembers(prev => [...prev, {...reg, id, status:'Active', joined: today}]);
-    toast('Member registered — ' + reg.name + ' (' + id + ')');
-    addAudit?.('info', 'Member registered', reg.name + ' (' + id + ')');
-    setReg({name:'', email:'', phone:'', plan:'Premium'});
-    setShowRegister(false);
+    try {
+      const member = await onStaffRegisterMember({ name: reg.name, email: reg.email, phone: reg.phone, planName: reg.plan });
+      toast('Member registered — ' + member.name + ' (' + member.id + '). Complete payment in Point of Sale.');
+      setReg({name:'', email:'', phone:'', plan: defaultPlan});
+      setShowRegister(false);
+    } catch (error) { toast(error instanceof Error ? error.message : 'Could not register member.'); }
   };
 
-  const checkIn = (m) => {
+  const checkIn = async (m) => {
     if (m.status === 'Frozen') { toast('Frozen accounts cannot check in'); return; }
-    setCheckIns(c => ({...c, count: c.count + 1}));
-    toast(m.name + ' checked in');
-    addAudit?.('info', 'Member checked in', m.name + ' (' + m.id + ')');
+    try {
+      await onStaffCheckIn(m.id);
+      toast(m.name + ' checked in');
+    } catch (error) { toast(error instanceof Error ? error.message : 'Could not check in member.'); }
   };
 
   const isRegisteredMember = (m) => !m.deletedAt;

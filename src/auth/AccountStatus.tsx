@@ -119,15 +119,6 @@ export default function AccountStatus({ initialStatus }: { initialStatus?: Visib
     });
   }
 
-  async function resendVerification() {
-    await run(async () => {
-      const response = await fetch('/api/verify-email/resend', { method: 'POST' });
-      const result: { message?: string } = await response.json();
-      if (!response.ok) throw new Error(result.message ?? 'The verification email could not be sent.');
-      setNotice(result.message ?? 'A new verification link has been sent.');
-    });
-  }
-
   const roles = status?.restricted ? [] : status?.roles ?? [];
   const activeRole = selectedRole && roles.includes(selectedRole) ? selectedRole : roles[0] ?? null;
   const memberDashboard = Boolean(status && !status.restricted && roles.length === 1 && roles[0] === 'member');
