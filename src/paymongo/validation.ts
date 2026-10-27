@@ -4,6 +4,7 @@ export type CheckoutSession = {
   id: string;
   attributes: {
     checkout_url?: string;
+    status?: string;
     livemode?: boolean;
     reference_number?: string;
     payments?: {

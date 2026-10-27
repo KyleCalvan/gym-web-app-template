@@ -17,6 +17,7 @@ import { buildCancelConfirmation, comparePlans, planDurationMonths } from './pla
 import { hasActiveMembership } from './activeMembership.ts';
 import { createReceiptReference } from '../receipt.ts';
 import { createSimulatedTransaction, getConfiguredPaymentFee, updateSimulatedTransaction } from '../payments.ts';
+import { startDemoMemberCheckout, checkDemoMemberCheckout, cancelDemoMemberCheckout } from '../paymongo/demoClient.ts';
 
 const PLAN_PAYMENT_METHOD = 'GCash';
 
@@ -709,6 +710,9 @@ function MemberMembership({
           method={paymentFlow.method}
           amount={paymentFlow.amount}
           fees={paymentFlow.fees}
+          startCheckout={() => startDemoMemberCheckout('Membership payment', paymentFlow.amount + paymentFlow.fees)}
+          checkCheckout={checkDemoMemberCheckout}
+          cancelCheckout={cancelDemoMemberCheckout}
           onStateChange={updatePaymentState}
           onComplete={completePayment}
           onClose={closePayment}

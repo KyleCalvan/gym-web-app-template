@@ -199,6 +199,73 @@ test('checkout rejects another plan while the member has an active membership', 
   assert.match((await response.json()).error, /already have an active plan/);
 });
 
+test('member activity reads only personal records and persists metrics and one daily check-in', async () => {
+  const accountId = await seedSessionAccount();
+  const otherAccountId = await seedSessionAccount();
+  const { cookie } = await issueSession(accountId);
+  const planName = `Activity-${randomUUID()}`;
+  const { memberId, otherMemberId, pastSessionId, futureSessionId } = await withDatabaseClient(database.env, async (client) => {
+    const { rows } = await client.query('SELECT "accountId", "profileId" FROM "AssignedRole" WHERE "accountId" IN ($1, $2) AND role = $3',
+      [accountId, otherAccountId, 'member']);
+    const memberId = rows.find(row => row.accountId === accountId).profileId;
+    const otherMemberId = rows.find(row => row.accountId === otherAccountId).profileId;
+    await client.query('INSERT INTO "MemberProfile" ("profileId", "weightKg", "heightCm") VALUES ($1, 72.5, 171), ($2, 80, 180)',
+      [memberId, otherMemberId]);
+    await client.query('INSERT INTO "GymPlan" (name, price, period, "updatedAt") VALUES ($1, 1000, $2, NOW())', [planName, 'month']);
+    await client.query(`INSERT INTO "Membership" (id, "memberId", "planName", status, "startsAt", "endsAt", "updatedAt")
+      VALUES ($1, $2, $3, 'Active', NOW() - INTERVAL '1 day', NOW() + INTERVAL '1 month', NOW())`,
+    [randomUUID(), memberId, planName]);
+    await client.query('INSERT INTO "Attendance" (id, "memberId", "visitDate") VALUES ($1, $2, $3)',
+      [randomUUID(), otherMemberId, '2026-01-01']);
+    const trainerId = randomUUID();
+    const { rows: [trainer] } = await client.query('INSERT INTO "User" (email, name) VALUES ($1, $2) RETURNING id',
+      [`${trainerId}@example.test`, 'Activity Trainer']);
+    await client.query('INSERT INTO "RoleProfile" (id, "gymUserId", role) VALUES ($1, $2, $3)', [trainerId, trainer.id, 'trainer']);
+    await client.query('INSERT INTO "TrainerProfile" ("profileId") VALUES ($1)', [trainerId]);
+    const pastSessionId = randomUUID();
+    const futureSessionId = randomUUID();
+    await client.query(`INSERT INTO "CoachingSession" (id, "memberId", "trainerId", "startsAt", status, amount, "updatedAt")
+      VALUES ($1, $4, $3, NOW() - INTERVAL '2 days', 'Completed', 500, NOW()),
+             ($2, $4, $3, NOW() + INTERVAL '2 days', 'Confirmed', 500, NOW()),
+             ($5, $6, $3, NOW() + INTERVAL '3 days', 'Confirmed', 500, NOW())`,
+    [pastSessionId, futureSessionId, trainerId, memberId, randomUUID(), otherMemberId]);
+    return { memberId, otherMemberId, pastSessionId, futureSessionId };
+  });
+  const endpoint = `${application.url}/api/member/activity`;
+  const headers = { cookie, origin: application.url, 'content-type': 'application/json' };
+  assert.equal((await fetch(endpoint)).status, 401);
+  const initial = await fetch(endpoint, { headers: { cookie } });
+  assert.equal(initial.status, 200, application.logs());
+  const before = await initial.json();
+  assert.equal(before.weightKg, 72.5);
+  assert.equal(before.heightCm, 171);
+  assert.equal(before.canCheckIn, true);
+  assert.deepEqual(before.checkInHistory, []);
+  assert.deepEqual(before.sessions.map(session => session.id).sort(), [pastSessionId, futureSessionId].sort());
+  assert.ok(before.sessions.every(session => session.trainer === 'Activity Trainer'));
+  assert.equal((await fetch(endpoint, { method: 'PATCH', headers: { ...headers, origin: 'https://attacker.example' },
+    body: JSON.stringify({ weightKg: 73, heightCm: 172 }) })).status, 403);
+  assert.equal((await fetch(endpoint, { method: 'PATCH', headers, body: JSON.stringify({ weightKg: 0, heightCm: 172 }) })).status, 400);
+  const updated = await fetch(endpoint, { method: 'PATCH', headers, body: JSON.stringify({ weightKg: 73.2, heightCm: 172 }) });
+  assert.equal(updated.status, 200, application.logs());
+  assert.deepEqual(await updated.json(), { weightKg: 73.2, heightCm: 172 });
+  const checked = await fetch(endpoint, { method: 'POST', headers });
+  assert.equal(checked.status, 201, application.logs());
+  const { checkIn } = await checked.json();
+  assert.equal(checkIn.memberId, memberId);
+  assert.match(checkIn.date, /^\d{4}-\d{2}-\d{2}$/);
+  assert.equal((await fetch(endpoint, { method: 'POST', headers })).status, 409);
+  const reloaded = await fetch(endpoint, { headers: { cookie } }).then(response => response.json());
+  assert.equal(reloaded.weightKg, 73.2);
+  assert.equal(reloaded.heightCm, 172);
+  assert.deepEqual(reloaded.checkInHistory, [checkIn]);
+  const other = await withDatabaseClient(database.env, client => client.query(
+    'SELECT "weightKg", "heightCm", COUNT(a.id)::int AS visits FROM "MemberProfile" m LEFT JOIN "Attendance" a ON a."memberId" = m."profileId" WHERE m."profileId" = $1 GROUP BY m."profileId"',
+    [otherMemberId]));
+  assert.equal(Number(other.rows[0].weightKg), 80);
+  assert.equal(other.rows[0].visits, 1);
+});
+
 test('member cancellation saves only the signed-in member’s plan and appears in their overview', async () => {
   const accountId = await seedSessionAccount();
   const otherAccountId = await seedSessionAccount();

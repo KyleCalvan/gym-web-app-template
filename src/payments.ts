@@ -48,7 +48,7 @@ export function updateSimulatedTransaction(
   const currentState = transaction.paymentState || transaction.status;
   const validNextStates: Record<string, PaymentState[]> = {
     Pending: ['Processing', 'Failed'],
-    Processing: ['Successful', 'Failed'],
+    Processing: ['Pending', 'Successful', 'Failed'],
     Failed: ['Processing'],
     Successful: [],
   };

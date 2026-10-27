@@ -6,8 +6,10 @@ import BookingCheckoutModal from './BookingCheckoutModal.tsx';
 import EditBookingModal from './EditBookingModal.tsx';
 import { getActivePromotionsForMember } from './promotionEligibility.ts';
 import { getBookingDateError, getBookingDatesError, getBookingToday, isBookingSlotAvailable } from './bookingDates.ts';
+import { getBookableDates, getCommonBookableTimes } from './bookingAvailability.ts';
+import { formatTime12h } from '../trainer/availability.ts';
 
-function MemberCoaching({ bookings, setBookings, sessions, setSessions, setTransactions, trainers, setTrainers, promotions, setPromotions, promotionRedemptions, setPromotionRedemptions, currentUserId, members, today, toast, addAudit, preferredPaymentMethod }){
+function MemberCoaching({ bookings, setBookings, sessions, setSessions, bookingSlots, trainerAvailability = [], setTransactions, trainers, setTrainers, promotions, setPromotions, promotionRedemptions, setPromotionRedemptions, currentUserId, members, today, toast, addAudit, preferredPaymentMethod, onCoachingCheckout, onCoachingCheckoutStatus, onCoachingCheckoutCancel }){
   const [showBooking, setShowBooking] = useState(false);
   const [bookingTrainer, setBookingTrainer] = useState(null);
   const [editing, setEditing] = useState(null);
@@ -23,13 +25,19 @@ function MemberCoaching({ bookings, setBookings, sessions, setSessions, setTrans
     () => getActivePromotionsForMember(promotions || [], myRedemptions, me),
     [promotions, myRedemptions, me?.plan],
   );
+  const occupiedSlots = bookingSlots || sessions;
+  const activeTrainers = trainers.filter(t => !t.deletedAt && t.status === 'Active');
 
   const openBookingFor = (trainerName) => { setBookingTrainer(trainerName); setShowBooking(true); };
 
   const handlePersistBookings = ({ id, trainer, dates, time, amount, totalAmount, promoCode, savings }) => {
     const dateError = getBookingDatesError(dates, getBookingToday());
     if (dateError) return dateError;
-    const unavailableDate = dates.find((date) => !isBookingSlotAvailable(sessions, { trainer, date, time }));
+    const selectedTrainer = activeTrainers.find(person => person.name === trainer);
+    if (!selectedTrainer || !getCommonBookableTimes(trainerAvailability, occupiedSlots, selectedTrainer, dates).includes(time)) {
+      return 'The selected trainer, dates, or time is no longer available. Choose another slot.';
+    }
+    const unavailableDate = dates.find((date) => !isBookingSlotAvailable(occupiedSlots, { trainer, date, time }));
     if (unavailableDate) return `That time is no longer available on ${unavailableDate}. Choose another slot.`;
 
     const memberName = me?.name || '';
@@ -103,16 +111,23 @@ function MemberCoaching({ bookings, setBookings, sessions, setSessions, setTrans
     <>
       <TabbedCard title="Available Schedules" right={<button className="btn btn-signal btn-sm" onClick={()=>openBookingFor(null)}>+ Book Session</button>}>
         <div className="grid grid-2">
-          {trainers.map(t=>(
+          {activeTrainers.map(t=>(
             <div className="card" key={t.id}>
               <div style={{display:'flex', gap:10}}>
                 <Avatar src={t.avatarUrl} name={t.name} size={36} />
                 <div><b>{t.name}</b><div style={{fontSize:13.2, color:'var(--steel)'}}>{t.specialty}</div></div>
               </div>
-              <div className="mono" style={{fontSize:12.7, color:'var(--steel)', marginTop:10}}>Next opening: Tomorrow, 7:00 AM · {peso(t.sessionPrice)}/session</div>
-              <button className="btn btn-outline btn-sm" style={{marginTop:10}} onClick={()=>openBookingFor(t.name)}>Book with {t.name.split(' ')[0]}</button>
+              <div className="mono" style={{fontSize:12.7, color:'var(--steel)', marginTop:10}}>
+                {(() => {
+                  const nextDate = getBookableDates(trainerAvailability, occupiedSlots, t)[0];
+                  const nextTime = nextDate && getCommonBookableTimes(trainerAvailability, occupiedSlots, t, [nextDate])[0];
+                  return nextDate && nextTime ? `Next opening: ${nextDate}, ${formatTime12h(nextTime)} · ${peso(t.sessionPrice)}/session` : `No open dates · ${peso(t.sessionPrice)}/session`;
+                })()}
+              </div>
+              <button className="btn btn-outline btn-sm" style={{marginTop:10}} onClick={()=>openBookingFor(t.name)} disabled={!getBookableDates(trainerAvailability, occupiedSlots, t).length}>Book with {t.name.split(' ')[0]}</button>
             </div>
           ))}
+          {!activeTrainers.length && <p className="booking-date-hint">No trainers are available yet.</p>}
         </div>
       </TabbedCard>
       <div style={{height:18}}></div>
@@ -146,6 +161,8 @@ function MemberCoaching({ bookings, setBookings, sessions, setSessions, setTrans
         <BookingCheckoutModal
           initialTrainer={bookingTrainer}
           trainers={trainers}
+          trainerAvailability={trainerAvailability}
+          bookingSlots={occupiedSlots}
           activePromotions={activePromotions}
           promotions={promotions}
           setPromotions={setPromotions}
@@ -154,6 +171,9 @@ function MemberCoaching({ bookings, setBookings, sessions, setSessions, setTrans
           member={me}
           setTransactions={setTransactions}
           preferredPaymentMethod={preferredPaymentMethod}
+          onCoachingCheckout={onCoachingCheckout}
+          onCoachingCheckoutStatus={onCoachingCheckoutStatus}
+          onCoachingCheckoutCancel={onCoachingCheckoutCancel}
           today={today}
           onClose={()=>setShowBooking(false)}
           onComplete={()=>setShowBooking(false)}

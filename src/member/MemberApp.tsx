@@ -5,7 +5,7 @@ import Sidebar from '../shared/shell/Sidebar';
 import { Topbar } from '../shared/shell/Topbar';
 import { ProfileMenu } from '../shared/shell/ProfileMenu';
 import { useToast } from '../shared/hooks/useToast';
-import type { Member, Notification, NotifPrefs, Plan, Session, Transaction, ViewProps } from '../types';
+import type { Member, Notification, NotifPrefs, Plan, Session, Trainer, TrainerAvailability, Transaction, ViewProps } from '../types';
 import MemberDashboard from './MemberDashboard';
 import { MEMBER_NAV, MEMBER_VIEWS } from './index';
 
@@ -30,6 +30,9 @@ export default function MemberApp({ name, email, phone, profileId, onLogout, pen
 }) {
   const [overview, setOverview] = useState<Overview | null>(null);
   const [plans, setPlans] = useState<Plan[]>([]);
+  const [trainers, setTrainers] = useState<Trainer[]>([]);
+  const [trainerAvailability, setTrainerAvailability] = useState<TrainerAvailability[]>([]);
+  const [bookingSlots, setBookingSlots] = useState<NonNullable<ViewProps['bookingSlots']>>([]);
   const [error, setError] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [view, setView] = useState('dashboard');
@@ -61,28 +64,42 @@ export default function MemberApp({ name, email, phone, profileId, onLogout, pen
     const result = params.get('checkout');
     const reference = params.get('reference');
     if (!result || !reference) return;
-    setView('membership');
+    const coaching = reference.startsWith('COACH-');
+    setView(coaching ? 'coaching' : 'membership');
     if (result === 'cancelled') {
       window.history.replaceState(null, '', '/account');
-      fireToast('Checkout was not completed. Your membership has not changed.');
+      if (coaching) {
+        void cancelCoachingCheckout(reference).then(status => {
+          fireToast(status === 'Paid' ? 'Test payment confirmed. Your coaching sessions are booked.'
+            : status === 'Pending' ? 'Payment is still processing. Check its status before leaving.'
+              : 'Checkout was not completed. No coaching session was booked.');
+          if (status !== 'Pending' && window.opener) window.close();
+        }).catch(error => fireToast(error instanceof Error ? error.message : 'Checkout could not be cancelled.'));
+      } else {
+        fireToast('Checkout was not completed. Your membership has not changed.');
+      }
       return;
     }
     let cancelled = false;
     async function verify() {
       for (let attempt = 0; attempt < 5 && !cancelled; attempt += 1) {
         try {
-          const response = await fetch(`/api/member/checkout/status?reference=${encodeURIComponent(reference!)}`, { cache: 'no-store' });
+          const endpoint = coaching ? '/api/member/coaching-checkout/status' : '/api/member/checkout/status';
+          const response = await fetch(`${endpoint}?reference=${encodeURIComponent(reference!)}`, { cache: 'no-store' });
           const data: { status?: string; error?: string } = await response.json();
           if (cancelled) return;
           if (!response.ok) throw new Error(data.error || 'Payment could not be verified.');
           if (data.status === 'Paid') {
             window.history.replaceState(null, '', '/account');
             refresh();
-            fireToast('Test payment confirmed. Your membership is active.');
+            fireToast(coaching ? 'Test payment confirmed. Your coaching sessions are booked.'
+              : 'Test payment confirmed. Your membership is active.');
+            if (coaching && window.opener) window.close();
             return;
           }
           if (data.status === 'Failed') {
-            fireToast('Checkout failed. Your membership has not changed.');
+            fireToast(coaching ? 'Checkout failed. No coaching session was booked.'
+              : 'Checkout failed. Your membership has not changed.');
             return;
           }
         } catch (error) {
@@ -108,6 +125,20 @@ export default function MemberApp({ name, email, phone, profileId, onLogout, pen
     return () => { active = false; };
   }, []);
   useEffect(() => {
+    if (view !== 'coaching') return;
+    let active = true;
+    fetch('/api/member/coaching-options', { cache: 'no-store' }).then(async response => {
+      if (!response.ok) throw new Error('Coaching schedules could not be loaded.');
+      return response.json() as Promise<{ trainers: Trainer[]; trainerAvailability: TrainerAvailability[]; bookingSlots: NonNullable<ViewProps['bookingSlots']> }>;
+    }).then(result => {
+      if (!active) return;
+      setTrainers(result.trainers);
+      setTrainerAvailability(result.trainerAvailability);
+      setBookingSlots(result.bookingSlots);
+    }).catch(() => { if (active) fireToast('Coaching schedules could not be loaded. Please try again.'); });
+    return () => { active = false; };
+  }, [view]);
+  useEffect(() => {
     document.documentElement.dataset.theme = theme;
     try { localStorage.setItem('vinathletics-theme', theme); } catch { /* Theme remains active for this visit. */ }
   }, [theme]);
@@ -127,6 +158,43 @@ export default function MemberApp({ name, email, phone, profileId, onLogout, pen
     const data: { checkoutUrl?: string; error?: string } = await response.json();
     if (!response.ok || !data.checkoutUrl) throw new Error(data.error || 'Checkout could not start.');
     window.location.assign(data.checkoutUrl);
+  }
+
+  async function startCoachingCheckout(selection: { trainerId: string; dates: string[]; time: string; expectedTotal: number }) {
+    const response = await fetch('/api/member/coaching-checkout', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(selection),
+    });
+    const data: { checkoutUrl?: string; reference?: string; error?: string } = await response.json();
+    if (!response.ok || !data.checkoutUrl || !data.reference) throw new Error(data.error || 'Coaching checkout could not start.');
+    return { checkoutUrl: data.checkoutUrl, reference: data.reference };
+  }
+
+  async function checkCoachingCheckout(reference: string): Promise<'Pending' | 'Paid' | 'Failed'> {
+    const response = await fetch(`/api/member/coaching-checkout/status?reference=${encodeURIComponent(reference)}`, { cache: 'no-store' });
+    const data: { status?: 'Pending' | 'Paid' | 'Failed'; error?: string } = await response.json();
+    if (!response.ok || !data.status) throw new Error(data.error || 'Payment status could not be verified.');
+    if (data.status === 'Paid') {
+      refresh();
+      void fetch('/api/member/coaching-options', { cache: 'no-store' }).then(async result => {
+        if (!result.ok) return;
+        const options: { trainers: Trainer[]; trainerAvailability: TrainerAvailability[];
+          bookingSlots: NonNullable<ViewProps['bookingSlots']> } = await result.json();
+        setTrainers(options.trainers);
+        setTrainerAvailability(options.trainerAvailability);
+        setBookingSlots(options.bookingSlots);
+      }).catch(() => {});
+    }
+    return data.status;
+  }
+
+  async function cancelCoachingCheckout(reference: string): Promise<'Pending' | 'Paid' | 'Failed'> {
+    const response = await fetch('/api/member/coaching-checkout/cancel', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reference }),
+    });
+    const data: { status?: 'Pending' | 'Paid' | 'Failed'; error?: string } = await response.json();
+    if (!response.ok || !data.status) throw new Error(data.error || 'Checkout could not be cancelled.');
+    if (data.status === 'Paid') refresh();
+    return data.status;
   }
 
   async function cancelPlan(reason: string) {
@@ -165,11 +233,11 @@ export default function MemberApp({ name, email, phone, profileId, onLogout, pen
   const viewProps: ViewProps = {
     role: 'member', currentUser: user, currentUserId: member.id, onNav: handleNav,
     members: [member as Member], setMembers: ignoreChange,
-    trainers: [], setTrainers: ignoreChange,
+    trainers, setTrainers: ignoreChange,
     plans, setPlans: ignoreChange,
     transactions: transactions as Transaction[], setTransactions: ignoreChange,
     sessions: sessions as Session[], setSessions: ignoreChange,
-    trainerAvailability: [], setTrainerAvailability: ignoreChange,
+    trainerAvailability, setTrainerAvailability: ignoreChange, bookingSlots,
     promotions: [], setPromotions: ignoreChange,
     staff: [], setStaff: ignoreChange, admins: [], setAdmins: ignoreChange,
     superadmins: [], setSuperadmins: ignoreChange,
@@ -184,6 +252,9 @@ export default function MemberApp({ name, email, phone, profileId, onLogout, pen
     qrDestinations: [], setQrDestinations: ignoreChange,
     onDeleteAccount: ignoreChange, emptyDefaults: true, onPlanCheckout: startPlanCheckout,
     onPlanCancel: cancelPlan,
+    onCoachingCheckout: startCoachingCheckout,
+    onCoachingCheckoutStatus: checkCoachingCheckout,
+    onCoachingCheckoutCancel: cancelCoachingCheckout,
     studentVerified: overview?.studentVerificationStatus === 'Verified',
   };
 
@@ -202,7 +273,7 @@ export default function MemberApp({ name, email, phone, profileId, onLogout, pen
         {view === 'dashboard' && !overview && !error && <p role="status">Loading your member dashboard…</p>}
         {view === 'dashboard' && overview && <MemberDashboard members={[member]} currentUserId={member.id}
           sessions={sessions} bookings={sessions} transactions={transactions}
-          trainers={[]} plans={[]} promotions={[]} promotionRedemptions={[]}
+          trainers={[]} trainerAvailability={[]} bookingSlots={[]} plans={[]} promotions={[]} promotionRedemptions={[]}
           setSessions={() => {}} setBookings={() => {}} setTransactions={() => {}}
           setPromotions={() => {}} setPromotionRedemptions={() => {}}
           onNav={handleNav} onBook={() => fireToast('Online booking is not available yet.')}

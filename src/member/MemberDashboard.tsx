@@ -4,9 +4,10 @@ import { Badge, Table, TabbedCard } from '../shared';
 import BookingCheckoutModal from './BookingCheckoutModal.tsx';
 import { formatPromotionDate, formatPromotionDiscount, getActivePromotionsForMember, getEligiblePromotions } from './promotionEligibility.ts';
 import { getBookingDatesError, getBookingToday, isBookingSlotAvailable } from './bookingDates.ts';
+import { getCommonBookableTimes } from './bookingAvailability.ts';
 import { peso } from '../data.ts';
 
-function MemberDashboard({ members, sessions, setSessions, bookings, setBookings, setTransactions, transactions, trainers, currentUserId, plans, promotions, setPromotions, promotionRedemptions, setPromotionRedemptions, onNav, toast, today, addAudit, preferredPaymentMethod, onBook, paymentKnown = true, promotionsAvailable = true }){
+function MemberDashboard({ members, sessions, setSessions, bookings, setBookings, setTransactions, transactions, trainers, trainerAvailability = [], bookingSlots, currentUserId, plans, promotions, setPromotions, promotionRedemptions, setPromotionRedemptions, onNav, toast, today, addAudit, preferredPaymentMethod, onBook, paymentKnown = true, promotionsAvailable = true }){
   const me = members.find(m => m.id === currentUserId) || members[0];
   const dashboardToday = new Date();
   const todayISO = `${dashboardToday.getFullYear()}-${String(dashboardToday.getMonth() + 1).padStart(2, '0')}-${String(dashboardToday.getDate()).padStart(2, '0')}`;
@@ -42,7 +43,12 @@ function MemberDashboard({ members, sessions, setSessions, bookings, setBookings
   const persistBookings = ({ id, trainer, dates, time, amount, totalAmount }) => {
     const dateError = getBookingDatesError(dates, getBookingToday());
     if (dateError) return dateError;
-    const unavailableDate = dates.find(date => !isBookingSlotAvailable(sessions, { trainer, date, time }));
+    const selectedTrainer = trainers.find(person => person.name === trainer && !person.deletedAt && person.status === 'Active');
+    const occupiedSlots = bookingSlots || sessions;
+    if (!selectedTrainer || !getCommonBookableTimes(trainerAvailability, occupiedSlots, selectedTrainer, dates).includes(time)) {
+      return 'The selected trainer, dates, or time is no longer available. Choose another slot.';
+    }
+    const unavailableDate = dates.find(date => !isBookingSlotAvailable(occupiedSlots, { trainer, date, time }));
     if (unavailableDate) return `That time is no longer available on ${unavailableDate}. Choose another slot.`;
     const newBookings = dates.map((date, index) => ({
       id: index === 0 ? id : `${id}-${index + 1}`,
@@ -149,6 +155,8 @@ function MemberDashboard({ members, sessions, setSessions, bookings, setBookings
       {showBook && (
         <BookingCheckoutModal
           trainers={trainers}
+          trainerAvailability={trainerAvailability}
+          bookingSlots={bookingSlots || sessions}
           activePromotions={activePromotions}
           promotions={promotions}
           setPromotions={setPromotions}

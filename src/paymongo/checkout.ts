@@ -29,18 +29,19 @@ async function requestPaymongo(path: string, init?: RequestInit): Promise<Checko
   return body.data;
 }
 
-export async function createCheckout(input: {
-  reference: string; planName: string; amountCentavos: number; email: string; name: string;
+export async function createTestCheckout(input: {
+  reference: string; description: string; amountCentavos: number; email: string; name: string;
+  returnPath: '/account' | '/login'; method?: 'gcash' | 'card';
 }) {
   const origin = new URL(process.env.NEXTAUTH_URL ?? 'http://localhost:3000').origin;
-  const result = await requestPaymongo('/v1/checkout_sessions', {
+  const result = await requestPaymongo('/v2/checkout_sessions', {
     method: 'POST',
     body: JSON.stringify({ data: { attributes: {
-      line_items: [{ name: `${input.planName} membership`, amount: input.amountCentavos,
+      line_items: [{ name: input.description, amount: input.amountCentavos,
         currency: 'PHP', quantity: 1 }],
-      payment_method_types: ['gcash'],
-      success_url: `${origin}/account?checkout=success&reference=${encodeURIComponent(input.reference)}`,
-      cancel_url: `${origin}/account?checkout=cancelled&reference=${encodeURIComponent(input.reference)}`,
+      payment_method_types: [input.method ?? 'gcash'],
+      success_url: `${origin}${input.returnPath}?checkout=success&reference=${encodeURIComponent(input.reference)}`,
+      cancel_url: `${origin}${input.returnPath}?checkout=cancelled&reference=${encodeURIComponent(input.reference)}`,
       reference_number: input.reference,
       billing: { email: input.email, name: input.name },
     } } }),
@@ -52,9 +53,20 @@ export async function createCheckout(input: {
   return { id: result.id, url };
 }
 
+export function createCheckout(input: {
+  reference: string; planName: string; amountCentavos: number; email: string; name: string;
+}) {
+  return createTestCheckout({ ...input, description: `${input.planName} membership`, returnPath: '/account' });
+}
+
 export function retrieveCheckout(id: string) {
   if (!/^cs_[a-zA-Z0-9]+$/.test(id)) throw new Error('PAYMONGO_INVALID_SESSION_ID');
   return requestPaymongo(`/v1/checkout_sessions/${encodeURIComponent(id)}`);
+}
+
+export function expireCheckout(id: string) {
+  if (!/^cs_[a-zA-Z0-9]+$/.test(id)) throw new Error('PAYMONGO_INVALID_SESSION_ID');
+  return requestPaymongo(`/v1/checkout_sessions/${encodeURIComponent(id)}/expire`, { method: 'POST' });
 }
 
 function addMonths(date: Date, months: number) {

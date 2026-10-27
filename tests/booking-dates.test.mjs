@@ -42,3 +42,9 @@ test('slot availability blocks active duplicate trainer slots across time format
     trainer: 'James Reyes', date: '2026-10-20', time: '07:00', excludeBookingId: 'active',
   }), true);
 });
+
+test('occupied slots without an id still block that trainer and time', () => {
+  assert.equal(isBookingSlotAvailable([
+    { trainer: 'James Reyes', date: '2026-10-20', time: '09:00', status: 'Confirmed' },
+  ], { trainer: 'James Reyes', date: '2026-10-20', time: '09:00' }), false);
+});

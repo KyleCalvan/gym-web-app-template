@@ -1,4 +1,6 @@
 import { fulfillCheckout, type CheckoutSession } from '@/src/paymongo/checkout';
+import { fulfillDemoCheckout } from '@/src/paymongo/demoCheckout';
+import { fulfillCoachingCheckout } from '@/src/paymongo/coachingCheckout';
 import { validTestWebhookSignature } from '@/src/paymongo/validation';
 
 export const runtime = 'nodejs';
@@ -20,7 +22,11 @@ export async function POST(request: Request) {
   const checkout = payload.data;
   if (!checkout?.id || !checkout.attributes) return Response.json({ error: 'Invalid event.' }, { status: 400 });
   try {
-    const fulfilled = await fulfillCheckout(checkout);
+    const fulfilled = checkout.attributes.reference_number?.startsWith('DEMO-')
+      ? await fulfillDemoCheckout(checkout)
+      : checkout.attributes.reference_number?.startsWith('COACH-')
+        ? await fulfillCoachingCheckout(checkout)
+        : await fulfillCheckout(checkout);
     if (!fulfilled) return Response.json({ error: 'Checkout could not be matched.' }, { status: 409 });
     return Response.json({ received: true });
   } catch (error) {

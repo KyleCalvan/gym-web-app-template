@@ -293,6 +293,9 @@ export interface ViewProps {
   emptyDefaults?: boolean;
   onPlanCheckout?: (planName: string) => Promise<void>;
   onPlanCancel?: (reason: string) => Promise<void>;
+  onCoachingCheckout?: (selection: { trainerId: string; dates: string[]; time: string; expectedTotal: number }) => Promise<{ checkoutUrl: string; reference: string }>;
+  onCoachingCheckoutStatus?: (reference: string) => Promise<'Pending' | 'Paid' | 'Failed'>;
+  onCoachingCheckoutCancel?: (reference: string) => Promise<'Pending' | 'Paid' | 'Failed'>;
   studentVerified?: boolean;
   onProfilePhotoChange?: (url: string) => void;
   onNav: (id: string, action?: string) => void;
@@ -311,6 +314,7 @@ export interface ViewProps {
   setSessions: Setter<Session[]>;
   trainerAvailability: TrainerAvailability[];
   setTrainerAvailability: Setter<TrainerAvailability[]>;
+  bookingSlots?: Pick<Session, 'id' | 'trainer' | 'date' | 'time' | 'status'>[];
   promotions: Promotion[];
   setPromotions: Setter<Promotion[]>;
   staff: Staff[];
