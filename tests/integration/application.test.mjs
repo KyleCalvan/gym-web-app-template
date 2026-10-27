@@ -527,7 +527,8 @@ async function readLegacyRecords(env) {
   return withDatabaseClient(env, async (client) => {
     const records = [];
     for (const table of ['User', 'Post', 'AuthUser', 'AuthAccount', 'AuthSession']) {
-      const columns = table === 'AuthUser' ? '"id", "email", "name", "emailVerified", "image", "gymUserId"'
+      const columns = table === 'User' ? '"id", "email", "name"'
+        : table === 'AuthUser' ? '"id", "email", "name", "emailVerified", "image", "gymUserId"'
         : table === 'AuthSession' ? '"id", "sessionToken", "userId", "expires"' : '*';
       records.push((await client.query(`SELECT ${columns} FROM "${table}" ORDER BY "id"`)).rows);
     }

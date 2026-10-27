@@ -220,12 +220,9 @@ export async function PATCH(request: NextRequest) {
           const plan = payload.plan as Plan;
           const updatedPlan = { ...plan, status: existing.status as Plan['status'] };
           const dbPlan = toDatabasePlan(updatedPlan);
-          if (originalName === plan.name) {
-            await tx.gymPlan.update({ where: { name: originalName }, data: dbPlan });
-          } else {
-            await tx.gymPlan.create({ data: dbPlan });
-            await tx.gymPlan.delete({ where: { name: originalName } });
-          }
+          // Rename in place so memberships and other plan references follow the
+          // database's ON UPDATE CASCADE without deleting purchased history.
+          await tx.gymPlan.update({ where: { name: originalName }, data: dbPlan });
         }
 
         const [records, activePlanCount] = await Promise.all([

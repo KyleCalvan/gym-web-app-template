@@ -9,36 +9,48 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {  
-  id    Int     @id @default(autoincrement())  
-  email String  @unique
-  name  String?
-  posts Post[]
-  oauthIdentity AuthUser?
-  roleProfiles RoleProfile[]
+model User {
+  id             Int           @id @default(autoincrement())
+  email          String        @unique
+  name           String?
+  posts          Post[]
+  oauthIdentity  AuthUser?
+  roleProfiles   RoleProfile[]
+  phone          String?
+  phoneSecondary String?
+  avatarUrl      String?
 }
 
 // Auth.js identity is kept in separate tables so existing integer User IDs,
 // Post relationships, and gym data remain unchanged.
 model AuthUser {
-  id            String         @id @default(cuid())
-  name          String?
-  email         String?        @unique
-  emailVerified DateTime?
-  image         String?
-  gymUserId     Int?           @unique
-  gymUser       User?          @relation(fields: [gymUserId], references: [id], onDelete: SetNull)
-  accounts      AuthAccount[]
-  sessions      AuthSession[]
-  status        AccountStatus  @default(enabled)
-  establishedAt DateTime?
-  emailVerifiedProvider String?
-  emailVerifiedSubject String?
-  phone         String?
-  termsVersion  String?
-  termsAcceptedAt DateTime?
-  mfaEnabledAt  DateTime?
-  assignedRoles AssignedRole[]
+  id                     String                  @id @default(cuid())
+  name                   String?
+  email                  String?                 @unique
+  emailVerified          DateTime?
+  image                  String?
+  gymUserId              Int?                    @unique
+  gymUser                User?                   @relation(fields: [gymUserId], references: [id], onDelete: SetNull)
+  accounts               AuthAccount[]
+  sessions               AuthSession[]
+  status                 AccountStatus           @default(enabled)
+  establishedAt          DateTime?
+  emailVerifiedProvider  String?
+  emailVerifiedSubject   String?
+  phone                  String?
+  termsVersion           String?
+  termsAcceptedAt        DateTime?
+  mfaEnabledAt           DateTime?
+  assignedRoles          AssignedRole[]
+  // Secrets must be hashed/encrypted by the account service, never stored raw.
+  passwordHash           String?
+  mfaSecretEncrypted     String?
+  recoveryCodes          AuthRecoveryCode[]
+  notificationPreference NotificationPreference?
+  notifications          Notification[]
+  cashierTransactions    PaymentTransaction[]
+  recordedAttendance     Attendance[]
+  scheduleChangeRequests ScheduleChangeRequest[]
 }
 
 enum AccountStatus {
@@ -55,20 +67,30 @@ enum GymRole {
 }
 
 model RoleProfile {
-  id        String @id @default(cuid())
-  gymUserId Int
-  role      GymRole
-  gymUser   User @relation(fields: [gymUserId], references: [id], onDelete: Restrict)
+  id          String          @id @default(cuid())
+  gymUserId   Int
+  role        GymRole
+  gymUser     User            @relation(fields: [gymUserId], references: [id], onDelete: Restrict)
   assignments AssignedRole[]
+  // Archive the gym role record without implicitly deleting its Account.
+  status      String          @default("Active")
+  archivedAt  DateTime?       @db.Timestamptz(3)
+  createdAt   DateTime        @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime        @default(now()) @updatedAt @db.Timestamptz(3)
+  member      MemberProfile?
+  trainer     TrainerProfile?
+  staff       StaffProfile?
 
   @@unique([gymUserId, role])
+  @@unique([id, role])
+  @@index([role, archivedAt])
 }
 
 model AssignedRole {
   accountId String
   role      GymRole
   profileId String
-  account   AuthUser @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  account   AuthUser    @relation(fields: [accountId], references: [id], onDelete: Cascade)
   profile   RoleProfile @relation(fields: [profileId], references: [id], onDelete: Restrict)
 
   @@id([accountId, role])
@@ -76,15 +98,25 @@ model AssignedRole {
 }
 
 model AuditEvent {
-  id        String @id @default(cuid())
+  id         String   @id @default(cuid())
   occurredAt DateTime @default(now())
-  actor     String?
-  action    String
-  target    String?
-  result    String
-  requestId String
+  actor      String?
+  action     String
+  target     String?
+  result     String
+  requestId  String
+  level      String   @default("info")
+  actorRole  GymRole?
+  category   String?
+  details    String?
+  ipAddress  String?
+  metadata   Json?
+  before     Json?
+  after      Json?
 
   @@index([target, occurredAt])
+  @@index([occurredAt])
+  @@index([category, occurredAt])
 }
 
 model AuthAccount {
@@ -107,15 +139,15 @@ model AuthAccount {
 }
 
 model AuthSession {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
-  createdAt    DateTime @default(now())
-  lastActiveAt DateTime @default(now())
+  id                     String    @id @default(cuid())
+  sessionToken           String    @unique
+  userId                 String
+  expires                DateTime
+  createdAt              DateTime  @default(now())
+  lastActiveAt           DateTime  @default(now())
   primaryAuthenticatedAt DateTime?
-  mfaVerifiedAt DateTime?
-  user         AuthUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mfaVerifiedAt          DateTime?
+  user                   AuthUser  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
@@ -129,30 +161,391 @@ model AuthVerificationToken {
 }
 
 model Post {
-  id        Int     @id @default(autoincrement())  
+  id        Int     @id @default(autoincrement())
   title     String
   content   String?
-  published Boolean @default(false)  
-  author    User    @relation(fields: [authorId], references: [id])  
+  published Boolean @default(false)
+  author    User    @relation(fields: [authorId], references: [id])
   authorId  Int
 }
 
 model GymPlan {
-  name             String   @id
+  name             String            @id
   price            Float
   period           String
-  members          Int      @default(0)
-  perks            String[] @default([])
-  featured         Boolean  @default(false)
-  status           String   @default("Active")
-  category         String   @default("Standard")
-  description      String   @default("")
-  restrictions     String[] @default([])
-  sessionLimit     String   @default("0")
-  facilities       String[] @default([])
-  includedBenefits String[] @default([])
-  excludedBenefits String[] @default([])
+  members          Int               @default(0)
+  perks            String[]          @default([])
+  featured         Boolean           @default(false)
+  status           String            @default("Active")
+  category         String            @default("Standard")
+  description      String            @default("")
+  restrictions     String[]          @default([])
+  sessionLimit     String            @default("0")
+  facilities       String[]          @default([])
+  includedBenefits String[]          @default([])
+  excludedBenefits String[]          @default([])
   terms            String?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  memberships      Membership[]
+  transactionItems TransactionItem[]
+  promotions       Promotion[]
+}
+
+// Operational records reference stable IDs, not the display names used by demo data.
+// A RoleProfile can exist without an AssignedRole or an online Account.
+model MemberProfile {
+  profileId              String                @id
+  role                   GymRole               @default(member)
+  profile                RoleProfile           @relation(fields: [profileId, role], references: [id, role], onDelete: Restrict)
+  joinedAt               DateTime              @default(now()) @db.Timestamptz(3)
+  emergencyContact       String?
+  weightKg               Decimal?              @db.Decimal(6, 2)
+  heightCm               Decimal?              @db.Decimal(5, 2)
+  preferredPaymentMethod PaymentMethod         @default(GCash)
+  memberships            Membership[]
+  transactions           PaymentTransaction[]
+  coachingSessions       CoachingSession[]
+  attendance             Attendance[]
+  promotionRedemptions   PromotionRedemption[]
+  studentVerifications   StudentVerification[]
+
+  @@unique([profileId, role])
+}
+
+model TrainerProfile {
+  profileId        String                @id
+  role             GymRole               @default(trainer)
+  profile          RoleProfile           @relation(fields: [profileId, role], references: [id, role], onDelete: Restrict)
+  specialty        String                @default("")
+  certifications   String                @default("")
+  bio              String                @default("")
+  sessionPrice     Decimal               @default(0) @db.Decimal(12, 2)
+  availability     TrainerAvailability[]
+  coachingSessions CoachingSession[]
+  // Rating and weekly session totals are derived from CoachingSession.
+
+  @@unique([profileId, role])
+}
+
+enum StaffJobRole {
+  FrontDesk @map("Front Desk")
+  Sales
+  Manager
+}
+
+enum StaffShift {
+  Morning
+  Evening
+  Night
+}
+
+model StaffProfile {
+  profileId String       @id
+  role      GymRole      @default(staff)
+  profile   RoleProfile  @relation(fields: [profileId, role], references: [id, role], onDelete: Restrict)
+  jobRole   StaffJobRole @default(FrontDesk)
+  shift     StaffShift   @default(Morning)
+  hiredAt   DateTime     @default(now()) @db.Timestamptz(3)
+
+  @@unique([profileId, role])
+}
+
+enum MembershipStatus {
+  Active
+  Expiring
+  Frozen
+  Expired
+}
+
+model Membership {
+  id                 String           @id @default(cuid())
+  memberId           String
+  member             MemberProfile    @relation(fields: [memberId], references: [profileId], onDelete: Restrict)
+  planName           String
+  plan               GymPlan          @relation(fields: [planName], references: [name], onDelete: Restrict, onUpdate: Cascade)
+  status             MembershipStatus @default(Active)
+  startsAt           DateTime         @db.Timestamptz(3)
+  endsAt             DateTime         @db.Timestamptz(3)
+  frozenAt           DateTime?        @db.Timestamptz(3)
+  cancelledAt        DateTime?        @db.Timestamptz(3)
+  cancellationReason String?
+  createdAt          DateTime         @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime         @updatedAt @db.Timestamptz(3)
+  transactionItem    TransactionItem?
+
+  @@index([memberId, endsAt])
+  @@index([planName, status])
+}
+
+enum PaymentMethod {
+  Cash
+  GCash
+}
+
+enum TransactionStatus {
+  Pending
+  Paid
+  Refunded
+  Failed
+}
+
+enum PaymentState {
+  Pending
+  Processing
+  Successful
+  Failed
+}
+
+model PaymentTransaction {
+  id                   String                @id @default(cuid())
+  reference            String                @unique
+  receiptNumber        String?               @unique
+  // A null member identifies a Walk-in Customer; retain the receipt name snapshot.
+  memberId             String?
+  member               MemberProfile?        @relation(fields: [memberId], references: [profileId], onDelete: Restrict)
+  customerName         String
+  cashierAccountId     String?
+  cashier              AuthUser?             @relation(fields: [cashierAccountId], references: [id], onDelete: SetNull)
+  type                 String
+  method               PaymentMethod
+  status               TransactionStatus     @default(Pending)
+  paymentState         PaymentState          @default(Pending)
+  amount               Decimal               @db.Decimal(12, 2)
+  fees                 Decimal               @default(0) @db.Decimal(12, 2)
+  discountAmount       Decimal               @default(0) @db.Decimal(12, 2)
+  currency             String                @default("PHP") @db.Char(3)
+  isSimulated          Boolean               @default(false)
+  createdAt            DateTime              @default(now()) @db.Timestamptz(3)
+  paidAt               DateTime?             @db.Timestamptz(3)
+  refundedAt           DateTime?             @db.Timestamptz(3)
+  refundReason         String?
+  items                TransactionItem[]
+  promotionRedemptions PromotionRedemption[]
+
+  @@index([memberId, createdAt])
+  @@index([cashierAccountId, createdAt])
+  @@index([status, createdAt])
+}
+
+model TransactionItem {
+  id                String             @id @default(cuid())
+  transactionId     String
+  transaction       PaymentTransaction @relation(fields: [transactionId], references: [id], onDelete: Restrict)
+  // Keep purchased descriptions/prices after catalog edits or trainer rate changes.
+  description       String
+  quantity          Int                @default(1)
+  unitPrice         Decimal            @db.Decimal(12, 2)
+  discountAmount    Decimal            @default(0) @db.Decimal(12, 2)
+  total             Decimal            @db.Decimal(12, 2)
+  planName          String?
+  plan              GymPlan?           @relation(fields: [planName], references: [name], onDelete: Restrict, onUpdate: Cascade)
+  membershipId      String?            @unique
+  membership        Membership?        @relation(fields: [membershipId], references: [id], onDelete: Restrict)
+  coachingSessionId String?            @unique
+  coachingSession   CoachingSession?   @relation(fields: [coachingSessionId], references: [id], onDelete: Restrict)
+  promotionId       String?
+  promotion         Promotion?         @relation(fields: [promotionId], references: [id], onDelete: Restrict)
+  promotionCode     String?
+
+  @@index([transactionId])
+  @@index([planName])
+  @@index([promotionId])
+}
+
+enum CoachingSessionStatus {
+  Pending
+  Confirmed
+  Cancelled
+  Completed
+}
+
+model CoachingSession {
+  id                 String                  @id @default(cuid())
+  memberId           String
+  member             MemberProfile           @relation(fields: [memberId], references: [profileId], onDelete: Restrict)
+  trainerId          String
+  trainer            TrainerProfile          @relation(fields: [trainerId], references: [profileId], onDelete: Restrict)
+  startsAt           DateTime                @db.Timestamptz(3)
+  type               String                  @default("Personal Training")
+  status             CoachingSessionStatus   @default(Pending)
+  amount             Decimal                 @db.Decimal(12, 2)
+  notes              String?
+  cancellationReason String?
+  cancelledAt        DateTime?               @db.Timestamptz(3)
+  completedAt        DateTime?               @db.Timestamptz(3)
+  // One review per booking; trainer aggregates are calculated from these fields.
+  rating             Int?
+  reviewComment      String?
+  ratedAt            DateTime?               @db.Timestamptz(3)
+  createdAt          DateTime                @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime                @updatedAt @db.Timestamptz(3)
+  transactionItem    TransactionItem?
+  changeRequests     ScheduleChangeRequest[]
+  // The migration adds an active trainer/startsAt unique index (cancelled slots reusable).
+
+  @@index([memberId, startsAt])
+  @@index([trainerId, startsAt])
+  @@index([status, startsAt])
+}
+
+enum AvailabilityStatus {
+  available
+  unavailable
+}
+
+model TrainerAvailability {
+  id        String             @id @default(cuid())
+  trainerId String
+  trainer   TrainerProfile     @relation(fields: [trainerId], references: [profileId], onDelete: Restrict)
+  startsAt  DateTime           @db.Timestamptz(3)
+  endsAt    DateTime           @db.Timestamptz(3)
+  status    AvailabilityStatus
+  createdAt DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime           @updatedAt @db.Timestamptz(3)
+
+  @@index([trainerId, startsAt])
+}
+
+// Submission only. No invented approval queue or automatic rescheduling.
+model ScheduleChangeRequest {
+  id                   String          @id @default(cuid())
+  coachingSessionId    String
+  coachingSession      CoachingSession @relation(fields: [coachingSessionId], references: [id], onDelete: Restrict)
+  requestedByAccountId String?
+  requestedBy          AuthUser?       @relation(fields: [requestedByAccountId], references: [id], onDelete: SetNull)
+  requestedStartsAt    DateTime        @db.Timestamptz(3)
+  reason               String
+  createdAt            DateTime        @default(now()) @db.Timestamptz(3)
+
+  @@index([coachingSessionId, createdAt])
+  @@index([requestedByAccountId])
+}
+
+model Attendance {
+  id                  String        @id @default(cuid())
+  memberId            String
+  member              MemberProfile @relation(fields: [memberId], references: [profileId], onDelete: Restrict)
+  // Business date is computed in the gym timezone, separately from the timestamp.
+  visitDate           DateTime      @db.Date
+  checkedInAt         DateTime      @default(now()) @db.Timestamptz(3)
+  recordedByAccountId String?
+  recordedBy          AuthUser?     @relation(fields: [recordedByAccountId], references: [id], onDelete: SetNull)
+
+  @@unique([memberId, visitDate])
+  @@index([visitDate])
+  @@index([recordedByAccountId])
+}
+
+enum PromotionStatus {
+  Draft
+  Published
+}
+
+enum DiscountType {
+  Percentage
+  Fixed
+  Bundle
+}
+
+model Promotion {
+  id               String                @id @default(cuid())
+  title            String
+  code             String                @unique
+  discountType     DiscountType
+  // The existing editor supports custom bundle text as well as numeric values.
+  discount         String
+  validFrom        DateTime              @db.Date
+  validUntil       DateTime              @db.Date
+  // Null represents the frontend's Any Plan option.
+  planName         String?
+  plan             GymPlan?              @relation(fields: [planName], references: [name], onDelete: Restrict, onUpdate: Cascade)
+  maxRedemptions   Int                   @default(0)
+  minSpend         Decimal               @default(0) @db.Decimal(12, 2)
+  status           PromotionStatus       @default(Draft)
+  imageUrl         String?
+  description      String?
+  deletedAt        DateTime?             @db.Timestamptz(3)
+  createdAt        DateTime              @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime              @updatedAt @db.Timestamptz(3)
+  redemptions      PromotionRedemption[]
+  transactionItems TransactionItem[]
+
+  @@index([status, validFrom, validUntil])
+  @@index([planName])
+}
+
+model PromotionRedemption {
+  id            String              @id @default(cuid())
+  memberId      String
+  member        MemberProfile       @relation(fields: [memberId], references: [profileId], onDelete: Restrict)
+  promotionId   String
+  promotion     Promotion           @relation(fields: [promotionId], references: [id], onDelete: Restrict)
+  code          String
+  // Current UI can redeem before checkout; this link is optional until purchased.
+  transactionId String?
+  transaction   PaymentTransaction? @relation(fields: [transactionId], references: [id], onDelete: Restrict)
+  redeemedAt    DateTime            @default(now()) @db.Timestamptz(3)
+
+  @@unique([memberId, promotionId])
+  @@index([promotionId, redeemedAt])
+  @@index([transactionId])
+}
+
+// Persist the existing submission, without adding an approval workflow.
+model StudentVerification {
+  id                   String        @id @default(cuid())
+  memberId             String
+  member               MemberProfile @relation(fields: [memberId], references: [profileId], onDelete: Restrict)
+  // Private object-storage keys, not public URLs or image data embedded in rows.
+  studentIdStorageKey  String
+  enrollmentStorageKey String
+  status               String        @default("Pending")
+  submittedAt          DateTime      @default(now()) @db.Timestamptz(3)
+
+  @@index([memberId, submittedAt])
+}
+
+model NotificationPreference {
+  accountId String   @id
+  account   AuthUser @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  email     Boolean  @default(true)
+  sms       Boolean  @default(false)
+  reminders Boolean  @default(true)
+  promos    Boolean  @default(false)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+}
+
+model Notification {
+  id          String    @id @default(cuid())
+  accountId   String
+  account     AuthUser  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  title       String
+  body        String
+  actionView  String?
+  actionLabel String?
+  createdAt   DateTime  @default(now()) @db.Timestamptz(3)
+  readAt      DateTime? @db.Timestamptz(3)
+
+  @@index([accountId, readAt, createdAt])
+}
+
+model GymQrDestination {
+  id        String   @id @default(cuid())
+  label     String
+  url       String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+}
+
+model AuthRecoveryCode {
+  id        String    @id @default(cuid())
+  accountId String
+  account   AuthUser  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  codeHash  String    @unique
+  usedAt    DateTime? @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @db.Timestamptz(3)
+
+  @@index([accountId])
 }
