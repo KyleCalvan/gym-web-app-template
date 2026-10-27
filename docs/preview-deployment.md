@@ -15,12 +15,11 @@ The preview currently combines two kinds of sample data:
 
 - Hardcoded members, schedules, and other interface examples. Many operations
   still change only in-memory state and can reset on reload.
-- Database-backed Accounts, sessions, and membership plans. An empty plan catalog
-  is populated from the sample plans on its first API read.
+- Database-backed Accounts, sessions, and membership plans. The plan API reads
+  records already stored in PostgreSQL.
 
-Demo accounts let reviewers explore roles, but cannot authorize real plan writes
-or Account-status APIs. A deployed preview does not make unfinished workflows
-functional. Google sign-in is optional for the first interface review.
+Sign-in requires a database-backed Account created through email registration or
+Google. A deployed preview does not make unfinished workflows functional.
 
 ## 2. Prepare the project and preview database
 
@@ -116,8 +115,7 @@ The existing install and build scripts generate Prisma's client. The build does
 In **Settings → Deployment Protection**, enable **Vercel Authentication** with
 a scope covering preview deployments, such as Standard Protection. Testers must
 have access through Vercel's supported team/sharing options. This protection is
-separate from the gym app's login and protects the publicly documented demo
-credentials. See [Vercel Authentication](https://vercel.com/docs/deployment-protection/methods-to-protect-deployments/vercel-authentication).
+separate from the gym app's login. See [Vercel Authentication](https://vercel.com/docs/deployment-protection/methods-to-protect-deployments/vercel-authentication).
 
 Choose a unique preview hostname, for example
 `vinathletics-preview-YOURTEAM.vercel.app`. Replace `YOURTEAM` with your own unique
@@ -132,11 +130,10 @@ selected:
 | `DATABASE_URL` | The same preview database URL used in step 2 |
 | `NEXTAUTH_URL` | `https://vinathletics-preview-YOURTEAM.vercel.app` |
 | `NEXTAUTH_SECRET` | A newly generated random secret |
-| `DEMO_ACCOUNTS_ENABLED` | `true` |
-| `DEMO_SESSION_SECRET` | A second newly generated random secret |
 | `NEXT_PUBLIC_BOOKING_TIME_ZONE` | `Asia/Manila` |
 | `NEXT_PUBLIC_GCASH_TEST_FEE_PHP` | `0` |
 | `ACTIVE_PLAN_LIMIT` | `4` |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM` | Valid mail settings for email registration and verification |
 
 Generate each secret locally by running this command separately:
 
@@ -198,17 +195,13 @@ app testing: other deployment URLs will not match the configured auth origin.
 
 After passing Vercel's access check:
 
-- Open `/login` and sign in with `member@vinathletics.gym` / `member123`.
-- Log out and try `admin@vinathletics.gym` / `admin123` to review the admin interface.
-- Refresh while signed in to check demo-session restoration, then verify logout.
+- Register a designated test member through the configured SMTP verification flow,
+  or use the configured Google provider. Sign in with that Account.
+- Refresh while signed in to check database-session restoration, then verify logout.
 - Open `/api/gym-plans` in the same browser. It should return JSON containing
-  plans, not a database configuration error. This also initializes the sample
-  catalog if the table is empty.
+  the stored plan catalog, not a database configuration error.
 - Review desktop and mobile layouts. Treat simulated payments as demonstrations.
-- Expect real plan writes to reject demo identities; demo admin access does not
-  grant a real Account an admin Assigned Role.
 
-The other demo roles and credentials are listed in the [README](../README.md).
 Keep review records fictional. Testing Google sign-in will store the tester's
 actual Google identity in the preview database, so use designated test accounts.
 
@@ -258,7 +251,7 @@ Pushing to that production branch can publish a Production deployment. See
 | First deployment is Production and fails for missing variables | Follow the new-project exception in step 5; keep that record and deploy again to Preview. |
 | `DATABASE_URL is required` during build | Variable exists in Preview scope; root directory is correct; deploy again after adding it. |
 | `/api/gym-plans` returns an error | Database URL, provider TLS/network settings, and migration status against the same database. |
-| Demo accounts are missing or `/api/demo-session` returns 404 | Deployment must be Preview and `DEMO_ACCOUNTS_ENABLED` must be exactly `true`. Vercel Production always disables demos. |
+| Email registration returns `EMAIL_UNAVAILABLE` | Configure a valid SMTP sender and restart or redeploy the app. |
 | Google reports `redirect_uri_mismatch` | Exact HTTPS hostname and `/api/auth/callback/google` path match the Google client and `NEXTAUTH_URL`. |
 | Login redirects to an old site or API writes report an origin error | Open the stable alias matching `NEXTAUTH_URL`; check the alias points to the latest deployment. |
 | A reviewer sees a Vercel login screen | Deployment protection is working; grant them appropriate Vercel access. |
@@ -271,17 +264,13 @@ Keep this preview for future testing. When the essential workflows are complete:
 
 1. Create a separate production database and apply the reviewed migrations.
 2. Set **Production-only** database credentials and new auth secrets in Vercel.
-   Set `DEMO_ACCOUNTS_ENABLED=false` and omit the demo secret.
 3. Configure the public domain, its `NEXTAUTH_URL`, and the production Google OAuth
    callback. Rebuild for Production so the correct variables are used.
 4. Verify real sign-in, Account completion, Assigned Roles, persistent workflows,
    and any real payment integration. Establish database backups and recovery.
-5. Review initial data: the current plan endpoint seeds sample plans on an empty
-   database. Replace that behavior/catalog with approved launch data before going
-   live, and replace unfinished sample workflows where required.
+5. Review the stored plan catalog and replace unfinished sample workflows where required.
 6. Deploy to Production and verify its public-domain access settings. Keep
    Preview protected and connected to its own database.
 
 The hosting project can stay the same. Launch requires a production deployment
-with production configuration and data; making the demo preview public is not
-the launch procedure.
+with production configuration and data.

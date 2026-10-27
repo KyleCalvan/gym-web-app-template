@@ -5,7 +5,8 @@ import { SecurityFlow } from '../shared/components/SecurityFlow';
 import ProfileSettingsPanel from '../shared/ProfileSettingsPanel';
 import type { ViewProps } from '../types.ts';
 
-function StaffProfile({ staff, setStaff, currentUserId, toast, addAudit, notifPrefs, setNotifPrefs, currentUser, onProfilePhotoChange }: ViewProps) {
+function StaffProfile({ staff, setStaff, currentUserId, toast, addAudit, notifPrefs, setNotifPrefs, currentUser,
+  onProfilePhotoChange, onStaffProfileSave }: ViewProps) {
   const me = staff.find(s => s.id === currentUserId) || staff[0];
   const [info, setInfo] = useState({
     name: me?.name || currentUser?.name || '',
@@ -16,17 +17,27 @@ function StaffProfile({ staff, setStaff, currentUserId, toast, addAudit, notifPr
 
   const [showSecurityFlow, setShowSecurityFlow] = useState(false);
 
-  const submitInfo = (e: React.FormEvent) => {
+  const submitInfo = async (e: React.FormEvent) => {
     e.preventDefault();
-    setStaff(prev => prev.map(s => s.id === me.id ? {...s, ...info} : s));
-    toast('Profile updated');
-    addAudit?.('info', 'Profile updated', me?.id || 'staff');
+    try {
+      if (onStaffProfileSave) await onStaffProfileSave(info);
+      else {
+        setStaff(prev => prev.map(s => s.id === me.id ? {...s, ...info} : s));
+        addAudit?.('info', 'Profile updated', me?.id || 'staff');
+      }
+      toast('Profile updated');
+    } catch (error) { toast(error instanceof Error ? error.message : 'Could not update profile.'); }
   };
 
   const handleAvatarFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    onPickImage(file, url => {
+    onPickImage(file, async url => {
+      if (onStaffProfileSave) {
+        try { await onStaffProfileSave({ ...info, avatarUrl: url }); toast('Photo updated'); }
+        catch (error) { toast(error instanceof Error ? error.message : 'Could not update photo.'); }
+        return;
+      }
       onProfilePhotoChange?.(url);
       setStaff(prev => prev.map(s => s.id === me.id ? {...s, avatarUrl: url} : s));
       toast('Photo updated');
@@ -80,7 +91,9 @@ function StaffProfile({ staff, setStaff, currentUserId, toast, addAudit, notifPr
             </div>
           </form>
           }
-          onOpenSecurity={() => setShowSecurityFlow(true)}
+          onOpenSecurity={() => onStaffProfileSave
+            ? toast('Security changes require the account security service and are not available here yet.')
+            : setShowSecurityFlow(true)}
           notifPrefs={notifPrefs}
           setNotifPrefs={setNotifPrefs}
         />

@@ -380,7 +380,10 @@ test('registration creates only a member record and signs the new account in', a
   assert.equal((await register(body, 'https://attacker.example')).status, 403);
   assert.equal((await register({ ...body, termsAccepted: false })).status, 400);
   assert.equal((await register({ ...body, password: 'short' })).status, 400);
-  const created = await register(body);
+  const invalidPhone = await register({ ...body, phone: '123' });
+  assert.equal(invalidPhone.status, 400);
+  assert.equal((await invalidPhone.json()).code, 'INVALID_PHONE');
+  const created = await register({ ...body, phone: '+63 917–123–4567' });
   assert.equal(created.status, 201, application.logs());
   assert.equal((await created.json()).next, '/account?check-email=1');
   const cookie = responseCookieHeader(created);
@@ -395,7 +398,7 @@ test('registration creates only a member record and signs the new account in', a
   `, [email]));
   assert.equal(rows.rows.length, 1);
   assert.equal(rows.rows[0].name, 'Ava Marie Reyes Jr.');
-  assert.equal(rows.rows[0].phone, '+63 917 123 4567');
+  assert.equal(rows.rows[0].phone, '+63 917-123-4567');
   assert.equal(rows.rows[0].role, 'member');
   assert.equal(rows.rows[0].membership_count, 0);
   assert.equal(rows.rows[0].emailVerified, null);
@@ -432,7 +435,7 @@ test('registration creates only a member record and signs the new account in', a
   assert.ok(resentLink && resentLink !== link);
   const verified = await fetch(link, { redirect: 'manual' });
   assert.equal(verified.status, 307);
-  assert.equal(verified.headers.get('location'), `${application.url}/?verified=1`);
+  assert.equal(verified.headers.get('location'), `${application.url}/account?verified=1`);
   const verifiedCookie = responseCookieHeader(verified);
   assert.equal((await fetch(`${application.url}/api/auth/session`, { headers: { cookie: verifiedCookie } }).then(r => r.json())).user.role, 'member');
   const overview = await fetch(`${application.url}/api/member/overview`, { headers: { cookie: verifiedCookie } });
@@ -578,20 +581,17 @@ test('limited status, client session updates, and enabled preview demos cannot c
     method: 'PATCH', headers: { cookie: signedIn.cookie, 'content-type': 'application/json' }, body: '{}',
   });
   assert.equal(mutation.status, 403);
-  const preview = await startApplication({ ...database.env, VERCEL_ENV: 'preview', DEMO_ACCOUNTS_ENABLED: 'true' });
-  try {
-    const login = await fetch(`${preview.url}/api/demo-session`, {
-      method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ email: 'admin@vinathletics.gym', password: 'admin123' }),
-    });
-    assert.equal(login.status, 200, preview.logs());
-    const demoCookie = responseCookieHeader(login);
-    assert.equal((await fetch(`${preview.url}/api/me`, { headers: { cookie: demoCookie } })).status, 401);
-    const demoMutation = await fetch(`${preview.url}/api/gym-plans`, {
-      method: 'PATCH', headers: { cookie: demoCookie, 'content-type': 'application/json' }, body: '{}',
-    });
-    assert.equal(demoMutation.status, 401);
-  } finally { await preview.stop(); }
+  const removedDemo = await fetch(`${application.url}/api/demo-session`, {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ email: 'admin@vinathletics.gym', password: 'admin123' }),
+  });
+  assert.equal(removedDemo.status, 404);
+  const unknownAccount = await fetch(`${application.url}/api/password-login`, {
+    method: 'POST', headers: { 'content-type': 'application/json', origin: application.url },
+    body: JSON.stringify({ email: 'no-account@invalid.test', password: 'incorrect-pass' }),
+  });
+  assert.equal(unknownAccount.status, 401);
+  assert.equal((await unknownAccount.json()).code, 'INVALID_CREDENTIALS');
 });
 
 test('fresh migrations match the schema and can be deployed again without changes', async () => {
@@ -801,6 +801,81 @@ test('MFA assurance belongs to one session and only fully authorized administrat
   const stale = await mutate(assuredCookie, { action: 'deactivate', name: original.name });
   assert.equal(stale.status, 403);
   assert.equal((await stale.json()).code, 'FORBIDDEN');
+});
+
+test('staff registration, check-in, cash sale, and profile edits persist with staff authorization', async () => {
+  const accountId = await seedSessionAccount({ roles: ['staff'], mfa: true });
+  await withDatabaseClient(database.env, (client) => client.query(`
+    INSERT INTO "StaffProfile" ("profileId")
+    SELECT "profileId" FROM "AssignedRole" WHERE "accountId" = $1 AND role = 'staff'
+  `, [accountId]));
+  const initial = await issueSession(accountId);
+  const send = (route, body, cookie = initial.cookie, method = 'POST') => fetch(`${application.url}/api/staff/${route}`, {
+    method, headers: { cookie, origin: application.url, 'content-type': 'application/json' }, body: JSON.stringify(body),
+  });
+  assert.equal((await send('members', { name: 'Test Member' })).status, 403);
+  const rotation = await sessionCommand('rotate', { accountId, cookie: initial.cookie, mfaVerified: true });
+  assert.equal(rotation.status, 200);
+  const cookie = responseCookieHeader(rotation);
+  const plan = { name: `Staff test plan ${randomUUID()}`, price: 1500 };
+  await withDatabaseClient(database.env, (client) => client.query(`
+    INSERT INTO "GymPlan" (name, price, period, "updatedAt") VALUES ($1, $2, 'mo', NOW())
+  `, [plan.name, plan.price]));
+  const email = `staff-registered-${randomUUID()}@example.test`;
+  const registration = await send('members', { name: 'Staff Registered', email, phone: '0917–123–4567', planName: plan.name }, cookie);
+  assert.equal(registration.status, 201, application.logs());
+  const { member } = await registration.json();
+  assert.equal(member.phone, '0917-123-4567');
+  assert.equal((await send('members', { name: 'Duplicate', email, phone: '', planName: plan.name }, cookie)).status, 409);
+  const unpaidCheckIn = await send('check-ins', { memberId: member.id }, cookie);
+  assert.equal(unpaidCheckIn.status, 409);
+  assert.equal((await unpaidCheckIn.json()).code, 'MEMBERSHIP_INACTIVE');
+  const reference = `PAY-20261028-${randomUUID().toUpperCase()}`;
+  const saleInput = { reference, memberId: member.id, planNames: [plan.name], method: 'Cash', taxRate: '',
+    taxMode: 'exclusive', cashReceived: 2000 };
+  assert.equal((await send('sales', { ...saleInput, cashReceived: 100 }, cookie)).status, 400);
+  const sale = await send('sales', saleInput, cookie);
+  assert.equal(sale.status, 201, application.logs());
+  const saleBody = await sale.json();
+  const transaction = saleBody.transaction;
+  assert.equal(transaction.isSimulated, false);
+  assert.equal(transaction.amount, plan.price);
+  assert.equal(saleBody.membership.planName, plan.name);
+  assert.equal((await send('sales', saleInput, cookie)).status, 200);
+  const gcashReference = `PAY-20261028-${randomUUID().toUpperCase()}`;
+  const gcash = await send('sales', { ...saleInput, reference: gcashReference, method: 'GCash', cashReceived: undefined }, cookie);
+  assert.equal(gcash.status, 201, application.logs());
+  const gcashBody = await gcash.json();
+  assert.equal(gcashBody.transaction.isSimulated, true);
+  assert.equal(gcashBody.membership, null);
+  assert.equal((await send('sales', { ...saleInput, reference: gcashReference, method: 'GCash', cashReceived: undefined }, cookie)).status, 200);
+  const checkIn = await send('check-ins', { memberId: member.id }, cookie);
+  assert.equal(checkIn.status, 201, application.logs());
+  const duplicate = await send('check-ins', { memberId: member.id }, cookie);
+  assert.equal(duplicate.status, 409);
+  assert.equal((await duplicate.json()).code, 'ALREADY_CHECKED_IN');
+  const profileEmail = `${accountId}@example.test`;
+  const profile = await send('profile', { name: 'Updated Staff', email: profileEmail, phone: '09171234567', phoneSecondary: '' }, cookie, 'PATCH');
+  assert.equal(profile.status, 200, application.logs());
+  const stored = await withDatabaseClient(database.env, (client) => client.query(`
+    SELECT (SELECT COUNT(*)::int FROM "Attendance" WHERE "memberId" = $1) AS checkins,
+      (SELECT COUNT(*)::int FROM "Membership" WHERE "memberId" = $1) AS memberships,
+      (SELECT COUNT(*)::int FROM "PaymentTransaction" WHERE reference = $2 AND "isSimulated" = false AND status = 'Paid') AS sales,
+      (SELECT COUNT(*)::int FROM "PaymentTransaction" WHERE reference = $4 AND "isSimulated" = true) AS gcash_tests,
+      (SELECT COUNT(*)::int FROM "TransactionItem" WHERE "transactionId" =
+        (SELECT id FROM "PaymentTransaction" WHERE reference = $2) AND "membershipId" IS NOT NULL) AS linked_items,
+      (SELECT name FROM "AuthUser" WHERE id = $3) AS staff_name
+  `, [member.id, reference, accountId, gcashReference]));
+  assert.deepEqual(stored.rows[0], { checkins: 1, memberships: 1, sales: 1, gcash_tests: 1,
+    linked_items: 1, staff_name: 'Updated Staff' });
+  const staffPage = await fetch(`${application.url}/account`, { headers: { cookie } });
+  assert.equal(staffPage.status, 200, application.logs());
+  assert.match(await staffPage.text(), /Updated Staff/);
+  await withDatabaseClient(database.env, (client) => client.query(`
+    UPDATE "RoleProfile" SET status = 'Inactive' WHERE id =
+      (SELECT "profileId" FROM "AssignedRole" WHERE "accountId" = $1 AND role = 'staff')
+  `, [accountId]));
+  assert.equal((await send('check-ins', { memberId: member.id }, cookie)).status, 403);
 });
 
 test('member activity cannot extend thirty-day absolute expiry, including credential rotation', async () => {

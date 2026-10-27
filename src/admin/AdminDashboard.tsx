@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { StatTile, Badge, BarChart, Donut, Table, TabbedCard } from '../shared';
 import { downloadCSV } from '../shared/utils/csv.ts';
-import { REVENUE_7D, peso } from '../data.ts';
+import { peso } from '../data.ts';
 
 function AdminDashboard({ onNav, members, trainers, transactions, sessions, promotions, today, toast }){
   const published = promotions.filter(p=>p.status==='Published');
@@ -13,10 +13,21 @@ function AdminDashboard({ onNav, members, trainers, transactions, sessions, prom
   const distribution = Array.from(membershipCounts, ([l, v], index) => ({ l, v, color: planColors[l.toLowerCase()] || ['var(--signal-ink)', 'var(--amber)', 'var(--chart-blue)', 'var(--danger)'][index % 4] }));
   const activeCount = liveMembers.filter(m=>m.status==='Active').length;
   const paid = transactions.filter(t=>t.status==='Paid');
-  const revenueMtd = paid.reduce((a,t)=>a+t.amount,0);
+  const revenueMtd = paid.filter(t => {
+    const date = new Date(t.date);
+    const now = new Date();
+    return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
+  }).reduce((a,t)=>a+t.amount,0);
   const activeTrainers = liveTrainers.filter(t=>t.status==='Active').length;
   const today2 = new Date().toLocaleDateString('en-US', {month:'short', day:'2-digit', year:'numeric'});
   const sessionsToday = sessions.filter(s=>s.date===today2).length;
+  const revenue7d = Array.from({ length: 7 }, (_, index) => {
+    const date = new Date();
+    date.setDate(date.getDate() - (6 - index));
+    const dateKey = date.toDateString();
+    return { d: date.toLocaleDateString('en-US', { weekday: 'short' }),
+      v: paid.filter(t => new Date(t.date).toDateString() === dateKey).reduce((sum, t) => sum + t.amount, 0) };
+  });
 
   const exportReport = () => {
     const rows = [
@@ -71,7 +82,7 @@ function AdminDashboard({ onNav, members, trainers, transactions, sessions, prom
 
       <div className="grid grid-2" style={{marginBottom:18, alignItems:'start'}}>
         <TabbedCard title="Revenue — Last 7 Days">
-          <BarChart data={REVENUE_7D} valueKey="v" labelKey="d" prefix="₱" />
+          <BarChart data={revenue7d} valueKey="v" labelKey="d" prefix="₱" />
         </TabbedCard>
         <TabbedCard title="Membership Distribution">
           <Donut data={distribution} size={132} />

@@ -87,7 +87,6 @@ export async function startDatabase() {
       NEXTAUTH_SECRET: randomBytes(32).toString('hex'),
       GOOGLE_CLIENT_ID: 'isolated-test-client',
       GOOGLE_CLIENT_SECRET: 'isolated-test-secret',
-      DEMO_ACCOUNTS_ENABLED: 'false',
       ROLE_ASSIGNMENTS: '{}',
       ADMIN_EMAILS: '',
       ACTIVE_PLAN_LIMIT: '4',

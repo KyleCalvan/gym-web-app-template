@@ -1,30 +1,27 @@
 // @ts-nocheck
 import { StatTile, TabbedCard, Table, Badge } from '../shared';
 import { formatTime12h } from './availability.ts';
+import { getBookingToday } from '../member/bookingDates.ts';
 
 function TrainerDashboard({ sessions, today: todayLabel }) {
   const todayDate = new Date();
-  const weekdayLong = todayDate.toLocaleDateString('en-US', { weekday: 'long' });
-
-  // "Today" = either flagged as Today, OR its weekday matches today.
-  const todays = sessions.filter(
-    (s) => s.day === 'Today' || s.day === weekdayLong
-  );
+  const today = getBookingToday();
+  const todays = sessions.filter((s) => s.date === today);
 
   // This week = next 7 days, including today.
   const inAWeek = new Date(todayDate);
   inAWeek.setDate(inAWeek.getDate() + 7);
+  const weekEnd = inAWeek.toISOString().slice(0, 10);
   const thisWeek = sessions.filter((s) => {
     if (!s.date) return false;
-    const d = new Date(s.date);
-    return d >= todayDate && d <= inAWeek;
+    return s.date >= today && s.date <= weekEnd;
   });
 
   // Upcoming = future sessions, sorted ascending.
   const upcoming = sessions
     .filter((s) => {
       if (!s.date) return false;
-      return new Date(s.date) >= todayDate;
+      return s.date >= today;
     })
     .sort((a, b) => new Date(a.date) - new Date(b.date));
 

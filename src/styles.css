@@ -23,5 +23,6 @@
 @import './admin/admin.css';
 @import './member/member.css';
 @import './member/member-experience.css';
+@import './member/member-portal.css';
 @import './styles/mobile-optimization.css';
 @import './styles/interaction-polish.css';

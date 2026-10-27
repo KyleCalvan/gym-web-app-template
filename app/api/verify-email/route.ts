@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
       } });
       await writeAudit(tx, { actor: account.id, action: 'email.verified', target: account.id, result: 'success', requestId });
       const session = await createSession(tx, { accountId: account.id });
-      const response = NextResponse.redirect(destination('/?verified=1'));
+      const response = NextResponse.redirect(destination('/account?verified=1'));
       response.headers.set('cache-control', 'private, no-store');
       response.headers.set('referrer-policy', 'no-referrer');
       setSessionCookie(response, session);

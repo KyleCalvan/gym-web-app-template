@@ -28,7 +28,7 @@ export async function sendVerificationEmail(email: string, token: string) {
   const result = await transport.sendMail({
     from: config.from, to: email,
     subject: 'Verify your VinAthletics account',
-    text: `Open this link to verify your email and access your member dashboard:\n\n${link}\n\nThis link expires in 24 hours. If you did not register, ignore this message.`,
+    text: `Open this link to verify your VinAthletics email address:\n\n${link}\n\nThis link expires in 24 hours. If you did not register, ignore this message.`,
   });
   if (!result.accepted.some(address => (typeof address === 'string' ? address : address.address).toLowerCase() === email)) {
     throw new Error('SMTP server did not accept the verification recipient');

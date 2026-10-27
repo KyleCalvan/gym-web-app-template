@@ -11,7 +11,7 @@ interface PaymentSimulationModalProps {
   fees?: number;
   onClose: (state: PaymentState) => void;
   onStateChange?: (state: PaymentState) => void;
-  onComplete: (state: 'Successful' | 'Failed') => boolean | void;
+  onComplete: (state: 'Successful' | 'Failed') => boolean | void | Promise<boolean | void>;
 }
 
 const OUTCOMES = [
@@ -49,9 +49,9 @@ export function PaymentSimulationModal({
     processingLock.current = true;
     setError('');
     updateState('Processing');
-    window.setTimeout(() => {
+    window.setTimeout(async () => {
       try {
-        const canComplete = onComplete(outcome);
+        const canComplete = await onComplete(outcome);
         updateState(outcome === 'Successful' && canComplete === false ? 'Failed' : outcome);
       } catch (paymentError) {
         setError('The test payment could not be completed. Please try again.');

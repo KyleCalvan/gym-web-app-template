@@ -49,7 +49,6 @@ export default function AccountStatus({ initialStatus }: { initialStatus?: Visib
         setSelectedRole(null);
       }
       void establishAccountBrowserState(status.account.id);
-      void fetch('/api/demo-session', { method: 'DELETE' }).catch(() => {});
     }
   }, [status?.account.id]);
   useEffect(() => { if (!initialStatus) void refresh(); }, [initialStatus]);
