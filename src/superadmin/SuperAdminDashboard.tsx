@@ -19,7 +19,7 @@ function SuperAdminDashboard({
         <StatTile label="Total Members" value={liveMembers} tone="court" />
         <StatTile label="Trainers" value={liveTrainers} tone="steel" />
         <StatTile label="Staff" value={liveStaff} tone="amber" />
-        <StatTile label="Admin Users" value={liveAdmins} tone="signal" />
+        <StatTile label="Managers" value={liveAdmins} tone="signal" />
       </div>
 
       <TabbedCard title="Super Admin Overview">

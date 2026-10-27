@@ -18,7 +18,7 @@ export function Badge({ status }: { status: string }) {
         transition={{ duration: 0.22, ease: ease.out }}
         style={{ display: 'inline-block' }}
       >
-        {status}
+        {status === 'Expiring' ? 'Expire' : status}
       </motion.span>
     </AnimatePresence>
   );

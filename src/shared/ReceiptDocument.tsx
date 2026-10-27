@@ -1,5 +1,5 @@
 import type { Transaction } from '../types.ts';
-import { peso } from '../data.ts';
+import { formatMoney as peso } from './utils/money';
 import { getReceiptReference } from '../receipt.ts';
 
 interface ReceiptMember {
@@ -73,13 +73,17 @@ export function ReceiptDocument({ transaction, member, documentType = 'Receipt' 
         </div>
         <div className="receipt-item">
           <span>{transaction.type || 'Gym purchase'}</span>
-          <strong>{peso(transaction.amount)}</strong>
+          <strong>{peso(transaction.taxDetails?.subtotal ?? transaction.amount)}</strong>
         </div>
       </section>
 
       <section className="receipt-totals" aria-label="Payment totals">
-        <div><span>Amount</span><strong>{peso(transaction.amount)}</strong></div>
-        <div><span>Fees</span><strong>{peso(fees)}</strong></div>
+        {transaction.taxDetails ? <>
+          <div><span>Subtotal</span><strong>{peso(transaction.taxDetails.subtotal)}</strong></div>
+          {transaction.taxDetails.mode === 'inclusive' && <div><span>Taxable amount</span><strong>{peso(transaction.taxDetails.base)}</strong></div>}
+          <div><span>VAT / tax ({transaction.taxDetails.rate}%{transaction.taxDetails.mode === 'inclusive' ? ', included' : ''})</span><strong>{peso(transaction.taxDetails.amount)}</strong></div>
+        </> : <div><span>Amount</span><strong>{peso(transaction.amount)}</strong></div>}
+        {fees > 0 && <div><span>Fees</span><strong>{peso(fees)}</strong></div>}
         <div><span>Payment status</span><strong>{transaction.paymentState || transaction.status}</strong></div>
         <div className="receipt-grand-total"><span>{transaction.status === 'Paid' ? 'Total paid' : 'Total due'}</span><strong>{peso(total)}</strong></div>
       </section>

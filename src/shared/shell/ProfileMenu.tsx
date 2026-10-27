@@ -109,7 +109,7 @@ export function ProfileMenu({
               <Avatar src={user.avatarUrl} name={user.name || 'User'} size={32} />
               <span className="who">
                 <b>{user.name || 'User'}</b>
-                <span>{user.role || ROLE_LABEL[role]}</span>
+                <span>{role === 'admin' ? ROLE_LABEL.admin : user.role || ROLE_LABEL[role]}</span>
               </span>
             </div>
 

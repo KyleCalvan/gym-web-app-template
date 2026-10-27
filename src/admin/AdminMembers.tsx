@@ -1,41 +1,43 @@
 // @ts-nocheck
 import { useState } from 'react';
+import { NameFields } from '../shared/components/NameFields';
+import { emptyName, formatName, splitName } from '../shared/nameParts';
 import { StatTile, Badge, Table, Modal, Field, TextInput, Select, TabbedCard, Avatar, PaymentSimulationModal } from '../shared';
 import { peso } from '../data.ts';
 import { createSimulatedTransaction, getConfiguredPaymentFee, updateSimulatedTransaction } from '../payments.ts';
 
-function AdminMembers({ members, setMembers, plans, setTransactions, today, toast, addAudit, preferredPaymentMethod = 'GCash' }){
+function AdminMembers({ members, setMembers, plans, setTransactions, today, toast, addAudit, preferredPaymentMethod = 'GCash', initialAction }){
   const [q, setQ] = useState('');
   const [statusF, setStatusF] = useState('All');
-  const [showRegister, setShowRegister] = useState(false);
+  const [showRegister, setShowRegister] = useState(initialAction === 'register-member');
   const [selected, setSelected] = useState(null);
   const [editing, setEditing] = useState(false);
   const [renewing, setRenewing] = useState(false);
 
-  const [reg, setReg] = useState({name:'', email:'', phone:'', plan:'Basic'});
+  const [reg, setReg] = useState({...emptyName(), email:'', phone:'', plan:'Basic'});
   const submitRegister = (e) => {
     e.preventDefault();
-    if (!reg.name.trim() || !reg.email.trim()) { toast('Name and email are required'); return; }
+    if (!reg.firstName.trim() || !reg.lastName.trim() || !reg.email.trim()) { toast('Name and email are required'); return; }
     const id = 'M-' + (1042 + members.length);
-    setMembers(prev => [...prev, {...reg, id, status:'Active', joined: today}]);
-    toast('Member registered — ' + reg.name + ' (' + id + ')');
-    addAudit?.('info', 'Member registered', reg.name + ' (' + id + ')');
-    setReg({name:'', email:'', phone:'', plan:'Basic'});
+    setMembers(prev => [...prev, {...reg, name:formatName(reg), id, status:'Active', joined: today}]);
+    toast('Member registered — ' + formatName(reg) + ' (' + id + ')');
+    addAudit?.('info', 'Member registered', formatName(reg) + ' (' + id + ')');
+    setReg({...emptyName(), email:'', phone:'', plan:'Basic'});
     setShowRegister(false);
   };
 
   const [edit, setEdit] = useState(null);
   const startEdit = () => {
-    setEdit({name:selected.name, email:selected.email, phone:selected.phone, plan:selected.plan});
+    setEdit({...splitName(selected), email:selected.email, phone:selected.phone, plan:selected.plan});
     setEditing(true);
   };
   const submitEdit = (e) => {
     e.preventDefault();
-    setMembers(prev => prev.map(m => m.id===selected.id ? {...m, ...edit} : m));
-    setSelected(s => ({...s, ...edit}));
+    setMembers(prev => prev.map(m => m.id===selected.id ? {...m, ...edit, name:formatName(edit)} : m));
+    setSelected(s => ({...s, ...edit, name:formatName(edit)}));
     setEditing(false);
-    toast('Member updated — ' + edit.name);
-    addAudit?.('info', 'Member updated', edit.name + ' (' + selected.id + ')');
+    toast('Member updated — ' + formatName(edit));
+    addAudit?.('info', 'Member updated', formatName(edit) + ' (' + selected.id + ')');
   };
 
   const [renewPlan, setRenewPlan] = useState(plans[0]?.name || 'Premium');
@@ -132,7 +134,7 @@ function AdminMembers({ members, setMembers, plans, setTransactions, today, toas
       <div className="grid grid-4" style={{marginBottom:18}}>
         <StatTile label="Total Members" value={liveMembers.length} tone="steel"/>
         <StatTile label="Active" value={counts.active} tone="court"/>
-        <StatTile label="Expiring Soon" value={counts.expiring} tone="amber"/>
+        <StatTile label="Expire" value={counts.expiring} tone="amber"/>
         <StatTile label="Expired / Frozen" value={counts.ef} />
       </div>
 
@@ -140,12 +142,13 @@ function AdminMembers({ members, setMembers, plans, setTransactions, today, toas
         <div className="search-row">
           <TextInput placeholder="Search by name or member ID…" value={q} onChange={setQ} />
           <Select value={statusF} onChange={setStatusF} style={{maxWidth:180}}>
-            {['All','Active','Expiring','Frozen','Expired'].map(s=><option key={s}>{s}</option>)}
+            {['All','Active','Expiring','Frozen','Expired'].map(s=><option key={s} value={s}>{s === 'Expiring' ? 'Expire' : s}</option>)}
           </Select>
         </div>
-        <Table columns={['Member','Contact','Plan','Status','Joined','']} rows={filtered} renderRow={m=>(
+        <Table columns={['First Name','Middle Name','Last Name','Suffix','Contact','Plan','Status','Joined','']} rows={filtered} renderRow={m=>(
           <tr key={m.id}>
-            <td><Avatar src={m.avatarUrl} name={m.name} />{m.name}<div className="mono" style={{fontSize:11.6, color:'var(--steel)'}}>{m.id}</div></td>
+            <td><Avatar src={m.avatarUrl} name={m.name} />{splitName(m).firstName}<div className="mono" style={{fontSize:11.6, color:'var(--steel)'}}>{m.id}</div></td>
+            <td>{splitName(m).middleName || '—'}</td><td>{splitName(m).lastName || '—'}</td><td>{splitName(m).suffix || '—'}</td>
             <td>{m.email}<div style={{fontSize:12.7, color:'var(--steel)'}}>{m.phone}</div></td>
             <td>{m.plan}</td>
             <td><Badge status={m.status} /></td>
@@ -158,7 +161,7 @@ function AdminMembers({ members, setMembers, plans, setTransactions, today, toas
       {showRegister && (
         <Modal title="Register Member" onClose={()=>setShowRegister(false)}>
           <form onSubmit={submitRegister}>
-            <Field label="Full Name"><TextInput required value={reg.name} onChange={v=>setReg(r=>({...r, name:v}))} placeholder="Full name" /></Field>
+            <NameFields prefix="member-register" value={reg} onChange={parts=>setReg(r=>({...r,...parts}))} />
             <Field label="Email"><TextInput type="email" required value={reg.email} onChange={v=>setReg(r=>({...r, email:v}))} placeholder="Email address" /></Field>
             <Field label="Phone"><TextInput required value={reg.phone} onChange={v=>setReg(r=>({...r, phone:v}))} placeholder="+63 9XX XXX XXXX" /></Field>
             <Field label="Plan">
@@ -200,7 +203,7 @@ function AdminMembers({ members, setMembers, plans, setTransactions, today, toas
       {selected && editing && edit && (
         <Modal title="Edit Member" onClose={()=>{setEditing(false); setEdit(null);}}>
           <form onSubmit={submitEdit}>
-            <Field label="Full Name"><TextInput required value={edit.name} onChange={v=>setEdit(e=>({...e, name:v}))} /></Field>
+            <NameFields prefix="member-edit" value={edit} onChange={parts=>setEdit(e=>({...e,...parts}))} />
             <Field label="Email"><TextInput type="email" required value={edit.email} onChange={v=>setEdit(e=>({...e, email:v}))} /></Field>
             <Field label="Phone"><TextInput value={edit.phone} onChange={v=>setEdit(e=>({...e, phone:v}))} /></Field>
             <Field label="Plan">

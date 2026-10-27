@@ -5,10 +5,10 @@ import { SecurityFlow } from '../shared/components/SecurityFlow';
 import ProfileSettingsPanel from '../shared/ProfileSettingsPanel';
 import type { ViewProps } from '../types.ts';
 
-function StaffProfile({ staff, setStaff, currentUserId, toast, addAudit, notifPrefs, setNotifPrefs }: ViewProps) {
+function StaffProfile({ staff, setStaff, currentUserId, toast, addAudit, notifPrefs, setNotifPrefs, currentUser, onProfilePhotoChange }: ViewProps) {
   const me = staff.find(s => s.id === currentUserId) || staff[0];
   const [info, setInfo] = useState({
-    name: me?.name || '',
+    name: me?.name || currentUser?.name || '',
     email: me?.email || '',
     phone: me?.phone || '',
     phoneSecondary: me?.phoneSecondary || '',
@@ -27,6 +27,7 @@ function StaffProfile({ staff, setStaff, currentUserId, toast, addAudit, notifPr
     const file = e.target.files?.[0];
     if (!file) return;
     onPickImage(file, url => {
+      onProfilePhotoChange?.(url);
       setStaff(prev => prev.map(s => s.id === me.id ? {...s, avatarUrl: url} : s));
       toast('Photo updated');
       addAudit?.('info', 'Profile photo updated', me?.id || 'staff');
@@ -35,11 +36,11 @@ function StaffProfile({ staff, setStaff, currentUserId, toast, addAudit, notifPr
   };
 
   return (
-    <div className="grid grid-1-2">
-      <TabbedCard title={me?.name || 'Staff'}>
-        <div style={{textAlign:'center', marginBottom:14}}>
-          <Avatar src={me?.avatarUrl} name={me?.name || 'Staff'} size={64} />
-          <div style={{marginTop:10}}>
+    <div className="grid grid-1-2 profile-page-grid">
+      <TabbedCard title={me?.name || currentUser?.name || 'Staff'}>
+        <div className="profile-photo-content">
+          <Avatar src={me?.avatarUrl || currentUser?.avatarUrl} name={me?.name || currentUser?.name || 'Staff'} size={96} />
+          <div>
             <button
               type="button"
               className="btn btn-outline btn-sm"

@@ -1,30 +1,8 @@
-// @ts-nocheck
-import { INITIALS } from '../../data.ts';
-
-// Avatar: shows a user's profile photo when present, falls back to initials.
-// Used by admin / staff / member / trainer lists and by the Topbar role pill.
-
+import { useState } from 'react';
+import { INITIALS } from '../../data';
 export function Avatar({ src, name, size = 26 }: { src?: string; name: string; size?: number }) {
-  if (src) {
-    return (
-      <img
-        src={src}
-        alt={name}
-        className="avatar-img"
-        style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', display: 'block' }}
-      />
-    );
-  }
-  return (
-    <span
-      className="avatar-sm"
-      style={{
-        width: size,
-        height: size,
-        fontSize: Math.max(10, Math.round(size / 2.4)),
-      }}
-    >
-      {INITIALS(name)}
-    </span>
-  );
+  const [failed, setFailed] = useState<string>();
+  const style = { width: size, height: size, minWidth: size, borderRadius: '50%', flexShrink: 0, objectFit: 'cover' as const, display: 'inline-flex', verticalAlign: 'middle' };
+  if (src && failed !== src) return <img src={src} alt={name} className="avatar-img" style={style} onError={() => setFailed(src)} />;
+  return <span className="avatar-sm" style={{ ...style, fontSize: Math.max(11, Math.round(size / 2.4)) }} role="img" aria-label={name}>{INITIALS(name)}</span>;
 }

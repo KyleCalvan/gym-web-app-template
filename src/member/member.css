@@ -2,20 +2,20 @@
 
 .metrics-tracker{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;}
 .metric-tile{
-  border:2px solid var(--ink);border-radius:0;padding:10px 12px;background:var(--surface);
+  border:1px solid var(--line);border-radius:var(--radius);padding:10px 12px;background:var(--surface);
 }
 .metric-tile .lbl{font-family:var(--font-mono);font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--steel);}
 .metric-tile .val{font-family:var(--font-mono);font-size:22px;font-weight:600;margin-top:4px;}
 .metric-tile .sub{font-family:var(--font-mono);font-size:11px;color:var(--court);margin-top:2px;}
-.metric-tile.warn{border-left:4px solid var(--amber);}
-.metric-tile.ok{border-left:4px solid var(--court);}
+.metric-tile.warn{border-left:2px solid var(--amber);}
+.metric-tile.ok{border-left:2px solid var(--court);}
 
 /* ===== Check-in calendar (Activity page) ===== */
 .cal-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
 .cal-title{font-family:var(--font-display);font-size:15.4px;text-transform:uppercase;letter-spacing:.5px;font-weight:600;}
 .check-calendar{
   display:grid;grid-template-columns:repeat(7,1fr);gap:6px;
-  background:var(--surface);border:2px solid var(--ink);border-radius:0;padding:10px;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:10px;
   width: 100%;
   margin: 0 auto;
 }
@@ -24,9 +24,9 @@
   color:var(--steel);text-align:center;padding-bottom:4px;
 }
 .check-calendar .cal-cell{
-  min-height: 80px; max-height: 120px; display:flex;flex-direction:column;align-items:center;justify-content:center;
-  border:1.5px solid var(--line);border-radius:0;background:var(--surface);
-  font-family:var(--font-mono);font-size:13.2px;color:var(--ink);position:relative;padding:0;
+  min-width:0;min-height:80px; display:flex;flex-direction:column;align-items:center;justify-content:center;
+  border:1px solid var(--line);border-radius:8px;background:var(--surface);
+  font-family:var(--font-mono);font-size:13.2px;color:var(--ink);position:relative;padding:8px 3px;cursor:pointer;gap:4px;
   transition:border-color .15s ease, background-color .15s ease;
 }
 .check-calendar .cal-cell.empty{background:transparent;border-color:transparent;}
@@ -35,10 +35,10 @@
   width:6px;height:6px;border-radius:50%;background:var(--court);margin-top:4px;display:block;
 }
 .check-calendar .cal-cell.checked{
-  background:var(--court);color:var(--on-signal);border-color:var(--ink);
+  background:var(--court-soft);color:var(--ink);border-color:var(--line-strong);
 }
-.check-calendar .cal-cell.checked .cal-dot{background:var(--ink);}
-.check-calendar .cal-cell.today{outline:2px solid var(--ink);outline-offset:-2px;}
+.check-calendar .cal-cell.checked .cal-dot{background:var(--signal-ink);}
+.check-calendar .cal-cell.today{border-color:var(--signal);}
 .check-calendar .cal-cell:hover{border-color:var(--signal);}
 .cal-legend{
   display:flex;align-items:center;gap:8px;margin-top:10px;
@@ -60,3 +60,16 @@
   .cal-legend{align-items:flex-start;flex-wrap:wrap;line-height:1.4;}
   .cal-legend > span:last-child{margin-left:0 !important;}
 }
+
+.member-activity>.card,.member-activity>.grid{margin-bottom:20px;}
+.cal-toolbar{justify-content:space-between;}.cal-title{font-size:20px;}
+.check-calendar .cal-cell.selected{box-shadow:inset 0 0 0 2px var(--signal);background:var(--court-soft);}
+.cal-session-count{max-width:100%;font:500 10px var(--font-body);color:var(--signal-ink);background:var(--court-soft);padding:3px 5px;border-radius:4px;}
+.cal-session-indicator{height:8px;width:8px;border-radius:2px;background:var(--signal-ink);margin-left:12px;}
+.member-day-heading{display:flex;align-items:center;gap:12px;}
+.member-activity-list{display:grid;gap:6px;}
+.member-activity-record{display:grid;grid-template-columns:90px minmax(0,1fr) auto;gap:14px;align-items:center;padding:14px 4px;border-bottom:1px solid var(--line);}
+.member-activity-record>span:nth-child(2){display:grid;gap:4px;min-width:0;}
+.member-activity-record strong{font-weight:500;font-size:14px;}
+.member-activity-record small{color:var(--steel);font-size:12px;overflow-wrap:anywhere;}
+@media(max-width:600px){.check-calendar{padding:4px;gap:3px;}.check-calendar .cal-head{font-size:9px;letter-spacing:0;}.check-calendar .cal-cell{min-height:64px;}.cal-session-label{display:none;}.member-activity-record{grid-template-columns:60px minmax(0,1fr);gap:8px;}.member-activity-record>.badge{grid-column:2;justify-self:start;}.member-day-heading{align-items:flex-start;}}

@@ -15,7 +15,7 @@ function getPromotionBucket(promotion: Promotion, today: string): Exclude<Promot
   return 'active';
 }
 
-function AdminPromotions({ promotions, setPromotions, plans, toast, addAudit }: Pick<ViewProps, 'promotions' | 'setPromotions' | 'plans' | 'toast' | 'addAudit'>) {
+function AdminPromotions({ promotions, setPromotions, plans, toast, addAudit, initialAction }: Pick<ViewProps, 'promotions' | 'setPromotions' | 'plans' | 'toast' | 'addAudit' | 'initialAction'>) {
   const [form, setForm] = useState({
     title:'', discountType:'Percentage', discountValue:'', validFrom:'', validUntil:'',
     applicablePlan:'Any Plan', description:'', maxRedemptions:'', minSpend:'', code:'',
@@ -23,7 +23,7 @@ function AdminPromotions({ promotions, setPromotions, plans, toast, addAudit }: 
   });
   const [editing, setEditing] = useState(null);
   const [editForm, setEditForm] = useState(null);
-    const [showCreate, setShowCreate] = useState(false);
+    const [showCreate, setShowCreate] = useState(initialAction === 'create-promotion');
   const [detailPromo, setDetailPromo] = useState(null);
   const [pendingDelete, setPendingDelete] = useState<Promotion | null>(null);
   const [filter, setFilter] = useState<PromotionFilter>('all');

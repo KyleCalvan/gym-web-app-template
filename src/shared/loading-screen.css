@@ -1,0 +1,11 @@
+.loading-screen{min-height:100svh;display:grid;place-items:center;padding:32px 24px;background:radial-gradient(ellipse at 50% 35%,var(--court-soft),transparent 65%),var(--paper);color:var(--ink);}
+.loading-screen-content{display:flex;align-items:center;flex-direction:column;max-width:420px;text-align:center;}
+.loading-screen-logo{border-radius:50%;object-fit:cover;border:1px solid var(--line-strong);margin-bottom:16px;}
+.loading-screen-brand{font:400 24px var(--font-display);letter-spacing:.8px;}
+.loading-screen h1{font-size:clamp(26px,5vw,34px);line-height:1.2;margin:28px 0 10px;}
+.loading-screen p{margin:0;color:var(--steel);font-size:14px;}
+.loading-screen-track{width:180px;height:3px;margin:30px 0 12px;overflow:hidden;background:var(--line);border-radius:999px;}
+.loading-screen-track span{display:block;height:100%;width:45%;background:var(--signal);border-radius:inherit;animation:loading-progress 1.4s ease-in-out infinite alternate;}
+.loading-screen-caption{font:11px var(--font-mono);color:var(--steel);}
+@keyframes loading-progress{from{transform:translateX(-100%);}to{transform:translateX(225%);}}
+@media(prefers-reduced-motion:reduce){.loading-screen-track span{animation:none;transform:none;width:100%;}}

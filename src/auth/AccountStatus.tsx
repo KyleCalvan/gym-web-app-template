@@ -6,6 +6,9 @@ import type { getAccountStatus } from './account';
 import type { AccountNextStep } from './account-contract';
 import { CURRENT_TERMS_VERSION } from './terms';
 import TermsOfUse from './TermsOfUse';
+import { NameFields } from '../shared/components/NameFields';
+import { splitName, formatName } from '../shared/nameParts';
+import { LoadingScreen } from '../shared/LoadingScreen';
 import { clearAccountBrowserState, establishAccountBrowserState } from './browser-state';
 
 type Status = NonNullable<Awaited<ReturnType<typeof getAccountStatus>>>;
@@ -22,7 +25,7 @@ const STEP_LABELS: Record<AccountNextStep, string> = {
 };
 
 const ROLE_LABELS: Record<Status['roles'][number], string> = {
-  member: 'Member', trainer: 'Trainer', staff: 'Staff', admin: 'Administrator', superadmin: 'Super Admin',
+  member: 'Member', trainer: 'Trainer', staff: 'Staff', admin: 'Manager', superadmin: 'Super Admin',
 };
 
 export default function AccountStatus({ initialStatus }: { initialStatus?: VisibleStatus | null }) {
@@ -30,7 +33,7 @@ export default function AccountStatus({ initialStatus }: { initialStatus?: Visib
   const [pending, setPending] = useState(false);
   const pendingRef = useRef(false);
   const [error, setError] = useState('');
-  const [name, setName] = useState(initialStatus?.account.name ?? '');
+  const [profileName, setProfileName] = useState(() => splitName(initialStatus?.account.name ?? ''));
   const [phone, setPhone] = useState(initialStatus?.account.phone ?? '');
   const [accepted, setAccepted] = useState(false);
   const [selectedRole, setSelectedRole] = useState<Status['roles'][number] | null>(null);
@@ -65,7 +68,7 @@ export default function AccountStatus({ initialStatus }: { initialStatus?: Visib
       if (!response.ok) throw new Error('Your Account status could not be loaded. Please retry.');
       const next: VisibleStatus = await response.json();
       setStatus(next);
-      setName(next.account.name ?? '');
+      setProfileName(splitName(next.account.name ?? ''));
       setPhone(next.account.phone ?? '');
     });
   }
@@ -103,6 +106,8 @@ export default function AccountStatus({ initialStatus }: { initialStatus?: Visib
   const roles = status?.restricted ? [] : status?.roles ?? [];
   const activeRole = selectedRole && roles.includes(selectedRole) ? selectedRole : roles[0] ?? null;
 
+  if (!status && !error) return <LoadingScreen label="Loading your account" />;
+
   return <main className="account-status" aria-busy={pending}>
     <p className="account-status-brand">VinAthletics</p>
     <h1>Your Account</h1>
@@ -117,12 +122,13 @@ export default function AccountStatus({ initialStatus }: { initialStatus?: Visib
         <h2>Next steps</h2>
         <ul>{status.nextSteps.map((step) => <li key={step}>{STEP_LABELS[step]}</li>)}</ul>
         {status.nextSteps.includes('complete-profile') && <form onSubmit={(event) => {
-          event.preventDefault(); void submit('/api/me', { name, phone });
+          event.preventDefault();
+          const name = formatName(profileName);
+          if (name.length > 120) { setError('Keep your full name within 120 characters.'); return; }
+          void submit('/api/me', { name, phone });
         }}>
           <h3>Complete your profile</h3>
-          <label htmlFor="account-name">Full name</label>
-          <input id="account-name" name="name" autoComplete="name" required minLength={2} maxLength={120}
-            value={name} onChange={(event) => setName(event.target.value)} disabled={pending} />
+          <NameFields prefix="account" value={profileName} onChange={setProfileName} disabled={pending} />
           <label htmlFor="account-phone">Contact phone</label>
           <input id="account-phone" name="phone" type="tel" autoComplete="tel" required maxLength={25}
             value={phone} onChange={(event) => setPhone(event.target.value)} disabled={pending} />

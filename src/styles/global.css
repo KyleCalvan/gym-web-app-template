@@ -1,35 +1,35 @@
 /* ===== Design tokens, reset, and tiny global utilities ===== */
 :root{
-  --ink:#F4F6F1;
-  --ink-soft:#D8DDD5;
-  /* Recessed canvas, raised panels, and a brighter hover layer. These tones
-     preserve the gym's dark identity without collapsing into flat black. */
-  --paper:#10120F;
-  --surface:#191C18;
-  --surface-2:#232720;
-  --signal:#A8EF45;
-  --signal-dark:#8ED52D;
-  --signal-gradient:linear-gradient(135deg, #B8F565 0%, #8ED52D 100%);
-  --accent-glow:rgba(168,239,69,.18);
-  /* --signal-ink is the accent *as text*: the same lime reads as a background
-     fine, but as text on a light surface it needs a deeper green. --on-signal
-     is text on a lime fill and stays pure black in both themes — anything
-     lighter on #9BE92A loses the sharp contrast the accent needs. */
-  --signal-ink:#A8EF45;
+  --ink:#EDF3EF;
+  --bell-ink:#FFFFFF;
+  --ink-soft:#CDD8D0;
+  /* Shared surfaces and restrained green accents for every role. */
+  --paper:#151C18;
+  --surface:#0D1410;
+  --surface-2:#1C2921;
+  --signal:#63BA8B;
+  --signal-dark:#53A97C;
+  --signal-gradient:var(--signal);
+  --accent-glow:rgba(99,186,139,.12);
+  /* Text accents and text on filled controls use separate contrast tokens. */
+  --signal-ink:#83D4A7;
   --on-signal:#10120F;
-  --court:#A8EF45;
-  --court-soft:#27311E;
-  --steel:#AEB6AA;
-  --steel-soft:#252A23;
-  --steel-light:#363D33;
-  --amber:#A0A0A0;
-  --amber-soft:#1A1A1A;
-  --danger:#DC2626;
-  --danger-soft:#1A1A1A;
-  --line:#30362D;
-  --line-strong:#465040;
-  --radius:12px;
-  --shadow-card:0 12px 32px rgba(0,0,0,.20);
+  --court:#83D4A7;
+  --court-soft:#193B29;
+  --steel:#A3B4A8;
+  --steel-soft:#202D24;
+  --steel-light:#35463A;
+  --amber:#E4BE74;
+  --chart-blue:#78B9F2;
+  --amber-soft:#332B1C;
+  --danger:#F18E8E;
+  --danger-soft:#362020;
+  --line:#2B3A30;
+  --line-strong:#405548;
+  --radius:8px;
+  --radius-control:6px;
+  --radius-chip:4px;
+  --shadow-card:none;
   --scrim:rgba(8,10,7,.56);
   /* Font stacks are theme-independent, so they live in :root only and the
      light theme inherits them. */
@@ -38,40 +38,42 @@
   --font-mono:var(--font-plex-mono), 'IBM Plex Mono', 'SFMono-Regular', monospace;
 }
 
-/* Light theme — opted into from the notifications menu's Settings tab. Only
-   the tokens flip; every component reads them, so the whole app restyles from
-   this one block. The two anchors invert (paper becomes the soft field,
-   surface the white raised one) and the lime accent stays bright, with
-   --signal-ink / --on-signal carrying the contrast it loses on white. */
+/* Light theme uses a deep green for filled actions and text accents. */
 :root[data-theme="light"]{
   --ink:#1B2118;
+  --bell-ink:#1B2118;
   --ink-soft:#424A3F;
   --paper:#F2F4EF;
   --surface:#FBFCF9;
   --surface-2:#E8ECE5;
-  --signal:#A8EF45;
-  --signal-dark:#8ED52D;
-  --signal-gradient:linear-gradient(135deg, #B8F565 0%, #8ED52D 100%);
-  --accent-glow:rgba(102,153,42,.16);
-  --signal-ink:#4F791C;
-  --on-signal:#15200D;
-  --court:#4F791C;
-  --court-soft:#E5EEDB;
+  --signal:#286A49;
+  --signal-dark:#20573C;
+  --signal-gradient:var(--signal);
+  --accent-glow:rgba(34,98,68,.12);
+  --signal-ink:#226244;
+  --on-signal:#FFFFFF;
+  --court:#226244;
+  --court-soft:#E0EEE5;
   --steel:#586253;
   --steel-soft:#E8ECE5;
   --steel-light:#C6CEC0;
   --amber:#8A6300;
+  --chart-blue:#2467A3;
   --amber-soft:#F6EAC8;
   --danger:#B91C1C;
   --danger-soft:#F8E5E1;
   --line:#DCE2D7;
   --line-strong:#AEB8A7;
-  --shadow-card:0 12px 30px rgba(36,49,29,.08);
+  --shadow-card:none;
   --scrim:rgba(28,35,25,.34);
 }
 
 *{box-sizing:border-box;}
 html,body{margin:0;padding:0;}
+:root{color-scheme:dark;}
+:root[data-theme="light"]{color-scheme:light;}
+button,input,select,textarea{font:inherit;}
+button, a{touch-action:manipulation;}
 body{
   font-family:var(--font-body);
   background:var(--paper);
@@ -113,3 +115,9 @@ button{font-family:var(--font-body);cursor:pointer;}
   height:3px; background:var(--signal);
   transform-origin:left center;
 }
+
+.person-name-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 16px;}
+.person-name-grid label{font:500 14px var(--font-body);letter-spacing:0;text-transform:none;}
+@media(max-width:600px){.person-name-grid{grid-template-columns:minmax(0,1fr);}}
+
+input,textarea{caret-color:var(--signal-ink);}*{scrollbar-color:var(--line-strong) var(--surface);scrollbar-width:thin;}

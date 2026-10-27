@@ -13,7 +13,7 @@ export function PasswordStrengthMeter({ password }: PasswordStrengthMeterProps) 
   };
 
   const strength = getStrength(password);
-  const colors = ['#E0E0E0', '#FF4D4F', '#FAAD14', '#9BE92A']; // Grey, Red, Yellow, Lime
+  const colors = ['var(--line)', 'var(--danger)', 'var(--amber)', 'var(--signal)'];
 
   return (
     <div style={{ position: 'relative', marginBottom: 20 }}>
@@ -26,7 +26,7 @@ export function PasswordStrengthMeter({ password }: PasswordStrengthMeterProps) 
         {[1, 2, 3].map(i => (
           <div key={i} style={{
             flex: 1,
-            backgroundColor: i <= strength ? colors[strength] : '#262626',
+            backgroundColor: i <= strength ? colors[strength] : 'var(--line)',
             borderRadius: '2px',
             transition: 'background-color 0.2s ease'
           }} />
@@ -41,9 +41,9 @@ export function PasswordStrengthMeter({ password }: PasswordStrengthMeterProps) 
         color: 'var(--steel)',
         pointerEvents: 'none'
       }}>
-        <span style={{ color: strength === 1 ? '#FF4D4F' : 'inherit' }}>Weak</span>
-        <span style={{ color: strength === 2 ? '#FAAD14' : 'inherit' }}>Good</span>
-        <span style={{ color: strength === 3 ? '#9BE92A' : 'inherit' }}>Strong</span>
+        <span style={{ color: strength === 1 ? 'var(--danger)' : 'inherit' }}>Weak</span>
+        <span style={{ color: strength === 2 ? 'var(--amber)' : 'inherit' }}>Good</span>
+        <span style={{ color: strength === 3 ? 'var(--signal-ink)' : 'inherit' }}>Strong</span>
       </div>
     </div>
   );

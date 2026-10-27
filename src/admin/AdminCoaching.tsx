@@ -1,157 +1,67 @@
 import { useMemo, useState } from 'react';
-import { CalendarDays, UsersRound } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Badge, Field, Select, TabbedCard } from '../shared';
-import type { Session, Trainer, TrainerAvailability, ViewProps } from '../types.ts';
+import { getBookingToday } from '../member/bookingDates';
+import { formatTime12h, timeInMinutes } from '../trainer/availability';
+import type { ViewProps } from '../types';
 
-type AvailabilityFilter = 'all' | 'booked' | 'cancelled' | 'available' | 'unavailable';
-
-function getToday(): string {
-  const timeZone = process.env.NEXT_PUBLIC_BOOKING_TIME_ZONE || 'Asia/Manila';
-  const parts = new Intl.DateTimeFormat('en', {
-    timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(new Date());
-  const value = (type: Intl.DateTimeFormatPartTypes) => {
-    const part = parts.find((entry) => entry.type === type)?.value;
-    if (!part) throw new Error(`Unable to determine ${type} in ${timeZone}.`);
-    return part;
-  };
-  return `${value('year')}-${value('month')}-${value('day')}`;
-}
-
-function formatDate(value: string): string {
-  if (!value) return 'Select a date';
-  const date = new Date(`${value}T12:00:00.000Z`);
-  return new Intl.DateTimeFormat('en-US', {
-    timeZone: 'UTC',
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
-  }).format(date);
-}
-
-function AdminCoaching({
-  sessions,
-  trainers,
-  trainerAvailability,
-}: Pick<ViewProps, 'sessions' | 'trainers' | 'trainerAvailability'>) {
-  const [date, setDate] = useState(getToday);
+type CalendarEntry = { id: string; date: string; time: string; sortTime: number; trainer: string; description: string; status: string; kind: 'booked' | 'cancelled' | 'available' | 'unavailable' | 'completed' };
+function dateLabel(value: string, options: Intl.DateTimeFormatOptions) { return new Date(value + 'T12:00:00').toLocaleDateString('en-US', options); }
+export default function AdminCoaching({ sessions, trainers, trainerAvailability }: Pick<ViewProps, 'sessions' | 'trainers' | 'trainerAvailability'>) {
+  const [date, setDate] = useState(getBookingToday);
   const [trainerId, setTrainerId] = useState('all');
-  const [status, setStatus] = useState<AvailabilityFilter>('all');
-
-  const selectedTrainer = trainers.find((trainer) => trainer.id === trainerId);
-  const selectedTrainerName = selectedTrainer?.name.toLowerCase();
-
-  const dayBookings = useMemo(() => sessions.filter((session) => {
-    if (session.date !== date) return false;
-    return !selectedTrainerName || session.trainer.trim().toLowerCase() === selectedTrainerName;
-  }), [sessions, date, selectedTrainerName]);
-
-  const dayAvailability = useMemo(() => trainerAvailability.filter((schedule) => {
-    if (schedule.date !== date) return false;
-    return trainerId === 'all' || schedule.trainerId === trainerId;
-  }), [trainerAvailability, date, trainerId]);
-
-  const filteredBookings = dayBookings.filter((session) => {
-    if (status === 'booked') return session.status !== 'Cancelled' && session.status !== 'Completed';
-    if (status === 'cancelled') return session.status === 'Cancelled';
-    return status === 'all';
+  const [status, setStatus] = useState('all');
+  const [year, month] = date.split('-').map(Number);
+  const activeTrainers = trainers.filter(trainer => !trainer.deletedAt);
+  const visibleTrainers = activeTrainers.filter(trainer => trainerId === 'all' || trainer.id === trainerId);
+  const entries = useMemo(() => {
+    const visible = trainers.filter(trainer => !trainer.deletedAt && (trainerId === 'all' || trainer.id === trainerId));
+    const names = new Set(visible.map(trainer => trainer.name.trim().toLowerCase()));
+    const items: CalendarEntry[] = sessions.filter(session => names.has(session.trainer.trim().toLowerCase())).map(session => ({
+      id: session.id, date: session.date.slice(0, 10), time: session.time, sortTime: timeInMinutes(session.time) ?? 0, trainer: session.trainer,
+      description: session.type + ' · ' + session.member, status: session.status,
+      kind: session.status === 'Cancelled' ? 'cancelled' : session.status === 'Completed' ? 'completed' : 'booked',
+    }));
+    for (const slot of trainerAvailability) {
+      const trainer = visible.find(person => person.id === slot.trainerId);
+      if (trainer) items.push({ id: slot.id, date: slot.date, sortTime: timeInMinutes(slot.startTime) ?? 0, time: formatTime12h(slot.startTime) + '–' + formatTime12h(slot.endTime), trainer: trainer.name, description: 'Trainer availability', status: slot.status === 'available' ? 'Available' : 'Unavailable', kind: slot.status });
+    }
+    return items.filter(item => status === 'all' || item.kind === status).sort((a,b) => a.date.localeCompare(b.date) || a.sortTime - b.sortTime);
+  }, [sessions, trainers, trainerAvailability, trainerId, status]);
+  const byDate = new Map<string, CalendarEntry[]>();
+  for (const entry of entries) byDate.set(entry.date, [...(byDate.get(entry.date) || []), entry]);
+  const offset = (new Date(year, month-1, 1).getDay()+6)%7;
+  const days = new Date(year, month, 0).getDate();
+  const cells = Array.from({length: Math.ceil((offset+days)/7)*7}, (_,index) => {
+    const day=index-offset+1;
+    return day>0 && day<=days ? year + '-' + String(month).padStart(2,'0') + '-' + String(day).padStart(2,'0') : null;
   });
-  const filteredAvailability = dayAvailability.filter((schedule) =>
-    status === 'all' || status === schedule.status,
-  );
-  const activeBookings = dayBookings.filter((session) =>
-    session.status !== 'Cancelled' && session.status !== 'Completed',
-  ).length;
-  const cancelledBookings = dayBookings.filter((session) => session.status === 'Cancelled').length;
-
-  return (
-    <TabbedCard title="Trainer Availability">
-      <div className="admin-availability-filters">
-        <Field label="Date">
-          <input className="form-control" type="date" value={date} onChange={(event) => setDate(event.target.value)} />
-        </Field>
-        <Field label="Trainer">
-          <Select value={trainerId} onChange={setTrainerId}>
-            <option value="all">All trainers</option>
-            {trainers.filter((trainer) => !trainer.deletedAt).map((trainer) => (
-              <option key={trainer.id} value={trainer.id}>{trainer.name}</option>
-            ))}
-          </Select>
-        </Field>
-        <Field label="Show">
-          <Select value={status} onChange={(value) => setStatus(value as AvailabilityFilter)}>
-            <option value="all">All statuses</option>
-            <option value="booked">Booked</option>
-            <option value="cancelled">Cancelled</option>
-            <option value="available">Available</option>
-            <option value="unavailable">Unavailable</option>
-          </Select>
-        </Field>
-      </div>
-
-      <div className="admin-availability-summary">
-        <div><CalendarDays size={17} /><span><strong>{activeBookings}</strong> active bookings</span></div>
-        <div><UsersRound size={17} /><span><strong>{cancelledBookings}</strong> cancelled</span></div>
-        <span className="admin-availability-date">{formatDate(date)}</span>
-      </div>
-
-      <div className="admin-availability-grid">
-        {trainers.filter((trainer) => !trainer.deletedAt && (trainerId === 'all' || trainer.id === trainerId)).map((trainer: Trainer) => {
-          const bookings = filteredBookings.filter((session: Session) =>
-            session.trainer.trim().toLowerCase() === trainer.name.trim().toLowerCase(),
-          ).sort((a, b) => a.time.localeCompare(b.time));
-          const schedules = filteredAvailability.filter((schedule: TrainerAvailability) => schedule.trainerId === trainer.id)
-            .sort((a, b) => a.startTime.localeCompare(b.startTime));
-
-          if (status === 'booked' || status === 'cancelled') {
-            if (!bookings.length) return null;
-          } else if (status === 'available' || status === 'unavailable') {
-            if (!schedules.length) return null;
-          } else if (!bookings.length && !schedules.length) {
-            return (
-              <article className="admin-availability-trainer" key={trainer.id}>
-                <header><div><strong>{trainer.name}</strong><small>{trainer.specialty}</small></div><span className="admin-availability-state">No schedule set</span></header>
-                <p>No availability or bookings recorded for this date.</p>
-              </article>
-            );
-          }
-
-          return (
-            <article className="admin-availability-trainer" key={trainer.id}>
-              <header>
-                <div><strong>{trainer.name}</strong><small>{trainer.specialty}</small></div>
-                <span className="admin-availability-state">{bookings.length} booking{bookings.length === 1 ? '' : 's'} · {schedules.length} slot{schedules.length === 1 ? '' : 's'}</span>
-              </header>
-              <div className="admin-availability-items">
-                {bookings.map((session: Session) => (
-                  <div className={`admin-availability-item ${session.status === 'Cancelled' ? 'is-cancelled' : 'is-booked'}`} key={session.id}>
-                    <span className="admin-availability-time">{session.time}</span>
-                    <span className="admin-availability-item-copy"><strong>{session.member}</strong><small>{session.type} · {session.id}</small></span>
-                    <Badge status={session.status} />
-                  </div>
-                ))}
-                {schedules.map((schedule: TrainerAvailability) => (
-                  <div className={`admin-availability-item ${schedule.status === 'available' ? 'is-available' : 'is-unavailable'}`} key={schedule.id}>
-                    <span className="admin-availability-time">{schedule.startTime}–{schedule.endTime}</span>
-                    <span className="admin-availability-item-copy"><strong>{schedule.status === 'available' ? 'Available' : 'Unavailable'}</strong><small>Trainer schedule</small></span>
-                    <span className={`admin-availability-state state-${schedule.status}`}>{schedule.status}</span>
-                  </div>
-                ))}
-              </div>
-            </article>
-          );
-        })}
-      </div>
-
-      {filteredBookings.length === 0 && filteredAvailability.length === 0 && (
-        <p className="admin-availability-empty">No {status === 'all' ? 'availability or bookings' : status} found for {formatDate(date)}.</p>
-      )}
-    </TabbedCard>
-  );
+  const shiftMonth = (delta: number) => {
+    const next = new Date(year, month-1+delta, 1);
+    setDate(next.getFullYear() + '-' + String(next.getMonth()+1).padStart(2,'0') + '-01');
+  };
+  const selected = byDate.get(date) || [];
+  return <TabbedCard title="Trainer Availability">
+    <div className="manager-calendar-controls">
+      <Field label="Date"><input className="form-control" type="date" aria-label="Calendar date" value={date} onChange={event => { if(event.target.value) setDate(event.target.value); }} /></Field>
+      <Field label="Trainer"><Select aria-label="Filter calendar by trainer" value={trainerId} onChange={setTrainerId}><option value="all">All trainers</option>{activeTrainers.map(trainer => <option key={trainer.id} value={trainer.id}>{trainer.name}</option>)}</Select></Field>
+      <Field label="Show"><Select aria-label="Filter calendar by status" value={status} onChange={setStatus}>{['all','booked','cancelled','available','unavailable'].map(value => <option key={value} value={value}>{value === 'all' ? 'All statuses' : value[0].toUpperCase()+value.slice(1)}</option>)}</Select></Field>
+    </div>
+    <div className="trainer-calendar-toolbar">
+      <div className="trainer-calendar-navigation"><button className="btn btn-ghost btn-sm" aria-label="Previous month" onClick={() => shiftMonth(-1)}><ChevronLeft size={18} /></button><h3 aria-live="polite">{dateLabel(date,{month:'long',year:'numeric'})}</h3><button className="btn btn-ghost btn-sm" aria-label="Next month" onClick={() => shiftMonth(1)}><ChevronRight size={18} /></button></div>
+      <button className="btn btn-outline btn-sm" onClick={() => setDate(getBookingToday())}>Today</button>
+    </div>
+    <div className="manager-calendar" aria-label="All trainers schedule">
+      {['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(day => <span key={day} className="manager-calendar-weekday">{day}</span>)}
+      {cells.map((iso,index) => iso ? <button key={iso} type="button" className={'manager-calendar-cell' + (date === iso ? ' is-selected' : '')} aria-pressed={date === iso} aria-current={iso === getBookingToday() ? 'date' : undefined} aria-label={iso + ', ' + (byDate.get(iso)?.length || 0) + ' schedule entries'} onClick={() => setDate(iso)}>
+        <span className="manager-calendar-number">{Number(iso.slice(-2))}</span>
+        {(byDate.get(iso) || []).slice(0,2).map(entry => <span key={entry.id} className={'manager-calendar-preview event-' + entry.kind}>{entry.time} · {entry.trainer}</span>)}
+        {(byDate.get(iso)?.length || 0)>2 && <small>+{byDate.get(iso)!.length-2} more</small>}
+      </button> : <span key={'blank'+index} className="manager-calendar-cell is-empty" />)}
+    </div>
+    <section className="trainer-selected-day manager-calendar-detail" aria-label="Selected trainer schedule">
+      <div className="trainer-selected-day-heading"><div><h3>{dateLabel(date,{weekday:'long',month:'long',day:'numeric'})}</h3><p>{selected.length} entries · {visibleTrainers.length} trainer{visibleTrainers.length === 1 ? '' : 's'}</p></div></div>
+      {selected.length ? <div className="trainer-selected-day-list">{selected.map(entry => <div className="trainer-detail-row" key={entry.id}><span className="trainer-detail-time">{entry.time}</span><span><strong>{entry.trainer}</strong><small>{entry.description}</small></span><Badge status={entry.status} /></div>)}</div> : <p className="distribution-empty">No availability or bookings recorded for this date.</p>}
+    </section>
+  </TabbedCard>;
 }
-
-export default AdminCoaching;

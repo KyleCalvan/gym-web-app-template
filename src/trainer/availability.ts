@@ -1,7 +1,7 @@
 import type { Session, TrainerAvailability } from '../types.ts';
 import { BOOKING_TIME_ZONE, getBookingCurrentTime, getBookingToday } from '../member/bookingDates.ts';
 
-function timeInMinutes(value: string): number | null {
+export function timeInMinutes(value: string): number | null {
   const twentyFourHour = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(value.trim());
   if (twentyFourHour) return Number(twentyFourHour[1]) * 60 + Number(twentyFourHour[2]);
 

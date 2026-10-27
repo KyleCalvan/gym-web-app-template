@@ -175,7 +175,7 @@ function AdminPlans({ plans, setPlans, toast }: Pick<ViewProps, 'plans' | 'setPl
         </div>
       </div>
       {serviceError && <p className="admin-plan-error" role="alert">{serviceError}</p>}
-      <div className="grid grid-4" style={{ marginBottom: 22 }}>
+      <div className="member-plan-grid" style={{ marginBottom: 22 }}>
         {plans.map((plan) => {
           const isFeatured = plan.featured;
           const isInactive = plan.status === 'Inactive';
@@ -185,7 +185,8 @@ function AdminPlans({ plans, setPlans, toast }: Pick<ViewProps, 'plans' | 'setPl
               <h3 style={{ fontSize: 22 }}>{plan.name}</h3>
               <div className="price">{peso(plan.price)}<span>/{plan.period}</span></div>
               <ul>{plan.perks.map((perk, index) => <li key={index}>✓ {perk}</li>)}</ul>
-              <div style={{ display: 'flex', gap: 8 }}>
+              {plan.terms && <p className="plan-card-terms"><span className="plan-card-label">Terms</span>{plan.terms}</p>}
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 <button className={`btn btn-sm ${isFeatured ? 'btn-signal' : 'btn-outline'}`} type="button" onClick={() => openEdit(plan)} disabled={loading || saving}>Edit Plan</button>
                 {isInactive
                   ? <button className="btn btn-ghost btn-sm" type="button" onClick={() => activate(plan)} disabled={loading || saving || atLimit}>Reactivate</button>

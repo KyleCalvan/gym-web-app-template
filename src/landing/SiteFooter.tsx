@@ -1,7 +1,12 @@
 // @ts-nocheck
+import { useState } from 'react';
+import { Modal } from '../shared/primitives/Modal';
+import TermsOfUse from '../auth/TermsOfUse';
 function SiteFooter() {
   const year = new Date().getFullYear();
+  const [legal, setLegal] = useState(false);
   return (
+    <>
     <footer className="site-footer" aria-labelledby="footer-heading">
       <h2 id="footer-heading" className="sr-only">Site footer</h2>
       <div className="site-footer-inner">
@@ -36,12 +41,14 @@ function SiteFooter() {
       </div>
 
       <div className="legal">
-        <span>© 2026 VINATHLETICS GYM MANAGEMENT SYSTEM. ALL RIGHTS RESERVED.</span>
+        <span>© {year} VINATHLETICS GYM MANAGEMENT SYSTEM. ALL RIGHTS RESERVED.</span>
         <span>
-          <a href="#contact">Privacy</a> &nbsp;·&nbsp; <a href="#contact">Terms</a>
+          <button type="button" onClick={() => setLegal(true)}>Privacy &amp; account terms</button> · <button type="button" onClick={() => setLegal(true)}>Terms &amp; Conditions</button>
         </span>
       </div>
     </footer>
+    {legal && <Modal title="Terms & Conditions" wide onClose={() => setLegal(false)}><TermsOfUse /></Modal>}
+    </>
   );
 }
 

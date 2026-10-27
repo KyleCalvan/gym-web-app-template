@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import { ease } from '../../motion.tsx';
+import { useEnterMotion } from '../hooks/useEnterMotion';
 
 export interface ModalProps {
   title: string;
@@ -15,7 +16,7 @@ export interface ModalProps {
 }
 
 export function Modal({ title, onClose, children, wide, className, showCloseButton = true, blurBackdrop = true, dismissible = true }: ModalProps) {
-  const dialogRef = useRef<HTMLDivElement>(null);
+  const dialogRef = useEnterMotion<HTMLDivElement>();
   const overlayRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
   const dismissibleRef = useRef(dismissible);
@@ -76,7 +77,7 @@ export function Modal({ title, onClose, children, wide, className, showCloseButt
       exit={{ opacity: 0 }}
       transition={{ duration: 0.18, ease: ease.out }}
     >
-      <motion.div
+      <div
         ref={dialogRef}
         className={"modal " + (className || '')}
         style={wide ? { maxWidth: 640 } : undefined}
@@ -84,17 +85,13 @@ export function Modal({ title, onClose, children, wide, className, showCloseButt
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: 8 }}
-        transition={{ duration: 0.22, ease: ease.out }}
       >
         <div className="modal-head">
           <h2 id={titleId} style={{ fontSize: 19.8, textTransform: 'uppercase' }}>{title}</h2>
           {showCloseButton && <button type="button" className="modal-close" onClick={onClose} aria-label={`Close ${title}`}>✕</button>}
         </div>
         {children}
-      </motion.div>
+      </div>
     </motion.div>,
     document.body
   );

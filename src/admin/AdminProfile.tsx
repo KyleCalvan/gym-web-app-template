@@ -5,10 +5,10 @@ import { SecurityFlow } from '../shared/components/SecurityFlow';
 import ProfileSettingsPanel from '../shared/ProfileSettingsPanel';
 import type { ViewProps } from '../types.ts';
 
-function AdminProfile({ admins, setAdmins, currentUserId, toast, addAudit, notifPrefs, setNotifPrefs }: ViewProps) {
+function AdminProfile({ admins, setAdmins, currentUserId, toast, addAudit, notifPrefs, setNotifPrefs, currentUser, onProfilePhotoChange }: ViewProps) {
   const me = admins.find(a => a.id === currentUserId) || admins[0];
   const [info, setInfo] = useState({
-    name: me?.name || '',
+    name: me?.name || currentUser?.name || '',
     email: me?.email || '',
     phone: me?.phone || '',
     phoneSecondary: me?.phoneSecondary || '',
@@ -27,6 +27,7 @@ function AdminProfile({ admins, setAdmins, currentUserId, toast, addAudit, notif
     const file = e.target.files?.[0];
     if (!file) return;
     onPickImage(file, url => {
+      onProfilePhotoChange?.(url);
       setAdmins(prev => prev.map(a => a.id === me.id ? {...a, avatarUrl: url} : a));
       toast('Photo updated');
       addAudit?.('info', 'Profile photo updated', me?.id || 'admin');
@@ -35,11 +36,11 @@ function AdminProfile({ admins, setAdmins, currentUserId, toast, addAudit, notif
   };
 
   return (
-    <div className="grid grid-1-2">
-      <TabbedCard title={me?.name || 'Admin'}>
-        <div style={{textAlign:'center', marginBottom:14}}>
-          <Avatar src={me?.avatarUrl} name={me?.name || 'Admin'} size={64} />
-          <div style={{marginTop:10}}>
+    <div className="grid grid-1-2 profile-page-grid">
+      <TabbedCard title={me?.name || currentUser?.name || 'Admin'}>
+        <div className="profile-photo-content">
+          <Avatar src={me?.avatarUrl || currentUser?.avatarUrl} name={me?.name || currentUser?.name || 'Admin'} size={96} />
+          <div>
             <button
               type="button"
               className="btn btn-outline btn-sm"
@@ -61,9 +62,9 @@ function AdminProfile({ admins, setAdmins, currentUserId, toast, addAudit, notif
         <ProfileSettingsPanel
           account={
             <div className="profile-settings-account-grid">
-              <div className="profile-settings-account-item"><div className="eyebrow">Admin ID</div><p className="mono">{me?.id || '—'}</p></div>
-              <div className="profile-settings-account-item"><div className="eyebrow">Role</div><p>Administrator</p></div>
-              <div className="profile-settings-account-item"><div className="eyebrow">Admin Since</div><p className="mono">{me?.createdAt || '—'}</p></div>
+              <div className="profile-settings-account-item"><div className="eyebrow">Manager ID</div><p className="mono">{me?.id || '—'}</p></div>
+              <div className="profile-settings-account-item"><div className="eyebrow">Role</div><p>Manager</p></div>
+              <div className="profile-settings-account-item"><div className="eyebrow">Manager Since</div><p className="mono">{me?.createdAt || '—'}</p></div>
             </div>
           }
           profile={

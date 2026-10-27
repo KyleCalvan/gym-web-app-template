@@ -1,14 +1,12 @@
 import { useState, type ReactNode } from 'react';
 import type { NotifPrefs, Setter } from '../types.ts';
-import { Switch } from './primitives/Switch.tsx';
 
-type ProfileSettingsTab = 'account' | 'profile' | 'security' | 'preferences' | 'delete';
+type ProfileSettingsTab = 'account' | 'profile' | 'security' | 'delete';
 
 const TAB_LABELS: Record<ProfileSettingsTab, string> = {
   account: 'Account Information',
   profile: 'Profile Details',
   security: 'Security',
-  preferences: 'Preferences',
   delete: 'Delete Account',
 };
 
@@ -29,8 +27,8 @@ export default function ProfileSettingsPanel({
 }) {
   const [tab, setTab] = useState<ProfileSettingsTab>('account');
   const tabs: ProfileSettingsTab[] = deleteAccount
-    ? ['account', 'profile', 'security', 'preferences', 'delete']
-    : ['account', 'profile', 'security', 'preferences'];
+    ? ['account', 'profile', 'security', 'delete']
+    : ['account', 'profile', 'security'];
 
   return (
     <section className="profile-settings-panel">
@@ -82,18 +80,6 @@ export default function ProfileSettingsPanel({
               <button className="btn btn-outline btn-sm" type="button" onClick={onOpenSecurity}>
                 Open security settings
               </button>
-            </div>
-          </>
-        )}
-        {tab === 'preferences' && (
-          <>
-            <h2>Preferences</h2>
-            <p className="profile-settings-intro">Choose which account notifications you want to receive.</p>
-            <div className="profile-preference-list">
-              <div><span><strong>Email notifications</strong><small>Account updates and important notices</small></span><Switch on={notifPrefs.email} onClick={() => setNotifPrefs((previous) => ({ ...previous, email: !previous.email }))} ariaLabel="Toggle email notifications" /></div>
-              <div><span><strong>SMS notifications</strong><small>Time-sensitive updates by text message</small></span><Switch on={notifPrefs.sms} onClick={() => setNotifPrefs((previous) => ({ ...previous, sms: !previous.sms }))} ariaLabel="Toggle SMS notifications" /></div>
-              <div><span><strong>Session reminders</strong><small>Reminders about upcoming sessions</small></span><Switch on={notifPrefs.reminders} onClick={() => setNotifPrefs((previous) => ({ ...previous, reminders: !previous.reminders }))} ariaLabel="Toggle session reminders" /></div>
-              <div><span><strong>Promotions and offers</strong><small>News about gym promotions and offers</small></span><Switch on={notifPrefs.promos} onClick={() => setNotifPrefs((previous) => ({ ...previous, promos: !previous.promos }))} ariaLabel="Toggle promotions and offers" /></div>
             </div>
           </>
         )}

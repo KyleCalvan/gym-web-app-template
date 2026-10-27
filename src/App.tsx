@@ -6,6 +6,8 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { usePathname } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Landing from './landing';
+import { useEnterMotion } from './shared/hooks/useEnterMotion';
+import { LoadingScreen } from './shared/LoadingScreen';
 import LoginPage from './LoginPage.tsx';
 import Sidebar from './shared/shell/Sidebar.tsx';
 import { Topbar } from './shared/shell/Topbar.tsx';
@@ -74,7 +76,7 @@ const toISODate = (d: Date): string => {
 
 export default function App({ initialLoginTab = 'login' }: { initialLoginTab?: 'login' | 'register' } = {}) {
   const { status, data: session } = useSession();
-  if (status === 'loading') return <main className="account-status" role="status">Loading your Account…</main>;
+  if (status === 'loading') return <LoadingScreen />;
   if (status === 'authenticated') return <AccountStatus key={session?.user.id} />;
   return <PublicApp initialLoginTab={initialLoginTab} />;
 }
@@ -86,7 +88,7 @@ function PublicApp({ initialLoginTab }: { initialLoginTab: 'login' | 'register' 
     void clearFormerAccountBrowserState().then(() => { if (active) setReady(true); });
     return () => { active = false; };
   }, []);
-  if (!ready) return <main className="account-status" role="status">Loading your Account…</main>;
+  if (!ready) return <LoadingScreen />;
   return <DemoApp initialLoginTab={initialLoginTab} />;
 }
 
@@ -94,6 +96,7 @@ function DemoApp({ initialLoginTab = 'login' }: { initialLoginTab?: 'login' | 'r
   const pathname = usePathname();
   const { status: authStatus } = useSession();
   const handledDemoSession = useRef<string | null>(null);
+  const [demoProfilePhoto, setDemoProfilePhoto] = useState<{ email: string; role: Role; url: string } | null>(null);
 
   const [members, setMembers]               = useState<Member[]>(() => [...MEMBERS]);
   const [trainers, setTrainers]             = useState<Trainer[]>(() => [...TRAINERS]);
@@ -182,23 +185,28 @@ function DemoApp({ initialLoginTab = 'login' }: { initialLoginTab?: 'login' | 'r
   const [loggedIn, setLoggedIn]             = useState<boolean>(false);
   const [role, setRole]                     = useState<Role>('member');
   const [view, setView]                     = useState<string>('dashboard');
+  const [viewAction, setViewAction] = useState<string | undefined>();
+  const pageMotionRef = useEnterMotion<HTMLDivElement>(role + ':' + view + ':' + (viewAction || ''));
+  const contentRef = useRef<HTMLDivElement>(null);
+  useEffect(() => { contentRef.current?.scrollTo(0, 0); }, [role, view]);
   const [showNotifications, setShowNotifications] = useState<boolean>(false);
   const [loginPromotion, setLoginPromotion] = useState<Promotion | null>(null);
   const [showProfileMenu, setShowProfileMenu] = useState<boolean>(false);
-  const pillRef = useRef<HTMLDivElement>(null);
+  const pillRef = useRef<HTMLButtonElement>(null);
 
   // Resolve the actual current user from the dynamic state
   const currentUser = useMemo(() => {
     let user;
-    if (role === 'member') user = members.find(m => m.id === currentUserId) || CURRENT.member;
-    else if (role === 'trainer') user = trainers.find(t => t.id === currentUserId) || CURRENT.trainer;
-    else if (role === 'staff') user = staff.find(s => s.id === currentUserId) || CURRENT.staff;
-    else if (role === 'admin') user = admins.find(a => a.id === currentUserId) || CURRENT.admin;
-    else if (role === 'superadmin') user = superadmins.find(s => s.id === currentUserId) || CURRENT.superadmin;
+    if (role === 'member') user = members.find(m => m.id === currentUserId) || members[0] || CURRENT.member;
+    else if (role === 'trainer') user = trainers.find(t => t.id === currentUserId) || trainers[0] || CURRENT.trainer;
+    else if (role === 'staff') user = staff.find(s => s.id === currentUserId) || staff[0] || CURRENT.staff;
+    else if (role === 'admin') user = admins.find(a => a.id === currentUserId) || admins[0] || CURRENT.admin;
+    else if (role === 'superadmin') user = superadmins.find(s => s.id === currentUserId) || superadmins[0] || CURRENT.superadmin;
     else user = CURRENT[role];
     if (demoIdentity?.role === role) {
       return {
         ...user,
+        ...(demoProfilePhoto?.email === demoIdentity.email && demoProfilePhoto.role === role ? { avatarUrl: demoProfilePhoto.url } : {}),
         id: currentUserId || `DEMO-${role}`,
         name: demoIdentity.name,
         email: demoIdentity.email,
@@ -206,7 +214,7 @@ function DemoApp({ initialLoginTab = 'login' }: { initialLoginTab?: 'login' | 'r
       };
     }
     return user;
-  }, [role, members, trainers, staff, admins, superadmins, currentUserId, demoIdentity]);
+  }, [role, members, trainers, staff, admins, superadmins, currentUserId, demoIdentity, demoProfilePhoto]);
 
   // Theme: dark is the default and the layout script has already applied a
   // stored light preference to <html> before React mounted, so read the
@@ -339,6 +347,7 @@ function DemoApp({ initialLoginTab = 'login' }: { initialLoginTab?: 'login' | 'r
     if (handledDemoSession.current === sessionKey) return;
     handledDemoSession.current = sessionKey;
     setDemoIdentity(identity);
+    setDemoProfilePhoto(null);
     setAuthorizedRoles(session.roles);
     setRole(session.role);
     setView('dashboard');
@@ -450,7 +459,8 @@ function DemoApp({ initialLoginTab = 'login' }: { initialLoginTab?: 'login' | 'r
     fireToast('Account deleted');
   };
 
-  const handleNav = (id: string) => {
+  const handleNav = (id: string, action?: string) => {
+    setViewAction(action);
     if (role === 'member' && id === 'notifications') {
       setShowProfileMenu(false);
       setShowNotifications(true);
@@ -509,6 +519,7 @@ function DemoApp({ initialLoginTab = 'login' }: { initialLoginTab?: 'login' | 'r
     <div className="app-shell">
       <Sidebar
         role={role}
+        user={currentUser}
         brand="VinAthletics"
         nav={NAV_BY_ROLE[role]}
         active={view}
@@ -540,17 +551,14 @@ function DemoApp({ initialLoginTab = 'login' }: { initialLoginTab?: 'login' | 'r
           toast={fireToast}
           nav={NAV_BY_ROLE[role]}
         />
-        <div className="content">
-          <motion.div
-            key={`${role}-${view}`}
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: dur.fast, ease: ease.out }}
-          >
+        <div className="content" ref={contentRef}>
+          <div key={role + view + (viewAction || "")} ref={pageMotionRef}>
               <ViewComp
                 onNav={handleNav}
+                initialAction={viewAction}
                 role={role}
                 currentUser={currentUser}
+                onProfilePhotoChange={demoIdentity ? (url: string) => setDemoProfilePhoto({ email: demoIdentity.email, role, url }) : undefined}
                 members={members} setMembers={setMembers}
                 trainers={trainers} setTrainers={setTrainers}
                 plans={plans} setPlans={setPlans}
@@ -581,7 +589,7 @@ function DemoApp({ initialLoginTab = 'login' }: { initialLoginTab?: 'login' | 'r
                 setPromotionRedemptions={setPromotionRedemptions}
                 onDeleteAccount={handleDeleteAccount}
               />
-          </motion.div>
+          </div>
         </div>
       </div>
       {loginPromotion && (

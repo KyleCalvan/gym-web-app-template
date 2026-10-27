@@ -8,13 +8,14 @@ import { Avatar } from '../primitives/Avatar.tsx';
 export interface SidebarProps {
   role: Role;
   brand: string;
+  user?: { name: string; avatarUrl?: string };
   nav: NavSection[];
   active: string;
   onNav: (id: string) => void;
 }
 
 export default function Sidebar({
-  role, brand, nav, active, onNav, isOpen, setIsOpen,
+  role, brand, nav, active, onNav, isOpen, setIsOpen, user = CURRENT[role],
 }: SidebarProps & { isOpen: boolean; setIsOpen: (open: boolean) => void }) {
   // Page search moved to the top header (GlobalSearch), so the sidebar is now
   // a plain, unfiltered nav list.
@@ -99,16 +100,16 @@ export default function Sidebar({
           <div className="brand" style={{ padding: 0, border: 'none', margin: 0, color: 'var(--ink)' }}>
             <img src="/logo.jpg" alt="VinAthletics" className="brand-mark-img" /><span>{brand}</span>
           </div>
-          <button className="nav-close-btn" onClick={() => setIsOpen(false)} style={{ display: 'none' }}>✕</button>
+          <button aria-label="Close navigation" className="nav-close-btn" onClick={() => setIsOpen(false)} style={{ display: 'none' }}>✕</button>
         </div>
 
         {/* Who's signed in — mobile only. The desktop sidebar keeps its compact
            brand header; on phones the drawer doubles as the account surface, so
            it leads with the member's details before the role's shortcuts. */}
         <div className="drawer-user">
-          <Avatar src={CURRENT[role].avatarUrl} name={CURRENT[role].name} size={36} />
+          <Avatar src={user.avatarUrl} name={user.name} size={36} />
           <span className="who">
-            <b>{CURRENT[role].name}</b>
+            <b>{user.name}</b>
             <span>{ROLE_LABEL[role]}</span>
           </span>
         </div>
@@ -120,6 +121,7 @@ export default function Sidebar({
               <motion.button
                 key={it.id}
                 className={"nav-item" + (active === it.id ? " active" : "")}
+                aria-current={active === it.id ? "page" : undefined}
                 onClick={() => onNav(it.id)}
                 initial={{ opacity: 0, x: -6 }}
                 animate={{ opacity: 1, x: 0 }}

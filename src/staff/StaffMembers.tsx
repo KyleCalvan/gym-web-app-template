@@ -40,7 +40,7 @@ function StaffMembers({ members, setMembers, plans, setCheckIns, today, toast, a
         <div className="search-row">
           <TextInput placeholder="Search name or member ID…" value={q} onChange={setQ} />
           <Select value={statusF} onChange={setStatusF} style={{maxWidth:180}}>
-            {['All','Active','Expiring','Frozen','Expired'].map(s=><option key={s}>{s}</option>)}
+            {['All','Active','Expiring','Frozen','Expired'].map(s=><option key={s} value={s}>{s === 'Expiring' ? 'Expire' : s}</option>)}
           </Select>
         </div>
         <Table columns={['Member','Plan','Status','Joined','']} rows={filtered} renderRow={m=>(

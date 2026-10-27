@@ -6,6 +6,7 @@
    stylesheets to be loaded from the root layout, so every stylesheet in the
    app is aggregated here. */
 @import './styles/global.css';
+@import './shared/loading-screen.css';
 @import './styles/components.css';
 @import './styles/responsive.css';
 @import './shared/shell/app-shell.css';

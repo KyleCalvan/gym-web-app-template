@@ -1,12 +1,13 @@
 // @ts-nocheck
 import { useState, useMemo } from 'react';
 import { Badge, Table, Modal, Field, TextInput, Select, TabbedCard, Avatar, StatTile } from '../shared';
-import { INITIALS } from '../data.ts';
+import { NameFields } from '../shared/components/NameFields';
+import { emptyName, formatName, splitName } from '../shared/nameParts';
 
 // Normalized user shape used in the unified table.
 function buildUsers({ admins, members, trainers, staff }) {
   const out = [];
-  for (const a of admins)    if (!a.deletedAt) out.push({ kind: 'admin',   id: a.id, name: a.name,   email: a.email,                              status: a.status,   label: a.status === 'Active' ? 'Admin' : 'Inactive Admin' });
+  for (const a of admins)    if (!a.deletedAt) out.push({ kind: 'admin',   id: a.id, name: a.name,   email: a.email,                              status: a.status,   label: a.status === 'Active' ? 'Manager' : 'Inactive Manager' });
   for (const m of members)   if (!m.deletedAt) out.push({ kind: 'member',  id: m.id, name: m.name,   email: m.email, phone: m.phone, plan: m.plan, status: m.status, label: m.plan });
   for (const t of trainers)  if (!t.deletedAt) out.push({ kind: 'trainer', id: t.id, name: t.name,   email: '—',          status: t.status, label: t.specialty });
   for (const s of staff)     if (!s.deletedAt) out.push({ kind: 'staff',   id: s.id, name: s.name,   email: s.email, phone: s.phone, status: s.status, label: s.role });
@@ -20,6 +21,17 @@ function SuperAdminUsers({
   staff, setStaff,
   today, toast, addAudit,
 }) {
+  const [pendingRemove, setPendingRemove] = useState(null);
+  const removeUser = () => {
+    if (!pendingRemove) return;
+    const setters = { admin: setAdmins, member: setMembers, trainer: setTrainers, staff: setStaff };
+    const setter = setters[pendingRemove.kind];
+    if (!setter) { toast('That user cannot be removed here.'); return; }
+    setter(previous => previous.map(user => user.id === pendingRemove.id ? { ...user, deletedAt: new Date().toISOString() } : user));
+    addAudit?.('warn', 'User archived', pendingRemove.name + ' (' + pendingRemove.id + ')');
+    toast(pendingRemove.name + ' moved to Archive');
+    setPendingRemove(null);
+  };
   const [q, setQ] = useState('');
   const [kindF, setKindF] = useState('all');
   const [statusF, setStatusF] = useState('All');
@@ -30,7 +42,7 @@ function SuperAdminUsers({
   const [adding, setAdding] = useState(false);
   const [addKind, setAddKind] = useState('admin');
   const [addForm, setAddForm] = useState({
-    firstName: '', lastName: '', middleName: '', email: '', phone: '', plan: 'Premium',
+    ...emptyName(), email: '', phone: '', plan: 'Premium',
     specialty: 'General', certs: '', sessionPrice: '900',
     role: 'Front Desk', shift: 'Morning',
     status: 'Active',
@@ -55,28 +67,24 @@ function SuperAdminUsers({
 
   const startEdit = (u) => {
     setEditing(u);
-    const names = u.name.split(' ');
-    const firstName = names[0] || '';
-    const lastName = names[names.length - 1] || '';
-    const middleName = names.length > 2 ? names.slice(1, -1).join(' ') : '';
-
-    if (u.kind === 'admin')   setEditForm({ firstName, lastName, middleName, email: u.email, phone: u.phone || '', status: u.status, changeRole: '', resetPassword: false });
-    if (u.kind === 'member')  setEditForm({ firstName, lastName, middleName, email: u.email, phone: u.phone, plan: u.plan, changeRole: '', resetPassword: false });
-    if (u.kind === 'trainer') setEditForm({ firstName, lastName, middleName, email: u.email || '', phone: u.phone || '', specialty: u.label, certs: trainers.find((t) => t.id === u.id)?.certs || '', sessionPrice: String(trainers.find((t) => t.id === u.id)?.sessionPrice || 900), status: u.status, changeRole: '', resetPassword: false });
-    if (u.kind === 'staff')   setEditForm({ ...staff.find((s) => s.id === u.id), firstName, lastName, middleName, changeRole: '', resetPassword: false });
+    const { firstName, middleName, lastName, suffix } = splitName(u);
+    if (u.kind === 'admin')   setEditForm({ firstName, lastName, middleName, suffix, email: u.email, phone: u.phone || '', status: u.status, changeRole: '', resetPassword: false });
+    if (u.kind === 'member')  setEditForm({ firstName, lastName, middleName, suffix, email: u.email, phone: u.phone, plan: u.plan, changeRole: '', resetPassword: false });
+    if (u.kind === 'trainer') setEditForm({ firstName, lastName, middleName, suffix, email: u.email || '', phone: u.phone || '', specialty: u.label, certs: trainers.find((t) => t.id === u.id)?.certs || '', sessionPrice: String(trainers.find((t) => t.id === u.id)?.sessionPrice || 900), status: u.status, changeRole: '', resetPassword: false });
+    if (u.kind === 'staff')   setEditForm({ ...staff.find((s) => s.id === u.id), firstName, lastName, middleName, suffix, changeRole: '', resetPassword: false });
   };
 
   const submitEdit = (e) => {
     e.preventDefault();
     if (!editing || !editForm) return;
-    const fullName = `${editForm.lastName} ${editForm.firstName} ${editForm.middleName}`.trim().replace(/\s+/g, ' ');
+    const fullName = formatName(editForm);
     const password = editForm.resetPassword ? editForm.lastName : undefined;
     if (editing.kind === 'admin') {
-      setAdmins((prev) => prev.map((a) => a.id === editing.id ? { ...a, name: fullName, ...editForm, password, firstName: null, lastName: null, middleName: null } : a));
+      setAdmins((prev) => prev.map((a) => a.id === editing.id ? { ...a, ...editForm, name: fullName, password } : a));
       addAudit?.('info', 'Admin updated', `${fullName} (${editing.id})`);
-      toast('Admin updated — ' + fullName);
+      toast('Manager updated — ' + fullName);
     } else if (editing.kind === 'member') {
-      setMembers((prev) => prev.map((m) => m.id === editing.id ? { ...m, name: fullName, ...editForm, password, firstName: null, lastName: null, middleName: null } : m));
+      setMembers((prev) => prev.map((m) => m.id === editing.id ? { ...m, ...editForm, name: fullName, password } : m));
       addAudit?.('info', 'Member updated', `${fullName} (${editing.id})`);
       toast('Member updated — ' + fullName);
     } else if (editing.kind === 'trainer') {
@@ -84,7 +92,7 @@ function SuperAdminUsers({
       addAudit?.('info', 'Trainer updated', `${fullName} (${editing.id})`);
       toast('Trainer updated — ' + fullName);
     } else if (editing.kind === 'staff') {
-      setStaff((prev) => prev.map((s) => s.id === editing.id ? { ...s, name: fullName, ...editForm, password, firstName: null, lastName: null, middleName: null } : s));
+      setStaff((prev) => prev.map((s) => s.id === editing.id ? { ...s, ...editForm, name: fullName, password } : s));
       addAudit?.('info', 'Staff updated', `${fullName} (${editing.id})`);
       toast('Staff updated — ' + fullName);
     }
@@ -94,7 +102,7 @@ function SuperAdminUsers({
 
   const submitAdd = (e) => {
     e.preventDefault();
-    const fullName = `${addForm.lastName} ${addForm.firstName} ${addForm.middleName}`.trim().replace(/\s+/g, ' ');
+    const fullName = formatName(addForm);
     if (!fullName) { toast('Name is required'); return; }
     setPendingAddForm({ ...addForm, name: fullName });
     setConfirmAdd(true);
@@ -107,7 +115,7 @@ function SuperAdminUsers({
       const id = 'SA-' + String(admins.length + 1).padStart(2, '0');
       setAdmins((prev) => [...prev, { id, name: form.name.trim(), email: form.email.trim(), phone: form.phone.trim(), status: form.status, createdAt: today }]);
       addAudit?.('info', 'Admin registered', `${form.name.trim()} (${id})`);
-      toast('Admin added — ' + form.name);
+      toast('Manager added — ' + form.name);
     } else if (addKind === 'member') {
       const id = 'M-' + (1042 + members.length);
       setMembers((prev) => [...prev, { id, name: form.name.trim(), email: form.email.trim(), phone: form.phone.trim(), plan: form.plan, status: 'Active', joined: today }]);
@@ -127,13 +135,13 @@ function SuperAdminUsers({
     setAdding(false);
     setConfirmAdd(false);
     setPendingAddForm(null);
-    setAddForm({ name: '', email: '', phone: '', plan: 'Premium', specialty: 'General', certs: '', sessionPrice: '900', role: 'Front Desk', shift: 'Morning', status: 'Active' });
+    setAddForm({ ...emptyName(), email: '', phone: '', plan: 'Premium', specialty: 'General', certs: '', sessionPrice: '900', role: 'Front Desk', shift: 'Morning', status: 'Active' });
   };
 
   return (
     <>
       <div className="grid grid-4" style={{ marginBottom: 18 }}>
-        <StatTile label="Admins" value={counts.admin} />
+        <StatTile label="Managers" value={counts.admin} />
         <StatTile label="Members" value={counts.member} />
         <StatTile label="Active Trainers" value={counts.trainer} />
         <StatTile label="Staff" value={counts.staff} />
@@ -142,8 +150,8 @@ function SuperAdminUsers({
       <TabbedCard
         title="All Users"
         right={
-          <div style={{ display: 'flex', gap: 6 }}>
-            <button className="btn btn-outline btn-sm" onClick={() => { setAddKind('admin'); setAdding(true); }}>+ Add Admin</button>
+          <div className="user-management-actions">
+            <button className="btn btn-outline btn-sm" onClick={() => { setAddKind('admin'); setAdding(true); }}>+ Add Manager</button>
             <button className="btn btn-outline btn-sm" onClick={() => { setAddKind('trainer'); setAdding(true); }}>+ Add Trainer</button>
             <button className="btn btn-outline btn-sm" onClick={() => { setAddKind('staff'); setAdding(true); }}>+ Add Staff</button>
             <button className="btn btn-signal btn-sm" onClick={() => { setAddKind('member'); setAdding(true); }}>+ Register Member</button>
@@ -154,13 +162,13 @@ function SuperAdminUsers({
           <TextInput placeholder="Search by name or email…" value={q} onChange={setQ} />
           <Select value={kindF} onChange={setKindF} style={{ maxWidth: 140 }}>
             <option value="all">All Roles</option>
-            <option value="admin">Admins</option>
+            <option value="admin">Managers</option>
             <option value="member">Members</option>
             <option value="trainer">Trainers</option>
             <option value="staff">Staff</option>
           </Select>
           <Select value={statusF} onChange={setStatusF} style={{ maxWidth: 160 }}>
-            {['All','Active','Inactive','On Leave','Frozen','Expiring','Expired'].map((s) => <option key={s}>{s}</option>)}
+            {['All','Active','Inactive','On Leave','Frozen','Expiring','Expired'].map((s) => <option key={s} value={s}>{s === 'Expiring' ? 'Expire' : s}</option>)}
           </Select>
         </div>
 
@@ -179,13 +187,14 @@ function SuperAdminUsers({
                 {u.phone && <div className="mono" style={{ fontSize: 12.1, color: 'var(--steel)' }}>{u.phone}</div>}
               </td>
               <td>
-                <span style={{ textTransform: 'capitalize' }}>{u.kind}</span>
+                <span style={{ textTransform: 'capitalize' }}>{u.kind === 'admin' ? 'Manager' : u.kind}</span>
                 <div style={{ fontSize: 12.7, color: 'var(--steel)' }}>{u.label}</div>
               </td>
               <td><Badge status={u.status} /></td>
               <td>
                 <div style={{ display: 'flex', gap: 6 }}>
                   <button className="btn btn-outline btn-sm" onClick={() => startEdit(u)}>Edit</button>
+                  <button className="btn btn-danger-ghost btn-sm" onClick={() => setPendingRemove(u)}>Remove</button>
                 </div>
               </td>
             </tr>
@@ -193,17 +202,17 @@ function SuperAdminUsers({
         />
       </TabbedCard>
 
+      {pendingRemove && <Modal title="Move user to Archive?" onClose={() => setPendingRemove(null)}>
+        <p>{pendingRemove.name} will leave the active user list. You can restore this record from Archive.</p>
+        <div className="dialog-actions"><button className="btn btn-outline" onClick={() => setPendingRemove(null)}>Cancel</button><button className="btn btn-danger" onClick={removeUser}>Move to Archive</button></div>
+      </Modal>}
       {/* ===== Add modal ===== */}
       {adding && (
-        <Modal title={`Add ${addKind === 'admin' ? 'Admin' : addKind === 'member' ? 'Member' : addKind === 'trainer' ? 'Trainer' : 'Staff'}`} onClose={() => setAdding(false)}>
+        <Modal title={`Add ${addKind === 'admin' ? 'Manager' : addKind === 'member' ? 'Member' : addKind === 'trainer' ? 'Trainer' : 'Staff'}`} onClose={() => setAdding(false)}>
           <form onSubmit={submitAdd}>
             {addKind === 'admin' && (
               <>
-                <div className="name-row">
-                  <Field label="LAST NAME"><TextInput required value={addForm.lastName} onChange={(v) => setAddForm((f) => ({ ...f, lastName: v }))} /></Field>
-                  <Field label="FIRST NAME"><TextInput required value={addForm.firstName} onChange={(v) => setAddForm((f) => ({ ...f, firstName: v }))} /></Field>
-                  <Field label="MIDDLE NAME"><TextInput value={addForm.middleName} onChange={(v) => setAddForm((f) => ({ ...f, middleName: v }))} /></Field>
-                </div>
+                <NameFields value={addForm} onChange={parts => setAddForm(form => ({...form,...parts}))} />
                 <Field label="Email"><TextInput type="email" required value={addForm.email} onChange={(v) => setAddForm((f) => ({ ...f, email: v }))} placeholder="admin@vinathletics.gym" /></Field>
                 <Field label="Phone"><TextInput value={addForm.phone} onChange={(v) => setAddForm((f) => ({ ...f, phone: v }))} placeholder="+63 9XX XXX XXXX" /></Field>
                 <Field label="Status">
@@ -215,11 +224,7 @@ function SuperAdminUsers({
             )}
             {addKind === 'member' && (
               <>
-                <div className="name-row">
-                  <Field label="LAST NAME"><TextInput required value={addForm.lastName} onChange={(v) => setAddForm((f) => ({ ...f, lastName: v }))} /></Field>
-                  <Field label="FIRST NAME"><TextInput required value={addForm.firstName} onChange={(v) => setAddForm((f) => ({ ...f, firstName: v }))} /></Field>
-                  <Field label="MIDDLE NAME"><TextInput value={addForm.middleName} onChange={(v) => setAddForm((f) => ({ ...f, middleName: v }))} /></Field>
-                </div>
+                <NameFields value={addForm} onChange={parts => setAddForm(form => ({...form,...parts}))} />
                 <Field label="Email"><TextInput type="email" required value={addForm.email} onChange={(v) => setAddForm((f) => ({ ...f, email: v }))} /></Field>
                 <Field label="Phone"><TextInput value={addForm.phone} onChange={(v) => setAddForm((f) => ({ ...f, phone: v }))} placeholder="+63 9XX XXX XXXX" /></Field>
                 <Field label="Plan">
@@ -231,11 +236,7 @@ function SuperAdminUsers({
             )}
             {addKind === 'trainer' && (
               <>
-                <div className="name-row">
-                  <Field label="LAST NAME"><TextInput required value={addForm.lastName} onChange={(v) => setAddForm((f) => ({ ...f, lastName: v }))} /></Field>
-                  <Field label="FIRST NAME"><TextInput required value={addForm.firstName} onChange={(v) => setAddForm((f) => ({ ...f, firstName: v }))} /></Field>
-                  <Field label="MIDDLE NAME"><TextInput value={addForm.middleName} onChange={(v) => setAddForm((f) => ({ ...f, middleName: v }))} /></Field>
-                </div>
+                <NameFields value={addForm} onChange={parts => setAddForm(form => ({...form,...parts}))} />
                 <Field label="Email"><TextInput type="email" required value={addForm.email} onChange={(v) => setAddForm((f) => ({ ...f, email: v }))} placeholder="trainer@vinathletics.gym" /></Field>
                 <Field label="Phone"><TextInput value={addForm.phone} onChange={(v) => setAddForm((f) => ({ ...f, phone: v }))} placeholder="+63 9XX XXX XXXX" /></Field>
                 <Field label="Specialty"><TextInput value={addForm.specialty} onChange={(v) => setAddForm((f) => ({ ...f, specialty: v }))} /></Field>
@@ -250,11 +251,7 @@ function SuperAdminUsers({
             )}
             {addKind === 'staff' && (
               <>
-                <div className="name-row">
-                  <Field label="LAST NAME"><TextInput required value={addForm.lastName} onChange={(v) => setAddForm((f) => ({ ...f, lastName: v }))} /></Field>
-                  <Field label="FIRST NAME"><TextInput required value={addForm.firstName} onChange={(v) => setAddForm((f) => ({ ...f, firstName: v }))} /></Field>
-                  <Field label="MIDDLE NAME"><TextInput value={addForm.middleName} onChange={(v) => setAddForm((f) => ({ ...f, middleName: v }))} /></Field>
-                </div>
+                <NameFields value={addForm} onChange={parts => setAddForm(form => ({...form,...parts}))} />
                 <Field label="Email"><TextInput type="email" value={addForm.email} onChange={(v) => setAddForm((f) => ({ ...f, email: v }))} placeholder="name@vinathletics.gym" /></Field>
                 <Field label="Phone"><TextInput value={addForm.phone} onChange={(v) => setAddForm((f) => ({ ...f, phone: v }))} placeholder="+63 9XX XXX XXXX" /></Field>
                 <Field label="Role">
@@ -274,7 +271,7 @@ function SuperAdminUsers({
                 </Field>
               </>
             )}
-            <button className="btn btn-signal btn-block" type="submit">Add {addKind === 'admin' ? 'Admin' : addKind === 'member' ? 'Member' : addKind === 'trainer' ? 'Trainer' : 'Staff'}</button>
+            <button className="btn btn-signal btn-block" type="submit">Add {addKind === 'admin' ? 'Manager' : addKind === 'member' ? 'Member' : addKind === 'trainer' ? 'Trainer' : 'Staff'}</button>
           </form>
         </Modal>
       )}
@@ -283,7 +280,7 @@ function SuperAdminUsers({
         <Modal title="" showCloseButton={false} onClose={() => { setConfirmAdd(false); setPendingAddForm(null); }}>
           <div style={{ padding: '0 24px 24px', textAlign: 'center' }}>
             <p style={{ fontSize: 16.5, margin: '0 0 24px', lineHeight: 1.6 }}>
-              Are you sure you want to add this user as an {addKind === 'admin' ? 'admin' : addKind === 'member' ? 'member' : addKind === 'trainer' ? 'trainer' : 'staff'}?
+              Are you sure you want to add this user as an {addKind === 'admin' ? 'manager' : addKind === 'member' ? 'member' : addKind === 'trainer' ? 'trainer' : 'staff'}?
             </p>
             <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
               <button className="btn btn-outline" onClick={() => { setConfirmAdd(false); setPendingAddForm(null); }}>
@@ -305,11 +302,7 @@ function SuperAdminUsers({
       {editing && editForm && (
         <Modal title={`Edit ${editing.name}`} onClose={() => { setEditing(null); setEditForm(null); }}>
           <form onSubmit={submitEdit}>
-            <div className="name-row">
-              <Field label="LAST NAME"><TextInput required value={editForm.lastName} onChange={(v) => setEditForm((f) => ({ ...f, lastName: v }))} /></Field>
-              <Field label="FIRST NAME"><TextInput required value={editForm.firstName} onChange={(v) => setEditForm((f) => ({ ...f, firstName: v }))} /></Field>
-              <Field label="MIDDLE NAME"><TextInput value={editForm.middleName} onChange={(v) => setEditForm((f) => ({ ...f, middleName: v }))} /></Field>
-            </div>
+<NameFields value={editForm} onChange={setEditForm} />
             {editing.kind === 'admin' && (
               <>
                 <Field label="Email"><TextInput type="email" value={editForm.email} onChange={(v) => setEditForm((f) => ({ ...f, email: v }))} /></Field>
@@ -321,7 +314,7 @@ function SuperAdminUsers({
                 </Field>
                 <Field label="CHANGE ROLE">
                   <Select value={editForm.changeRole} onChange={(v) => setEditForm((f) => ({ ...f, changeRole: v }))}>
-                    <option value="admin">Admin</option>
+                    <option value="admin">Manager</option>
                     <option value="member">Member</option>
                     <option value="staff">Staff</option>
                     <option value="trainer">Trainer</option>
@@ -340,7 +333,7 @@ function SuperAdminUsers({
                 </Field>
                 <Field label="CHANGE ROLE">
                   <Select value={editForm.changeRole} onChange={(v) => setEditForm((f) => ({ ...f, changeRole: v }))}>
-                    <option value="admin">Admin</option>
+                    <option value="admin">Manager</option>
                     <option value="member">Member</option>
                     <option value="staff">Staff</option>
                     <option value="trainer">Trainer</option>
@@ -362,7 +355,7 @@ function SuperAdminUsers({
                 </Field>
                 <Field label="CHANGE ROLE">
                   <Select value={editForm.changeRole} onChange={(v) => setEditForm((f) => ({ ...f, changeRole: v }))}>
-                    <option value="admin">Admin</option>
+                    <option value="admin">Manager</option>
                     <option value="member">Member</option>
                     <option value="staff">Staff</option>
                     <option value="trainer">Trainer</option>
@@ -391,7 +384,7 @@ function SuperAdminUsers({
                 </Field>
                 <Field label="CHANGE ROLE">
                   <Select value={editForm.changeRole} onChange={(v) => setEditForm((f) => ({ ...f, changeRole: v }))}>
-                    <option value="admin">Admin</option>
+                    <option value="admin">Manager</option>
                     <option value="member">Member</option>
                     <option value="staff">Staff</option>
                     <option value="trainer">Trainer</option>

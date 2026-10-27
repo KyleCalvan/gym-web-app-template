@@ -1,23 +1,9 @@
 // @ts-nocheck
-import { CURRENT, ROLE_LABEL } from '../../data.ts';
+import { ROLE_LABEL } from '../../data.ts';
 import { ChevronDown, Menu } from 'lucide-react';
 import type { NavSection, Notification, Role, Setter } from '../../types.ts';
 import { Avatar } from '../primitives/Avatar.tsx';
 import NotificationsDropdown from './NotificationsDropdown.tsx';
-
-const VIEW_TITLES: Record<string, string> = {
-  dashboard: 'Dashboard', members: 'Member Management', plans: 'Membership Plans', payments: 'Payments / Point of Sale',
-  reports: 'Revenue & Reports', trainers: 'Trainers & Staff', promotions: 'Promotions', activity: 'Activity Logs',
-  coaching: 'Trainer Availability', membership: 'Membership', pos: 'Point of Sale', transactions: 'My Transactions',
-  schedules: 'Trainer Schedules', sessions: 'Assigned Sessions', schedule: 'My Schedule & Availability',
-  profile: 'My Profile', notifications: 'Notifications',
-};
-
-// Role-specific labels used where a view title differs from its navigation label.
-const VIEW_TITLES_BY_ROLE: Record<string, Record<string, string>> = {
-  member: { dashboard: 'Dashboard', membership: 'Membership Plans', activity: 'Activity', promotions: 'Promotions' },
-  staff: { members: 'Members' },
-};
 
 export function Topbar({
   role, user, view, onNav, toggleSidebar, onProfileMenu, pillRef, profileMenuOpen, nav,
@@ -39,7 +25,8 @@ export function Topbar({
   onCloseNotifications: () => void;
   toast: (message: string) => void;
 }) {
-  const title = VIEW_TITLES_BY_ROLE[role]?.[view] || VIEW_TITLES[view] || view;
+  const title = nav?.flatMap(section => section.items).find(item => item.id === view)?.label
+    || (view === 'profile' ? 'My Profile' : 'Dashboard');
 
   const handlePillClick = () => {
     // The pill opens the profile dropdown (which holds Profile / Log out)
@@ -63,7 +50,6 @@ export function Topbar({
         <Menu size={24} />
       </button>
       <div className="path-title">
-        <div className="path">{role.toUpperCase()} / {title.toUpperCase()}</div>
         <h1 style={{ margin: 0 }}>{title}</h1>
       </div>
 
@@ -78,26 +64,25 @@ export function Topbar({
           onNav={onNav || (() => {})}
           toast={toast}
         />
-        <div
+        <button
+          type="button"
+          aria-label="Open profile menu"
           className="role-pill clickable"
           ref={pillRef}
           onClick={handlePillClick}
-          role="button"
-          tabIndex={0}
           aria-haspopup="menu"
           aria-expanded={onProfileMenu ? Boolean(profileMenuOpen) : undefined}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handlePillClick(); } }}
         >
           <Avatar src={user?.avatarUrl} name={user?.name || 'User'} size={28} />
           {/* role-full is the verbose job title for desktop; role-short is the
              compact badge shown on mobile. CSS swaps them at the breakpoint. */}
           <span className="who">
             <b>{user?.name || 'User'}</b>
-            <span className="role-full">{user?.role || 'User'}</span>
+            <span className="role-full">{role === 'admin' ? ROLE_LABEL.admin : user?.role || ROLE_LABEL[role]}</span>
             <span className="role-short">{ROLE_LABEL[role] || 'User'}</span>
           </span>
           <ChevronDown className="role-pill-chevron" size={15} aria-hidden="true" />
-        </div>
+        </button>
       </div>
     </div>
   );

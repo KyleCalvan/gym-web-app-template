@@ -1,13 +1,16 @@
 // @ts-nocheck
 import { StatTile, Badge, BarChart, Donut, Table, TabbedCard } from '../shared';
 import { downloadCSV } from '../shared/utils/csv.ts';
-import { REVENUE_7D, MEMBERSHIP_DIST, peso } from '../data.ts';
+import { REVENUE_7D, peso } from '../data.ts';
 
 function AdminDashboard({ onNav, members, trainers, transactions, sessions, promotions, today, toast }){
   const published = promotions.filter(p=>p.status==='Published');
   const liveMembers = members.filter(m => !m.deletedAt);
   const liveTrainers = trainers.filter(t => !t.deletedAt);
-  const totalMembers = liveMembers.length;
+  const membershipCounts = new Map();
+  liveMembers.forEach(member => membershipCounts.set(member.plan || 'No plan', (membershipCounts.get(member.plan || 'No plan') || 0) + 1));
+  const planColors = { premium: 'var(--signal-ink)', elite: 'var(--amber)', basic: 'var(--chart-blue)' };
+  const distribution = Array.from(membershipCounts, ([l, v], index) => ({ l, v, color: planColors[l.toLowerCase()] || ['var(--signal-ink)', 'var(--amber)', 'var(--chart-blue)', 'var(--danger)'][index % 4] }));
   const activeCount = liveMembers.filter(m=>m.status==='Active').length;
   const paid = transactions.filter(t=>t.status==='Paid');
   const revenueMtd = paid.reduce((a,t)=>a+t.amount,0);
@@ -36,9 +39,9 @@ function AdminDashboard({ onNav, members, trainers, transactions, sessions, prom
   return (
     <>
       <div className="grid grid-4" style={{marginBottom:18}}>
-        <StatTile label="Total Members" value={totalMembers} delta={`${activeCount} active`} />
         <StatTile label="Revenue (MTD)" value={peso(revenueMtd)} delta={`${paid.length} paid txns`} tone="court" />
-        <StatTile label="Active Trainers" value={activeTrainers} delta={`${liveTrainers.length-activeTrainers} on leave/inactive`} tone="amber" />
+        <StatTile label="Active Members" value={activeCount} delta={`${liveMembers.length-activeCount} inactive or paused`} tone="attention" />
+        <StatTile label="Active Trainers" value={activeTrainers} delta={`${liveTrainers.length-activeTrainers} on leave/inactive`} tone="attention" />
         <StatTile label="Sessions Today" value={sessionsToday} delta={`${sessions.filter(s=>s.status==='Pending').length} pending`} tone="steel" />
       </div>
 
@@ -56,21 +59,22 @@ function AdminDashboard({ onNav, members, trainers, transactions, sessions, prom
         </TabbedCard>
 
         <TabbedCard title="Quick Actions">
-          <div style={{display:'flex', flexDirection:'column', gap:8}}>
-            <button className="btn btn-signal btn-block" onClick={()=>onNav && onNav('members')}>+ Register Member</button>
-            <button className="btn btn-outline btn-block" onClick={()=>onNav && onNav('trainers')}>+ Add Trainer</button>
-            <button className="btn btn-outline btn-block" onClick={()=>onNav && onNav('promotions')}>Create Promotion</button>
+          <div className="manager-quick-actions">
+            <button className="btn btn-signal btn-block" onClick={()=>onNav && onNav('members', 'register-member')}>+ Register Member</button>
+            <button className="btn btn-outline btn-block" onClick={()=>onNav && onNav('trainers', 'add-trainer')}>+ Add Trainer</button>
+            <button className="btn btn-outline btn-block" onClick={()=>onNav && onNav('promotions', 'create-promotion')}>Create Promotion</button>
+            <button className="btn btn-outline" onClick={()=>onNav && onNav('trainers', 'add-staff')}>+ Add Staff</button>
             <button className="btn btn-outline btn-block" onClick={exportReport}>Export Report</button>
           </div>
         </TabbedCard>
       </div>
 
-      <div className="grid grid-2" style={{marginBottom:18}}>
+      <div className="grid grid-2" style={{marginBottom:18, alignItems:'start'}}>
         <TabbedCard title="Revenue — Last 7 Days">
           <BarChart data={REVENUE_7D} valueKey="v" labelKey="d" prefix="₱" />
         </TabbedCard>
         <TabbedCard title="Membership Distribution">
-          <Donut data={MEMBERSHIP_DIST} />
+          <Donut data={distribution} size={132} />
         </TabbedCard>
       </div>
 

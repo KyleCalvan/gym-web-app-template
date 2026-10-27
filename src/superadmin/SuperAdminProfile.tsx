@@ -5,10 +5,10 @@ import { SecurityFlow } from '../shared/components/SecurityFlow';
 import ProfileSettingsPanel from '../shared/ProfileSettingsPanel';
 import type { ViewProps } from '../types.ts';
 
-function SuperAdminProfile({ superadmins, setSuperadmins, currentUserId, toast, addAudit, notifPrefs, setNotifPrefs }: ViewProps) {
+function SuperAdminProfile({ superadmins, setSuperadmins, currentUserId, toast, addAudit, notifPrefs, setNotifPrefs, currentUser, onProfilePhotoChange }: ViewProps) {
   const me = superadmins.find(s => s.id === currentUserId) || superadmins[0];
   const [info, setInfo] = useState({
-    name: me?.name || '',
+    name: me?.name || currentUser?.name || '',
     email: me?.email || '',
     phone: me?.phone || '',
     phoneSecondary: me?.phoneSecondary || '',
@@ -27,6 +27,7 @@ function SuperAdminProfile({ superadmins, setSuperadmins, currentUserId, toast, 
     const file = e.target.files?.[0];
     if (!file) return;
     onPickImage(file, url => {
+      onProfilePhotoChange?.(url);
       setSuperadmins(prev => prev.map(s => s.id === me.id ? {...s, avatarUrl: url} : s));
       toast('Photo updated');
       addAudit?.('info', 'Profile photo updated', me?.id || 'superadmin');
@@ -35,11 +36,11 @@ function SuperAdminProfile({ superadmins, setSuperadmins, currentUserId, toast, 
   };
 
   return (
-    <div className="grid grid-1-2">
-      <TabbedCard title={me?.name || 'Super Admin'}>
-        <div style={{textAlign:'center', marginBottom:14}}>
-          <Avatar src={me?.avatarUrl} name={me?.name || 'Super Admin'} size={64} />
-          <div style={{marginTop:10}}>
+    <div className="grid grid-1-2 profile-page-grid">
+      <TabbedCard title={me?.name || currentUser?.name || 'Super Admin'}>
+        <div className="profile-photo-content">
+          <Avatar src={me?.avatarUrl || currentUser?.avatarUrl} name={me?.name || currentUser?.name || 'Super Admin'} size={96} />
+          <div>
             <button
               type="button"
               className="btn btn-outline btn-sm"

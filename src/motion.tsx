@@ -19,8 +19,8 @@ export const ease = {
 
 export const dur = {
   fast: 0.18,
-  base: 0.32,
-  slow: 0.6,
+  base: 0.22,
+  slow: 0.25,
   ticker: 0.9,
   bar: 0.5,
   donut: 0.7,
@@ -33,9 +33,9 @@ export const spring = {
 
 // Stagger gaps
 export const stagger = {
-  tile: 0.06,
+  tile: 0.03,
   chart: 0.12,
-  list: 0.04,
+  list: 0.02,
 };
 
 // Variants

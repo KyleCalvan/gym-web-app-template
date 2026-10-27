@@ -63,7 +63,7 @@ function PlansStrip({ plansRef, activePlans, onNavigate }) {
         <SectionHeading
           id="plans-heading"
           title="Membership Plans"
-          sub="Pick a plan that fits your goals — switch or cancel anytime."
+          sub="Compare the benefits and terms. Find the plan that fits your goals."
         />
         <div className="grid grid-3" ref={trackRef}>
           {activePlans.map((p) => (
@@ -72,6 +72,7 @@ function PlansStrip({ plansRef, activePlans, onNavigate }) {
               <h3>{p.name}</h3>
               <div className="price">₱{p.price.toLocaleString('en-PH')}<span>/{p.period}</span></div>
               <ul>{p.perks.map((perk, i) => <li key={i}><Check size={13} strokeWidth={2.5} aria-hidden="true" /><span>{perk}</span></li>)}</ul>
+              {p.terms && <p className="plan-card-terms"><span className="plan-card-label">Terms</span>{p.terms}</p>}
               <button
                 className={"btn btn-sm btn-block " + (p.featured ? 'btn-signal' : 'btn-outline')}
                 onClick={() => onNavigate && onNavigate('/login')}

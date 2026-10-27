@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import { Search, ShoppingCart, Trash2, UserRound } from 'lucide-react';
 import { TabbedCard, Field, Select, PaymentSimulationModal } from '../shared';
-import { peso } from '../data.ts';
+import { formatMoney as peso } from '../shared/utils/money';
+import { calculatePosPricing, type TaxMode } from './posPricing';
 import { createSimulatedTransaction, getConfiguredPaymentFee, updateSimulatedTransaction } from '../payments.ts';
 import type { Member, PaymentState, Plan, Setter, Transaction } from '../types.ts';
 
@@ -42,16 +43,22 @@ function StaffPOS({ setTransactions, members, plans, toast, preferredPaymentMeth
     [plans],
   );
   const total = cart.reduce((sum, item) => sum + item.price, 0);
+  const [taxRate, setTaxRate] = useState('');
+  const [taxMode, setTaxMode] = useState<TaxMode>('exclusive');
+  const pricing = useMemo(() => {
+    try { return { ...calculatePosPricing(total, taxRate, taxMode), error: '' }; }
+    catch (cause) { return { ...calculatePosPricing(total, '', taxMode), error: cause instanceof Error ? cause.message : 'Check the tax settings.' }; }
+  }, [total, taxRate, taxMode]);
   const feeResult = useMemo(() => {
     try {
-      return { fees: getConfiguredPaymentFee(method, total), error: '' };
+      return { fees: getConfiguredPaymentFee(method, pricing.total), error: '' };
     } catch (error) {
       return {
         fees: 0,
         error: error instanceof Error ? error.message : 'Configured payment fee is invalid.',
       };
     }
-  }, [method, total]);
+  }, [method, pricing.total]);
   const fees = feeResult.fees;
   const feeError = feeResult.error;
   const member = members.find((entry) => entry.id === memberId && !entry.deletedAt) || null;
@@ -88,14 +95,15 @@ const addPlan = (item: POSCartItem) => {
       return;
     }
     if (memberId && !member) { toast('Select an active member or choose walk-in customer.'); return; }
-    if (feeError) { toast(feeError); return; }
+    if (feeError || pricing.error) { toast(feeError || pricing.error); return; }
 
     const memberName = member?.name || 'Walk-in';
     const today = new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
     const type = `Membership: ${cart.map((item) => item.planName).join(', ')}`;
-    const transaction = createSimulatedTransaction({ member: memberName, type, amount: total, method, date: today, fees });
+    const transaction = createSimulatedTransaction({ member: memberName, type, amount: pricing.total, method, date: today, fees });
+    if (pricing.configured) transaction.taxDetails = { subtotal: pricing.subtotal, base: pricing.base, rate: pricing.rate, amount: pricing.tax, mode: taxMode };
     setTransactions((previous) => [transaction, ...previous]);
-    setPayment({ transactionId: transaction.id, method, amount: total, fees });
+    setPayment({ transactionId: transaction.id, method, amount: pricing.total, fees });
   };
 
   const updatePaymentState = (paymentState: PaymentState) => {
@@ -117,22 +125,24 @@ const addPlan = (item: POSCartItem) => {
     <>
       <div className="grid grid-2-1 staff-pos">
         <TabbedCard title="Membership Plans">
-          <p className="staff-pos-hint">Add one of each membership plan to this sale.</p>
+          <p className="staff-pos-hint">Select one membership plan per sale. Remove it to choose a different plan.</p>
           <div className="staff-pos-products">
             {items.map((item) => {
               const inCart = cart.some((entry) => entry.id === item.id);
+              const incompatible = !isPtItem(item) && cart.some(entry => !isPtItem(entry)) && !inCart;
               return (
                 <button
                   key={item.id}
                   type="button"
                   className={`card pos-item${inCart ? ' is-in-cart' : ''}`}
                   onClick={() => addPlan(item)}
-                  disabled={inCart}
+                  disabled={inCart || incompatible}
+                  title={incompatible ? "Remove the current membership plan to choose this one." : undefined}
                   aria-pressed={inCart}
                 >
                   <span className="staff-pos-plan-name">{item.name}</span>
                   <span className="staff-pos-plan-price">{peso(item.price)}</span>
-                  <span className="staff-pos-plan-action">{inCart ? 'Added to cart' : 'Add to cart'}</span>
+                  <span className="staff-pos-plan-action">{inCart ? 'Added to cart' : incompatible ? 'Remove selected plan first' : 'Add to cart'}</span>
                 </button>
               );
             })}
@@ -165,7 +175,7 @@ const addPlan = (item: POSCartItem) => {
             <Field label="Status filter">
               <Select value={memberStatus} onChange={setMemberStatus} aria-label="Filter members by status">
                 {['All', 'Active', 'Expiring', 'Frozen', 'Expired'].map((status) => (
-                  <option key={status} value={status}>{status}</option>
+                  <option key={status} value={status}>{status === 'Expiring' ? 'Expire' : status}</option>
                 ))}
               </Select>
             </Field>
@@ -215,6 +225,12 @@ const addPlan = (item: POSCartItem) => {
             </Select>
           </Field>
 
+          <details className="pos-tax-settings"><summary>Tax settings</summary>
+            <p>Use the gym’s approved rate and pricing treatment. Leave the rate blank to preserve current prices.</p>
+            <Field label="VAT / tax rate (%)"><input className="form-control" type="number" min="0" max="100" step="0.01" value={taxRate} onChange={event => setTaxRate(event.target.value)} aria-label="VAT or tax rate" placeholder="Not configured" /></Field>
+            <Field label="Price treatment"><Select value={taxMode} onChange={value => setTaxMode(value as TaxMode)} aria-label="Tax treatment"><option value="exclusive">Add tax to item prices</option><option value="inclusive">Item prices already include tax</option></Select></Field>
+            {pricing.error && <p className="field-error" role="alert">{pricing.error}</p>}
+          </details>
           <section className="staff-pos-cart" aria-label="Cart items">
             <div className="staff-pos-cart-head">
               <h3><ShoppingCart size={16} aria-hidden="true" /> Items</h3>
@@ -243,9 +259,12 @@ const addPlan = (item: POSCartItem) => {
             )}
             <div className="staff-pos-totals">
               <div><span>Subtotal</span><strong>{peso(total)}</strong></div>
-              <div><span>Discount</span><strong>{peso(0)}</strong></div>
-              <div><span>Configured fee</span><strong>{peso(fees)}</strong></div>
-              <div className="staff-pos-grand-total"><span>Total</span><strong>{peso(total + fees)}</strong></div>
+              {pricing.configured ? <>
+                {taxMode === 'inclusive' && <div><span>Taxable amount</span><strong>{peso(pricing.base)}</strong></div>}
+                <div><span>VAT / tax ({pricing.rate}%{taxMode === 'inclusive' ? ', included' : ''})</span><strong>{peso(pricing.tax)}</strong></div>
+              </> : <div><span>VAT / tax</span><span>Not configured</span></div>}
+              {fees > 0 && <div><span>Payment fee</span><strong>{peso(fees)}</strong></div>}
+              <div className="staff-pos-grand-total"><span>Total</span><strong>{peso(pricing.total + fees)}</strong></div>
             </div>
             {feeError && <p className="staff-pos-fee-error" role="alert">{feeError}</p>}
             {method.toLowerCase() === 'gcash' && (
@@ -257,9 +276,9 @@ const addPlan = (item: POSCartItem) => {
             type="button"
             className="btn btn-signal btn-block staff-pos-charge"
             onClick={charge}
-            disabled={cart.length === 0 || Boolean(feeError)}
+            disabled={cart.length === 0 || Boolean(feeError || pricing.error)}
           >
-            Charge {peso(total + fees)}
+            Charge {peso(pricing.total + fees)}
           </button>
         </TabbedCard>
       </div>

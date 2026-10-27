@@ -51,7 +51,7 @@ function NavActions({ onAction }) {
       <button
         className="btn btn-signal btn-sm"
         onClick={() => onAction('/login')}
-      >Member Login</button>
+      >Login</button>
     </div>
   );
 }

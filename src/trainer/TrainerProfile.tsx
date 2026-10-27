@@ -5,9 +5,10 @@ import { onPickImage } from '../shared/imageUpload.ts';
 import { SecurityFlow } from '../shared/components/SecurityFlow';
 import ProfileSettingsPanel from '../shared/ProfileSettingsPanel';
 
-function TrainerProfile({ trainer, setTrainers, toast, addAudit, notifPrefs, setNotifPrefs }) {
+function TrainerProfile({ trainers, currentUserId, setTrainers, toast, addAudit, notifPrefs, setNotifPrefs, currentUser, onProfilePhotoChange }) {
+  const trainer = trainers.find(person => person.id === currentUserId) || trainers[0];
   const [form, setForm] = useState({
-    name: trainer?.name || '', specialty: trainer?.specialty || '',
+    name: trainer?.name || currentUser?.name || '', specialty: trainer?.specialty || '',
     email: trainer?.email || '', bio: trainer?.bio || '',
   });
 
@@ -24,6 +25,7 @@ function TrainerProfile({ trainer, setTrainers, toast, addAudit, notifPrefs, set
     const file = e.target.files?.[0];
     if (!file) return;
     onPickImage(file, url => {
+      onProfilePhotoChange?.(url);
       setTrainers(prev => prev.map(t => t.id === trainer.id ? {...t, avatarUrl: url} : t));
       toast('Photo updated');
       addAudit?.('info', 'Profile photo updated', trainer?.id || 'trainer');
@@ -32,11 +34,11 @@ function TrainerProfile({ trainer, setTrainers, toast, addAudit, notifPrefs, set
   };
 
   return (
-    <div className="grid grid-1-2">
-      <TabbedCard title={trainer?.name || 'Trainer'}>
-        <div style={{textAlign:'center', marginBottom:14}}>
-          <Avatar src={trainer?.avatarUrl} name={trainer?.name || 'Trainer'} size={64} />
-          <div style={{marginTop:10}}>
+    <div className="grid grid-1-2 profile-page-grid">
+      <TabbedCard title={trainer?.name || currentUser?.name || 'Trainer'}>
+        <div className="profile-photo-content">
+          <Avatar src={trainer?.avatarUrl || currentUser?.avatarUrl} name={trainer?.name || currentUser?.name || 'Trainer'} size={96} />
+          <div>
             <button
               type="button"
               className="btn btn-outline btn-sm"

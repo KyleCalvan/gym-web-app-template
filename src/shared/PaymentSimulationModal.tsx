@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { Field } from './primitives/Field.tsx';
 import { Modal } from './primitives/Modal.tsx';
 import { Select } from './primitives/Select.tsx';
-import { peso } from '../data.ts';
+import { formatMoney as peso } from './utils/money';
 import type { PaymentState } from '../types.ts';
 
 interface PaymentSimulationModalProps {

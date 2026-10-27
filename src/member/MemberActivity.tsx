@@ -1,5 +1,7 @@
 // @ts-nocheck
 import { useMemo, useState } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { formatTime12h } from '../trainer/availability';
 import { Badge, BarChart, StatTile, TabbedCard, Table, Modal, Field } from '../shared';
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -65,6 +67,16 @@ function MemberActivity({
     myHistory.forEach(r => m.set(r.date, r));
     return m;
   }, [myHistory]);
+
+  // Reuse the member's existing sessions; never expose another member's entries.
+  const sessionsByDate = useMemo(() => {
+    const days = new Map();
+    sessions.filter(session => session.member === me?.name).forEach(session => {
+      const day = session.date.slice(0, 10);
+      days.set(day, [...(days.get(day) || []), session]);
+    });
+    return days;
+  }, [sessions, me?.name]);
 
   // Calendar view state
   const [viewMonth, setViewMonth] = useState(() => {
@@ -146,8 +158,8 @@ function MemberActivity({
   );
 
   const handleCheckIn = () => {
-    if (isFrozen) { toast('Frozen accounts cannot check in.'); return; }
-    if (checkedToday) { toast('Already checked in today.'); return; }
+    if (isFrozen) { toast('Frozen accounts cannot check in.', 'error'); return; }
+    if (checkedToday) { toast('Already checked in today.', 'info'); return; }
     const date = todayISO();
     const time = nowHHMM();
     setCheckInHistory(prev => [...prev, {
@@ -157,12 +169,12 @@ function MemberActivity({
       time,
     }]);
     setCheckIns(c => ({ ...c, count: c.count + 1 }));
-    toast('Checked in — see you at the gym!');
+    toast('Checked in — see you at the gym!', 'success');
     setSelectedDay(date);
   };
 
   return (
-    <>
+    <div className="member-activity">
       <div className="grid grid-4" style={{marginBottom:18}}>
         <StatTile label="Check-ins This Month" value={monthCheckIns} tone="court" />
         <StatTile label="Total Check-ins" value={myHistory.length} />
@@ -213,7 +225,7 @@ function MemberActivity({
           </div>
         </TabbedCard>
       )}
-      {isFrozen && <div style={{height:18}}></div>}
+
 
       <TabbedCard
         title="Check-in Calendar"
@@ -228,36 +240,40 @@ function MemberActivity({
           </button>
         }
       >
-        <div className="cal-toolbar">
-          <button className="btn btn-ghost btn-sm" onClick={() => setViewMonth(({year, month}) => {
+        <div className="cal-toolbar" aria-label="Calendar month navigation">
+          <button aria-label="Previous month" className="btn btn-ghost btn-sm" onClick={() => setViewMonth(({year, month}) => {
             const m = month - 1;
             if (m < 0) return { year: year - 1, month: 11 };
             return { year, month: m };
-          })}>◀</button>
-          <div className="cal-title">{MONTHS[viewMonth.month]} {viewMonth.year}</div>
-          <button className="btn btn-ghost btn-sm" onClick={() => setViewMonth(({year, month}) => {
+          })}><ChevronLeft size={18} /></button>
+          <div className="cal-title" aria-live="polite">{MONTHS[viewMonth.month]} {viewMonth.year}</div>
+          <button aria-label="Next month" className="btn btn-ghost btn-sm" onClick={() => setViewMonth(({year, month}) => {
             const m = month + 1;
             if (m > 11) return { year: year + 1, month: 0 };
             return { year, month: m };
-          })}>▶</button>
+          })}><ChevronRight size={18} /></button>
         </div>
         <div className="check-calendar">
           {WEEKDAYS.map(d => <div key={d} className="cal-head">{d}</div>)}
           {grid.map((iso, i) => {
             if (!iso) return <div key={`empty-${i}`} className="cal-cell empty"></div>;
             const rec = historyByDate.get(iso);
+            const entries = sessionsByDate.get(iso) || [];
             const day = Number(iso.slice(8, 10));
             const isToday = iso === todayISO();
             return (
               <button
                 key={iso}
                 type="button"
-                className={`cal-cell${rec ? ' checked' : ''}${isToday ? ' today' : ''}`}
-                onClick={() => rec && setSelectedDay(iso)}
-                style={{ cursor: rec ? 'pointer' : 'default' }}
+                className={`cal-cell${rec ? ' checked' : ''}${isToday ? ' today' : ''}${selectedDay === iso ? ' selected' : ''}`}
+                onClick={() => setSelectedDay(iso)}
+                aria-pressed={selectedDay === iso}
+                aria-current={isToday ? 'date' : undefined}
+                aria-label={`${iso}${rec ? ', checked in' : ''}, ${entries.length} scheduled sessions`}
               >
                 <span className="cal-day">{day}</span>
-                {rec && <span className="cal-dot" aria-hidden="true"></span>}
+                {rec && <span className="cal-dot" aria-hidden="true" />}
+                {entries.length > 0 && <span className="cal-session-count">{entries.length}<span className="cal-session-label"> session{entries.length === 1 ? '' : 's'}</span></span>}
               </button>
             );
           })}
@@ -265,13 +281,25 @@ function MemberActivity({
         <div className="cal-legend">
           <span className="cal-legend-dot" aria-hidden="true"></span>
           <span>Checked in</span>
-          {selectedDay && historyByDate.get(selectedDay) && (
-            <span style={{marginLeft:'auto', color:'var(--steel)'}}>
-              {selectedDay} · checked in at {historyByDate.get(selectedDay).time}
-              <button className="btn btn-ghost btn-sm" style={{marginLeft:8}} onClick={() => setSelectedDay(null)}>close</button>
-            </span>
-          )}
+          <span className="cal-session-indicator" aria-hidden="true" /> <span>Coaching session</span>
         </div>
+        {selectedDay && <section className="trainer-selected-day" aria-label="Selected day's activities">
+          <div className="trainer-selected-day-heading member-day-heading">
+            <div><span>Daily activity</span><h3>{new Date(selectedDay + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</h3></div>
+            <button className="btn btn-ghost btn-sm" onClick={() => setSelectedDay(null)}>Close</button>
+          </div>
+          <div className="member-activity-list">
+            {historyByDate.get(selectedDay) && <div className="member-activity-record">
+              <span className="trainer-detail-time">{formatTime12h(historyByDate.get(selectedDay).time)}</span>
+              <span><strong>Gym check-in</strong><small>Your recorded visit</small></span><Badge status="Completed" />
+            </div>}
+            {(sessionsByDate.get(selectedDay) || []).map(session => <div className="member-activity-record" key={session.id}>
+              <span className="trainer-detail-time">{session.time}</span>
+              <span><strong>{session.type}</strong><small>With {session.trainer}</small></span><Badge status={session.status} />
+            </div>)}
+            {!historyByDate.has(selectedDay) && !sessionsByDate.has(selectedDay) && <p className="trainer-calendar-empty">No check-ins or coaching sessions on this date.</p>}
+          </div>
+        </section>}
       </TabbedCard>
 
       <div style={{height:18}}></div>
@@ -315,7 +343,7 @@ function MemberActivity({
           </form>
         </Modal>
       )}
-    </>
+    </div>
   );
 }
 

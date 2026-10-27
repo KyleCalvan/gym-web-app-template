@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { useState, useMemo } from 'react';
+import { RotateCcw, Trash2 } from 'lucide-react';
 import { Table, Modal, TabbedCard, TextInput, Select, Avatar, StatTile } from '../shared';
 
 const fmt = (iso) => {
@@ -142,13 +143,13 @@ function SuperAdminTrash({
   return (
     <>
       <div className="grid grid-4" style={{ marginBottom: 18 }}>
-        <StatTile label="Archived Admins" value={counts.admin} />
+        <StatTile label="Archived Managers" value={counts.admin} />
         <StatTile label="Archived Members" value={counts.member} />
         <StatTile label="Archived Trainers" value={counts.trainer} />
         <StatTile label="Archived Staff" value={counts.staff} />
       </div>
 
-      <TabbedCard
+      <div className="archive-table"><TabbedCard
         title="Archive"
         right={
           <div style={{ display: 'flex', gap: 8 }}>
@@ -169,7 +170,7 @@ function SuperAdminTrash({
           <TextInput placeholder="Search by name or email…" value={q} onChange={setQ} />
           <Select value={kindF} onChange={setKindF} style={{ maxWidth: 160 }}>
             <option value="all">All Roles</option>
-            <option value="admin">Admins</option>
+            <option value="admin">Managers</option>
             <option value="member">Members</option>
             <option value="trainer">Trainers</option>
             <option value="staff">Staff</option>
@@ -193,17 +194,17 @@ function SuperAdminTrash({
                 </td>
                 <td style={{ fontSize: 13.8 }}>{u.email}</td>
                 <td>
-                  <span style={{ textTransform: 'capitalize' }}>{u.kind}</span>
+                  <span style={{ textTransform: 'capitalize' }}>{u.kind === 'admin' ? 'Manager' : u.kind}</span>
                   <div style={{ fontSize: 12.7, color: 'var(--steel)' }}>{u.label}</div>
                 </td>
                 <td className="mono" style={{ fontSize: 13.2 }}>{fmt(u.deletedAt)}</td>
                 <td>
                   <div style={{ display: 'flex', gap: 6 }}>
-                    <button className="btn btn-signal btn-sm" style={{ background: 'var(--court)', borderColor: 'var(--court)' }} onClick={() => setPendingRestore(u)}>
-                      Restore
+                    <button className="btn btn-outline btn-sm archive-restore" onClick={() => setPendingRestore(u)}>
+                      <RotateCcw size={15} aria-hidden="true" /> Restore
                     </button>
-                    <button className="btn btn-danger btn-sm" onClick={() => setPendingPurge(u)}>
-                      Delete
+                    <button className="btn btn-danger-ghost btn-sm archive-delete" onClick={() => setPendingPurge(u)}>
+                      <Trash2 size={15} aria-hidden="true" /> Delete
                     </button>
                   </div>
                 </td>
@@ -211,10 +212,10 @@ function SuperAdminTrash({
             )}
           />
         )}
-      </TabbedCard>
+      </TabbedCard></div>
 
       {bulkRestoreOpen && (
-        <Modal title="Select Users to Restore" showCloseButton onClose={() => setBulkRestoreOpen(false)} wide>
+        <Modal className="bulk-restore-modal" title="Select Users to Restore" showCloseButton onClose={() => setBulkRestoreOpen(false)} wide>
           <div className="bulk-restore-selection">
             <div className="bulk-restore-toolbar">
               <label>

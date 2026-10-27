@@ -2,7 +2,7 @@
 
 .resource-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;}
 .resource-card{
-  background:var(--surface);border:2px solid var(--ink);border-radius:0;padding:20px;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:20px;
   display:flex;flex-direction:column;gap:10px;position:relative;cursor:pointer;
   transition:transform .15s ease, box-shadow .15s ease;
   overflow:hidden;
@@ -17,7 +17,7 @@
 
 /* Image drop zone (used in promotion create/edit modals) */
 .dropzone{
-  border:2px dashed var(--line);border-radius:0;height:160px;
+  border:1px dashed var(--line-strong);border-radius:var(--radius);height:160px;
   display:flex;align-items:center;justify-content:center;
   background-color:var(--surface);background-size:cover;background-position:center;
   color:var(--steel);font-size:13.2px;text-align:center;cursor:pointer;padding:14px;
@@ -26,13 +26,13 @@
 .dropzone:hover, .dropzone.drag{border-color:var(--signal);background-color:var(--surface);}
 .dropzone-hint{font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.5px;font-size:12.1px;color:var(--steel);}
 .field-spacer{height:8px;}
-.resource-card:hover{transform:translate(-2px,-2px);box-shadow:4px 4px 0 var(--ink);}
+.resource-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-card);border-color:var(--line-strong);}
 .resource-card .head{display:flex;justify-content:space-between;align-items:flex-start;}
 .resource-card .head .ttl{font-family:var(--font-display);font-size:17.6px;text-transform:uppercase;font-weight:600;}
 .resource-card .head .badge{flex-shrink:0;}
 .resource-card .desc{font-size:13.8px;color:var(--steel);margin:0;line-height:1.45;}
 .resource-card .meta{display:flex;flex-wrap:wrap;gap:10px;font-family:var(--font-mono);font-size:12.1px;color:var(--steel);}
-.resource-card .meta .pill{background:var(--surface-2);border:1.5px solid var(--line);border-radius:0;padding:3px 9px;letter-spacing:.5px;text-transform:uppercase;}
+.resource-card .meta .pill{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius);padding:3px 9px;letter-spacing:.5px;text-transform:uppercase;}
 .resource-card .foot{display:flex;justify-content:space-between;align-items:center;margin-top:auto;padding-top:8px;border-top:1px solid var(--line);font-family:var(--font-mono);font-size:11.6px;color:var(--steel);letter-spacing:.5px;text-transform:uppercase;}
 .resource-card .foot .open{color:var(--signal-ink);font-weight:700;}
 
@@ -58,3 +58,15 @@
   /* Name fields stack so each gets the full modal width. */
   .name-row{grid-template-columns:1fr;}
 }
+
+.manager-quick-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}.manager-quick-actions .btn{width:auto;min-height:44px;text-align:center;}.manager-quick-actions .btn:last-child{grid-column:1/-1;}
+.stat-tile.attention .d{color:var(--danger);}.distribution-empty{padding:12px 0;margin:0;color:var(--steel);font-size:14px;}.user-management-actions,.dialog-actions{display:flex;flex-wrap:wrap;gap:8px;}.dialog-actions{justify-content:flex-end;margin-top:20px;}
+
+.manager-calendar-controls{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;}
+.manager-calendar{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:1px;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;background:var(--line);}
+.manager-calendar-weekday{padding:10px 4px;text-align:center;color:var(--steel);background:var(--surface);font-size:13px;}
+.manager-calendar-cell{display:flex;flex-direction:column;align-items:stretch;gap:5px;min-width:0;min-height:102px;padding:8px;border:0;border-radius:0;background:var(--surface);color:var(--ink);text-align:left;}
+.manager-calendar-cell:not(.is-empty):hover{background:var(--surface-2);}.manager-calendar-cell.is-selected{box-shadow:inset 0 0 0 2px var(--signal);}.manager-calendar-cell.is-empty{background:var(--paper);}
+.manager-calendar-number{font-size:14px;font-weight:500;}.manager-calendar-preview{font-size:11px;line-height:1.4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border-radius:3px;padding:3px 4px;}
+.manager-calendar-detail{margin-top:18px;}.manager-calendar-detail p{margin:4px 0 0;font-size:13px;color:var(--steel);}
+@media(max-width:700px){.manager-calendar-controls{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}.manager-calendar-cell{min-height:68px;padding:6px;}.manager-calendar-preview{font-size:0;padding:0;width:6px;height:6px;border-radius:50%;background:var(--signal);}.manager-calendar-cell small{font-size:10px;}.manager-calendar-detail .trainer-detail-row{grid-template-columns:minmax(0,1fr) auto;}.manager-calendar-detail .trainer-detail-time{grid-column:1/-1;}}

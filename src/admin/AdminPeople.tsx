@@ -3,12 +3,12 @@ import { useState } from 'react';
 import { Avatar, Badge, Table, TabbedCard, Modal, Field, TextInput, Select } from '../shared';
 import type { Staff, StaffRole, StaffShift, StaffStatus } from '../types.ts';
 
-function AdminPeople({ trainers, setTrainers, staff, setStaff, members, sessions, setSessions, toast, addAudit }){
-  const [peopleTab, setPeopleTab] = useState<'trainers' | 'staff'>('trainers');
+function AdminPeople({ trainers, setTrainers, staff, setStaff, members, sessions, setSessions, toast, addAudit, initialAction }){
+  const [peopleTab, setPeopleTab] = useState<'trainers' | 'staff'>(initialAction === 'add-staff' ? 'staff' : 'trainers');
   // ===== Trainer state =====
   const [editing, setEditing] = useState(null);
   const [editForm, setEditForm] = useState(null);
-  const [adding, setAdding] = useState(false);
+  const [adding, setAdding] = useState(initialAction === 'add-trainer');
   const [addForm, setAddForm] = useState({name:'', specialty:'', certs:'', sessionPrice:'900', status:'Active'});
   const [viewing, setViewing] = useState(null);
   const [assignForm, setAssignForm] = useState({trainerId:trainers[0]?.id||'', memberId:members[0]?.id||'', dateTime:''});
@@ -60,7 +60,7 @@ function AdminPeople({ trainers, setTrainers, staff, setStaff, members, sessions
   };
 
   // ===== Staff state =====
-  const [staffAdding, setStaffAdding] = useState(false);
+  const [staffAdding, setStaffAdding] = useState(initialAction === 'add-staff');
   const [staffAddForm, setStaffAddForm] = useState({name:'', role:'Front Desk' as StaffRole, shift:'Morning' as StaffShift, email:'', phone:'', status:'Active' as StaffStatus});
   const [staffEditing, setStaffEditing] = useState<Staff | null>(null);
   const [staffEditForm, setStaffEditForm] = useState<Staff | null>(null);

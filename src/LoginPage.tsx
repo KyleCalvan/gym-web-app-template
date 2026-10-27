@@ -6,6 +6,8 @@ import { dur, ease } from './motion.tsx';
 import type { Member, Plan, Role, Setter } from './types.ts';
 import { ROLE_LABEL } from './data.ts';
 import TermsOfUse from './auth/TermsOfUse';
+import { NameFields } from './shared/components/NameFields';
+import { emptyName, formatName } from './shared/nameParts';
 
 // Development demo credentials are fetched from a non-production server route.
 
@@ -57,7 +59,7 @@ export default function LoginPage({
   const [password, setPassword] = useState<string>('');
 
   // Register fields (member-only)
-  const [regName, setRegName] = useState<string>('');
+  const [regName, setRegName] = useState(emptyName);
   const [regEmail, setRegEmail] = useState<string>('');
   const [regPhone, setRegPhone] = useState<string>('');
   const [regPassword, setRegPassword] = useState<string>('');
@@ -251,7 +253,9 @@ export default function LoginPage({
     e.preventDefault();
     if (!demoAccountsEnabled) return;
     const errors: Record<string, string> = {};
-    if (!regName.trim()) errors['register-name'] = 'Enter your full name.';
+    if (!regName.firstName.trim()) errors['register-firstName'] = 'Enter your first name.';
+    if (!regName.lastName.trim()) errors['register-lastName'] = 'Enter your last name.';
+    if (formatName(regName).length > 120) errors['register-lastName'] = 'Keep your full name within 120 characters.';
     if (!EMAIL_PATTERN.test(regEmail.trim())) errors['register-email'] = 'Enter a valid email address.';
     if (!regPhone.trim()) errors['register-phone'] = 'Enter a phone number.';
     if (regPassword.length < 8) errors['register-password'] = 'Use at least 8 characters.';
@@ -266,7 +270,8 @@ export default function LoginPage({
     const id = 'M-' + (1042 + members.length);
     const newMember: Member = {
       id,
-      name: regName.trim(),
+      ...regName,
+      name: formatName(regName),
       email: regEmail.trim().toLowerCase(),
       phone: regPhone.trim(),
       plan: 'Premium',
@@ -274,7 +279,7 @@ export default function LoginPage({
       joined: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
     };
     setMembers((prev) => [...prev, newMember]);
-    showToast('Welcome, ' + regName.trim() + '! Your member ID is ' + id);
+    showToast('Welcome, ' + formatName(regName) + '! Your member ID is ' + id);
     onLogin('member', id, newMember);
   };
 
@@ -352,9 +357,9 @@ export default function LoginPage({
               <p className="demo-account-notice">Development demo accounts only. Do not use these credentials in production.</p>
             </>
           )}
-<h2 style={{ fontSize: 22, textTransform: 'uppercase', marginBottom: 4 }}>
-            {role === 'member' && memberTab === 'register' ? 'Create Account with Google' : `${creds.label} Sign In`}
-          </h2>
+<h1 style={{ fontSize: 26, textTransform: 'uppercase', marginBottom: 4 }}>
+            {role === 'member' && memberTab === 'register' ? 'Create Account' : 'Login'}
+          </h1>
           <p style={{ color: 'var(--steel)', fontSize: 14.3, margin: '4px 0 14px' }}>
             {role === 'member'
               ? (memberTab === 'login' ? 'Access your member dashboard' : 'Join VinAthletics Gym today')
@@ -374,14 +379,15 @@ export default function LoginPage({
             {demoAccountsEnabled && <>
             <p className="demo-account-notice">Demo registration only. This sample Account and Membership are not saved to gym records.</p>
             <form onSubmit={handleMemberRegister} noValidate>
-              <Field label="Full Name" htmlFor="register-name">
-                <input id="register-name" className="form-control" required placeholder="Your full name"
-                  aria-invalid={Boolean(formErrors['register-name'])}
-                  aria-describedby={formErrors['register-name'] ? 'register-name-error' : undefined}
-                  value={regName} onChange={(e) => { setRegName(e.target.value); clearFieldError('register-name'); }}
-                  onBlur={() => { if (!regName.trim()) setFormErrors((prev) => ({ ...prev, 'register-name': 'Enter your full name.' })); }} />
-                {formErrors['register-name'] && <p className="field-error" id="register-name-error" role="alert">{formErrors['register-name']}</p>}
-              </Field>
+              <NameFields prefix="register" value={regName} onChange={parts => {
+                setRegName(parts);
+                setFormErrors(previous => {
+                  const next = {...previous};
+                  if (parts.firstName.trim()) delete next['register-firstName'];
+                  if (parts.lastName.trim()) delete next['register-lastName'];
+                  return next;
+                });
+              }} errors={formErrors} />
               <Field label="Email" htmlFor="register-email">
                 <input id="register-email" className="form-control" type="email" required placeholder="you@example.com"
                   aria-invalid={Boolean(formErrors['register-email'])}

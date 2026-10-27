@@ -19,32 +19,19 @@ function LandingHero({ onNavigate }) {
       <div className="hero-blob hero-blob-2" />
       <HeroImage className="hero-photo-bg" />
       <div className="landing-hero-inner">
-        <div>
-          <motion.div className="eyebrow" {...heroItem(0)}>
-            Gym Management, Squared Away
-          </motion.div>
+        <div className="hero-copy">
           <motion.h1 id="hero-heading" {...heroItem(1)}>
             Run your gym like a{' '}
             <span className="accent-word">
-              champion&nbsp;runs
-              <motion.span
-                className="vm-underline"
-                initial={{ scaleX: 0 }}
-                animate={{ scaleX: 1 }}
-                transition={{ duration: 0.5, delay: 0.3, ease: ease.out }}
-                style={{ transformOrigin: 'left center' }}
-              />
+              champion runs
             </span>{' '}
             a season.
           </motion.h1>
           <motion.p className="lede" {...heroItem(2)}>
-            Memberships, coaching schedules, point-of-sale and reporting — one ledger for admins, staff, trainers and members alike.
+            Memberships, coaching schedules, point-of-sale and reporting — one ledger for managers, staff, trainers and members alike.
           </motion.p>
-          <motion.div className="btn-group" {...heroItem(3)}>
-            <button
-              className="btn btn-signal"
-              onClick={() => onNavigate && onNavigate('/login')}
-            >Get Started</button>
+          <motion.div className="btn-group hero-actions" {...heroItem(3)}>
+            <a className="btn btn-signal" href="/login?flow=register">Get Started</a>
             <a
               href="#promotions"
               className="btn btn-outline"

@@ -50,8 +50,8 @@
   display:flex;align-items:center;justify-content:space-between;
   gap:20px;
   width:100%;
-  padding:16px 20px;
-  border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  padding:12px 20px;
+  border-bottom:1px solid var(--line);background:var(--surface);
   position:sticky;top:0;z-index:5;
 }
 /* Desktop fluid padding, scoped to >=981px for the same cascade reason as
@@ -60,7 +60,7 @@
    stay flush with the dashboard field under it — the two are a single visual
    column, and desynced edges read as a broken layout. */
 @media (min-width:981px){
-  .topbar{ padding:16px clamp(20px, 3vw, 56px); }
+  .topbar{ padding:12px clamp(20px, 3vw, 56px); }
 }
 .topbar .path-title{min-width:0;}
 .nav-toggle-btn {
@@ -77,21 +77,21 @@
   padding:0;
 }
 .nav-toggle-btn:hover { background: var(--surface-2); border-radius: var(--radius); }
-.topbar .path{font-family:var(--font-mono);font-size:14.3px;color:var(--steel);text-transform:uppercase;letter-spacing:1px;}
-.topbar h1{font-size:30.8px;text-transform:uppercase;}
+.topbar .path{font-family:var(--font-mono);font-size:12px;color:var(--steel);text-transform:uppercase;letter-spacing:1px;}
+.topbar h1{font-size:clamp(24px,2.3vw,30px);line-height:1.2;text-transform:uppercase;}
 
 /* Right-hand group: notification and profile controls remain in one stable row. */
 .topbar-right{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex:1 1 auto;min-width:0;}
 
 /* Bell button */
 .bell-btn{
-  position:relative;border:2px solid var(--line);background:var(--surface);color:var(--ink);border-radius:50%;
+  position:relative;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:50%;
   width:38px;height:38px;display:flex;align-items:center;justify-content:center;
   cursor:pointer;flex-shrink:0;transition:border-color .12s ease,background .12s ease;
 }
 .bell-btn:hover{border-color:var(--line-strong);}
 .bell-btn[aria-expanded="true"]{border-color:var(--signal);}
-.notification-count{position:absolute;top:-5px;right:-7px;min-width:17px;height:17px;padding:0 4px;display:grid;place-items:center;border-radius:999px;background:var(--signal);color:var(--signal-ink);border:1.5px solid var(--surface);font:700 10px var(--font-mono);line-height:1;}
+.notification-count{position:absolute;top:-5px;right:-7px;min-width:17px;height:17px;padding:0 4px;display:grid;place-items:center;border-radius:var(--radius-control);background:var(--signal);color:var(--on-signal);border:1px solid var(--surface);font:700 10px var(--font-mono);line-height:1;}
 
 @media (max-width: 980px) {
   .nav-toggle-btn {
@@ -105,16 +105,16 @@
 }
 
 .role-pill{
-  display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:999px;
-  padding:5px 12px 5px 5px;background:var(--surface);transition:transform .12s ease,box-shadow .12s ease,border-color .12s ease;
+  display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:var(--radius-control);
+  min-height:44px;padding:8px 12px;line-height:1.25;text-align:left;color:var(--ink);background:var(--surface);transition:transform .12s ease,box-shadow .12s ease,border-color .12s ease;
 }
 .role-pill.clickable{cursor:pointer;}
-.role-pill.clickable:hover{transform:translate(-1px,-1px);box-shadow:2px 2px 0 var(--line);}
+.role-pill.clickable:hover{background:var(--surface-2);border-color:var(--line-strong);}
 .role-pill.clickable:focus-visible{outline:2px solid var(--ink);outline-offset:2px;}
 .role-pill .av{width:32px;height:32px;border-radius:50%;background:var(--surface);color:var(--signal-ink);
   display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:14.3px;font-weight:700;}
-.role-pill .who{font-size:15.4px;}
-.role-pill .who b{display:block;font-size:15.4px;}
+.role-pill .who{font-size:14px;min-width:0;}
+.role-pill .who b{display:block;font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px;}
 .role-pill .who span{color:var(--steel);font-size:13.2px;text-transform:uppercase;letter-spacing:.5px;}
 .role-pill-chevron{color:var(--steel);flex:0 0 auto;transition:transform .15s ease;}
 .role-pill[aria-expanded="true"] .role-pill-chevron{transform:rotate(180deg);}
@@ -158,7 +158,7 @@
   min-height:0;
 }
 @media (min-width:981px){
-  .content{ padding:26px clamp(20px, 3vw, 56px) 60px; }
+  .content{ padding:18px clamp(20px, 3vw, 56px) 40px; }
 }
 
 /* Tablet down: keep the notification and profile controls grouped and
@@ -197,3 +197,6 @@
 @media (max-width:480px){
   .topbar h1{font-size:18.7px;}
 }
+
+.bell-btn{color:var(--bell-ink);}.bell-btn svg{stroke:currentColor;}.notification-count{background:var(--signal);color:var(--on-signal);}
+.role-pill .avatar-sm{margin-right:0;}

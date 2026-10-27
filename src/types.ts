@@ -13,6 +13,10 @@ export type PromoStatus = 'Published' | 'Draft';
 export type DiscountType = 'Percentage' | 'Bundle' | 'Fixed';
 
 export interface Member {
+  firstName?: string;
+  middleName?: string;
+  lastName?: string;
+  suffix?: string;
   id: string;
   name: string;
   email: string;
@@ -81,6 +85,8 @@ export interface Plan {
 export interface Transaction {
   id: string;
   receiptNumber?: string;
+  // Optional browser-session pricing snapshot; existing transaction/API fields are unchanged.
+  taxDetails?: { subtotal: number; base: number; rate: number; amount: number; mode: 'inclusive' | 'exclusive' };
   transactionReference?: string;
   member: string;
   type: string;
@@ -283,9 +289,11 @@ export interface Conversation {
 // View props shared across every role's view component.
 // Each role's view receives this bag from <App/>.
 export interface ViewProps {
-  onNav: (id: string) => void;
+  onProfilePhotoChange?: (url: string) => void;
+  onNav: (id: string, action?: string) => void;
+  initialAction?: string;
   role: Role;
-  currentUser: { id?: string; name: string };
+  currentUser: { id?: string; name: string; avatarUrl?: string };
   members: Member[];
   setMembers: Setter<Member[]>;
   trainers: Trainer[];

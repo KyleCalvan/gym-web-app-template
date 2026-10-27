@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { useEffect, useId, useRef, useState } from 'react';
 import { ChevronDown, Check } from 'lucide-react';
+import { useEnterMotion } from '../hooks/useEnterMotion';
 
 export interface DropdownOption {
   value: string;
@@ -41,7 +42,7 @@ export function Dropdown({
   const [open, setOpen] = useState(false);
   const [highlight, setHighlight] = useState(-1);
   const triggerRef = useRef(null);
-  const listRef = useRef(null);
+  const listRef = useEnterMotion<HTMLUListElement>(open, 4);
   const wrapRef = useRef(null);
   const listId = useId();
 

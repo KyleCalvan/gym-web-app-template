@@ -27,7 +27,7 @@ function PlanComparisonTable({ currentPlan, plans, member, promotions, redemptio
     <div className="plan-comparison" role="region" aria-label="Plan comparison">
       <div className="plan-comparison-head">
         <h3>Plan comparison</h3>
-        <span>Side-by-side coverage, pricing, and what's different from your current plan.</span>
+        <span>Compare coverage, pricing, and terms with your current plan.</span>
       </div>
       <div className="plan-comparison-table-wrap">
         <table className="plan-comparison-table">
@@ -94,9 +94,9 @@ function PlanComparisonTable({ currentPlan, plans, member, promotions, redemptio
                       })}
                     </ul>
                     {diff && diff.removedBenefits.length > 0 && (
-                      <div className="plan-comparison-lost">
-                        <span className="plan-comparison-lost-label">You'd lose:</span>
-                        {diff.removedBenefits.map((b) => <span key={b} className="plan-comparison-tag plan-comparison-tag-lost">{b}</span>)}
+                      <div className="plan-comparison-difference">
+                        <span className="plan-comparison-difference-label">Current-plan benefits not included:</span>
+                        {diff.removedBenefits.map((b) => <span key={b} className="plan-comparison-tag plan-comparison-tag-difference">{b}</span>)}
                       </div>
                     )}
                   </td>
@@ -108,7 +108,7 @@ function PlanComparisonTable({ currentPlan, plans, member, promotions, redemptio
               {plans.map((plan) => (
                 <td key={plan.name} className={plan.name === currentPlan?.name ? 'is-current' : ''}>
                   {plan.excludedBenefits.length === 0
-                    ? <span className="plan-comparison-muted">—</span>
+                    ? <span className="plan-comparison-muted">No exclusions listed</span>
                     : <ul className="plan-comparison-bullets plan-comparison-bullets-muted">
                         {plan.excludedBenefits.map((b) => <li key={b}><X size={12} aria-hidden="true" /> {b}</li>)}
                       </ul>}
@@ -439,7 +439,7 @@ function MemberMembership({
           <span className="member-plan-price">
             {currentDiscount
               ? <span className="price-with-discount"><s className="member-plan-price-old">{peso(currentPlan.price)}</s><strong>{peso(currentPriceToPay)}</strong><span className="member-plan-price-saved">Save {peso(currentDiscount.savings)}</span></span>
-              : `${peso(currentPlan?.price || 0)} / mo`}
+              : <>{peso(currentPlan?.price || 0)}<small> / {currentPlan?.period || 'mo'}</small></>}
           </span>
           {currentDiscount && <span className="member-plan-price-code mono">Code {currentDiscount.promo.code}</span>}
           {verificationStatus !== 'None' && <Badge status={verificationStatus === 'Verified' ? 'Active' : 'Pending'}>Student: {verificationStatus}</Badge>}
@@ -476,8 +476,8 @@ function MemberMembership({
       )}
 
       <TabbedCard title="Available plans">
-        <p className="muted" style={{margin:'0 0 14px', fontSize:13.5}}>Choose a plan to compare against your current coverage. All prices and benefits are loaded from the plans database.</p>
-        <div className="grid grid-4" role="list">
+        <p className="muted" style={{margin:'0 0 14px', fontSize:13.5}}>Choose a plan to compare against your current coverage. Review pricing, included benefits, and terms before choosing.</p>
+        <div className="member-plan-grid" role="list">
           {plans.map((p) => {
             const isCurrent = p.name === me?.plan;
             const discount = bestDiscountFor(p.name, p.price);
@@ -503,6 +503,11 @@ function MemberMembership({
                   <span><strong>{p.sessionLimit === 'unlimited' ? 'Unlimited' : p.sessionLimit}</strong> sessions / mo</span>
                   <span>{p.members} {p.members === 1 ? 'member' : 'members'}</span>
                 </div>
+                {p.excludedBenefits.length > 0 && <div className="plan-card-exclusions">
+                  <span className="plan-card-label">Not included</span>
+                  <ul>{p.excludedBenefits.map(benefit => <li key={benefit}><X size={13} aria-hidden="true" /><span>{benefit}</span></li>)}</ul>
+                </div>}
+                {p.terms && <p className="plan-card-terms"><span className="plan-card-label">Terms</span>{p.terms}</p>}
                 <button
                   className={"btn btn-sm btn-block " + (isCurrent ? 'btn-outline' : 'btn-signal')}
                   disabled={isCurrent}
