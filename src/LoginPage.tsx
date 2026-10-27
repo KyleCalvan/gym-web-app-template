@@ -21,7 +21,7 @@ export default function LoginPage({ defaultTab = 'login', onBack }: LoginPagePro
   const [tab, setTab] = useState(defaultTab);
   const [configured, setConfigured] = useState(false);
   const [checked, setChecked] = useState(false);
-  const [pending, setPending] = useState(false);
+  const [pendingMethod, setPendingMethod] = useState<'password' | 'google' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [termsOpen, setTermsOpen] = useState(false);
 
@@ -46,13 +46,31 @@ export default function LoginPage({ defaultTab = 'login', onBack }: LoginPagePro
   useEffect(() => {
     if (termsOpen) handleTermsScroll();
   }, [termsOpen]);
-  const handleEmailSignIn = (event: React.FormEvent) => {
+  const handleEmailSignIn = async (event: React.FormEvent) => {
     event.preventDefault(); setError(null);
+    if (pendingMethod) return;
     const errors: Record<string, string> = {};
     if (!EMAIL_PATTERN.test(email.trim())) errors['login-email'] = 'Enter a valid email address.';
-    if (password.length < 6) errors['login-password'] = 'Password must be at least 6 characters.';
+    if (!password || password.length > 128) errors['login-password'] = 'Enter your password.';
     setFormErrors(errors);
-    if (!Object.keys(errors).length) setError('Email and password sign-in is not connected yet. Continue with Google or contact the gym for assistance.');
+    if (Object.keys(errors).length) return;
+    setPendingMethod('password');
+    try {
+      const response = await fetch('/api/password-login', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ email: email.trim(), password }),
+      });
+      const result: { code?: string; message?: string; next?: string } = await response.json();
+      if (!response.ok) {
+        setError(result.message ?? 'Sign-in could not be completed. Please retry.');
+        return;
+      }
+      window.location.assign(result.next === '/account' ? '/account' : '/');
+    } catch {
+      setError('Could not connect to sign-in. Check your connection and retry.');
+    } finally {
+      setPendingMethod(null);
+    }
   };
   const handleMemberRegister = (event: React.FormEvent) => {
     event.preventDefault(); setError(null);
@@ -80,16 +98,16 @@ export default function LoginPage({ defaultTab = 'login', onBack }: LoginPagePro
     return () => { active = false; };
   }, []);
   const handleSignIn = async () => {
-    if (!configured || pending) return;
-    setError(null); setPending(true);
+    if (!configured || pendingMethod) return;
+    setError(null); setPendingMethod('google');
     try {
       const result = await signIn('google', { callbackUrl: window.location.origin, redirect: false });
       if (result?.error || !result?.url) {
-        setError(OAUTH_ERRORS[result?.error ?? ''] ?? OAUTH_ERRORS.Default); setPending(false); return;
+        setError(OAUTH_ERRORS[result?.error ?? ''] ?? OAUTH_ERRORS.Default); setPendingMethod(null); return;
       }
       window.location.assign(result.url);
     } catch {
-      setError('Could not connect to Google sign-in. Check your connection and try again.'); setPending(false);
+      setError('Could not connect to Google sign-in. Check your connection and try again.'); setPendingMethod(null);
     }
   };
   return (
@@ -186,7 +204,7 @@ export default function LoginPage({ defaultTab = 'login', onBack }: LoginPagePro
             </form>) : (<form onSubmit={handleEmailSignIn} noValidate>
               <Field label="Email" htmlFor="login-email">
                 <input
-                  id="login-email" className="form-control" type="email" required
+                  id="login-email" className="form-control" type="email" required autoComplete="username"
                   placeholder="you@example.com"
                   aria-invalid={Boolean(formErrors['login-email'])}
                   aria-describedby={formErrors['login-email'] ? 'login-email-error' : undefined}
@@ -197,12 +215,12 @@ export default function LoginPage({ defaultTab = 'login', onBack }: LoginPagePro
               </Field>
               <Field label="Password" htmlFor="login-password">
                 <input
-                  id="login-password" className="form-control" type="password" required
+                  id="login-password" className="form-control" type="password" required autoComplete="current-password"
                   placeholder="••••••••"
                   aria-invalid={Boolean(formErrors['login-password'])}
                   aria-describedby={formErrors['login-password'] ? 'login-password-error' : undefined}
                   value={password} onChange={(e) => { setPassword(e.target.value); clearFieldError('login-password'); }}
-                  onBlur={() => { if (password.length < 6) setFormErrors((prev) => ({ ...prev, 'login-password': 'Password must be at least 6 characters.' })); }}
+                  onBlur={() => { if (!password || password.length > 128) setFormErrors((prev) => ({ ...prev, 'login-password': 'Enter your password.' })); }}
                 />
                 {formErrors['login-password'] && <p className="field-error" id="login-password-error" role="alert">{formErrors['login-password']}</p>}
               </Field>
@@ -218,13 +236,13 @@ export default function LoginPage({ defaultTab = 'login', onBack }: LoginPagePro
                 </button>
               </div>
               {formErrors.auth && <p className="field-error" role="alert">{formErrors.auth}</p>}
-              <button type="submit" className="btn btn-signal btn-block" disabled={pending}>
-                {pending ? 'Signing in…' : 'Login'}
+              <button type="submit" className="btn btn-signal btn-block" disabled={Boolean(pendingMethod)}>
+                {pendingMethod === 'password' ? 'Signing in…' : 'Login'}
               </button>
             </form>)}
           <div className="auth-divider"><span>or continue with</span></div>
-          <button type="button" className="auth-google-button" onClick={handleSignIn} disabled={!checked || !configured || pending} aria-describedby={!checked || !configured ? 'google-provider-note' : undefined}>
-            <span className="google-mark" aria-hidden="true">G</span>{pending ? 'Connecting to Google…' : 'Continue with Google'}
+          <button type="button" className="auth-google-button" onClick={handleSignIn} disabled={!checked || !configured || Boolean(pendingMethod)} aria-describedby={!checked || !configured ? 'google-provider-note' : undefined}>
+            <span className="google-mark" aria-hidden="true">G</span>{pendingMethod === 'google' ? 'Connecting to Google…' : 'Continue with Google'}
           </button>
           {(!checked || !configured) && <p className="auth-provider-note" id="google-provider-note">{!checked ? 'Checking sign-in availability…' : 'Google sign-in is currently unavailable. Please contact the gym for assistance.'}</p>}
           {error && <p className="field-error auth-provider-error" role="alert">{error}</p>}

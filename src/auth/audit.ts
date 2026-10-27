@@ -1,6 +1,7 @@
 import type { Prisma } from '@/backend/generated/prisma/client';
 
 type AuditAction = 'account.created' | 'account.established' | 'email.verified' | 'google.sign-in'
+  | 'password.sign-in'
   | 'session.created' | 'session.revoked' | 'session.revoked-all' | 'session.rotated'
   | 'business.authorization' | 'request.origin' | 'account.conflict'
   | 'account.profile-completed' | 'account.terms-accepted';

@@ -4,7 +4,7 @@ import { copyFile, mkdir, readFile, writeFile, unlink, rmdir } from 'node:fs/pro
 import path from 'node:path';
 import { startDatabase, startApplication, runNode, withDatabaseClient } from './harness.mjs';
 import { startGoogle } from './google.mjs';
-import { randomUUID } from 'node:crypto';
+import { randomBytes, randomUUID, scryptSync } from 'node:crypto';
 
 let database;
 let application;
@@ -293,6 +293,67 @@ test('Google remains configured and database sessions work through NextAuth HTTP
   assert.equal((await signout.json()).url, application.url);
   const revoked = await fetch(`${application.url}/api/auth/session`, { headers: { cookie: memberCookie } });
   assert.deepEqual(await revoked.json(), {});
+});
+
+test('password login checks the stored hash and issues a shared database session', async () => {
+  const accountId = await seedSessionAccount();
+  const email = `${accountId}@example.test`;
+  const password = 'A long password with spaces 2026';
+  const salt = randomBytes(16);
+  const hash = `scrypt:16384:8:1:${salt.toString('base64url')}:${scryptSync(password, salt, 64, { N: 16384, r: 8, p: 1 }).toString('base64url')}`;
+  await withDatabaseClient(database.env, (client) => client.query(
+    'UPDATE "AuthUser" SET "passwordHash" = $1 WHERE "id" = $2', [hash, accountId],
+  ));
+  const login = (emailValue, passwordValue, origin = application.url) => fetch(`${application.url}/api/password-login`, {
+    method: 'POST', headers: { origin, 'content-type': 'application/json' },
+    body: JSON.stringify({ email: emailValue, password: passwordValue }),
+  });
+  const wrong = await login(email, 'incorrect password');
+  assert.equal(wrong.status, 401, application.logs());
+  assert.equal((await wrong.json()).code, 'INVALID_CREDENTIALS');
+  assert.equal(wrong.headers.getSetCookie().length, 0);
+  const missing = await login('missing@example.test', password);
+  assert.equal(missing.status, 401);
+  assert.equal((await missing.json()).code, 'INVALID_CREDENTIALS');
+  const foreign = await login(email, password, 'https://attacker.example');
+  assert.equal(foreign.status, 403);
+  const signedIn = await login(email.toUpperCase(), password);
+  assert.equal(signedIn.status, 200, application.logs());
+  const cookie = responseCookieHeader(signedIn);
+  assert.match(cookie, /^next-auth\.session-token=[A-Za-z0-9_-]{43}$/);
+  assert.equal((await fetch(`${application.url}/api/me`, { headers: { cookie } }).then((r) => r.json())).account.id, accountId);
+  assert.equal((await fetch(`${application.url}/api/auth/session`, { headers: { cookie } }).then((r) => r.json())).user.id, accountId);
+  await application.stop();
+  application = await startApplication(database.env);
+  assert.equal((await fetch(`${application.url}/api/me`, { headers: { cookie } }).then((r) => r.json())).account.id, accountId);
+  const csrf = await fetch(`${application.url}/api/auth/csrf`);
+  const { csrfToken } = await csrf.json();
+  const signout = await fetch(`${application.url}/api/auth/signout`, {
+    method: 'POST',
+    headers: { cookie: `${cookie}; ${responseCookieHeader(csrf)}`, 'content-type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ csrfToken, callbackUrl: application.url, json: 'true' }),
+  });
+  assert.equal(signout.status, 200, application.logs());
+  assert.equal((await fetch(`${application.url}/api/me`, { headers: { cookie } })).status, 401);
+  const attempts = await withDatabaseClient(database.env, (client) => client.query(
+    `SELECT action, result, "requestId", details, metadata FROM "AuditEvent" WHERE action = 'password.sign-in' AND target = $1`, [accountId],
+  ));
+  assert.deepEqual(new Set(attempts.rows.map(({ result }) => result)), new Set(['rejected', 'success']));
+  assert.ok(attempts.rows.every(({ details, metadata, requestId }) => details === null && metadata === null && typeof requestId === 'string'));
+  for (let attempt = 0; attempt < 5; attempt++) {
+    assert.equal((await login(email, 'incorrect password')).status, 401);
+  }
+  await application.stop();
+  application = await startApplication(database.env);
+  const throttled = await login(email, password);
+  assert.equal(throttled.status, 429);
+  assert.equal((await throttled.json()).code, 'TOO_MANY_ATTEMPTS');
+  assert.equal(throttled.headers.getSetCookie().length, 0);
+  const otherAccount = await seedSessionAccount();
+  await withDatabaseClient(database.env, (client) => client.query(
+    'UPDATE "AuthUser" SET "passwordHash" = $1, "status" = $2 WHERE "id" = $3', [hash, 'disabled', otherAccount],
+  ));
+  assert.equal((await login(`${otherAccount}@example.test`, password)).status, 401);
 });
 
 test('existing Google mappings survive while email-only claims and automatic provider additions are rejected', async () => {

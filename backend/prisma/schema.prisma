@@ -160,6 +160,13 @@ model AuthVerificationToken {
   @@unique([identifier, token])
 }
 
+model PasswordLoginThrottle {
+  key          String   @id
+  failures     Int
+  windowStart  DateTime @db.Timestamptz(3)
+  blockedUntil DateTime? @db.Timestamptz(3)
+}
+
 model Post {
   id        Int     @id @default(autoincrement())
   title     String
