@@ -40,7 +40,7 @@ export default function AccountStatus({ initialStatus }: { initialStatus?: Visib
   const [phone, setPhone] = useState(initialStatus?.account.phone ?? '');
   const [accepted, setAccepted] = useState(false);
   const [selectedRole, setSelectedRole] = useState<Status['roles'][number] | null>(null);
-  const [challengeOpen, setChallengeOpen] = useState(false);
+  const [authenticatorMode, setAuthenticatorMode] = useState<'setup' | 'challenge' | null>(null);
   const seenAccountId = useRef(initialStatus?.account.id ?? null);
 
   useEffect(() => {
@@ -121,9 +121,16 @@ export default function AccountStatus({ initialStatus }: { initialStatus?: Visib
     });
   }
 
+  async function prepareAuthenticator() {
+    const response = await fetch('/api/mfa', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' });
+    const result: { secret?: string; message?: string } = await response.json();
+    if (!response.ok || !result.secret) throw new Error(result.message ?? 'Could not prepare two-step verification.');
+    return result.secret;
+  }
+
   async function verifyAuthenticator(code: string) {
     const response = await fetch('/api/mfa', { method: 'PATCH', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ mode: 'challenge', code }) });
+      body: JSON.stringify({ mode: authenticatorMode, code }) });
     const result: { message?: string } = await response.json();
     if (!response.ok) throw new Error(result.message ?? 'Could not verify the authenticator code.');
     return true;
@@ -156,7 +163,9 @@ export default function AccountStatus({ initialStatus }: { initialStatus?: Visib
         {status.nextSteps.includes('verify-email') && <button type="button" disabled={pending}
           onClick={() => void resendVerification()}>Resend verification email</button>}
         {status.nextSteps.includes('complete-two-step-verification') && <button type="button" disabled={pending}
-          onClick={() => setChallengeOpen(true)}>Verify authenticator</button>}
+          onClick={() => setAuthenticatorMode('challenge')}>Verify authenticator</button>}
+        {status.nextSteps.includes('set-up-two-step-verification') && <button type="button" disabled={pending}
+          onClick={() => setAuthenticatorMode('setup')}>Set up authenticator</button>}
         {status.nextSteps.includes('complete-profile') && <form onSubmit={(event) => {
           event.preventDefault();
           const name = formatName(profileName);
@@ -202,8 +211,10 @@ export default function AccountStatus({ initialStatus }: { initialStatus?: Visib
       <button type="button" onClick={() => void refresh()} disabled={pending}>Refresh status</button>
       <button type="button" onClick={() => void logout()} disabled={pending}>Sign out</button>
     </div>
-    {challengeOpen && status?.nextSteps.includes('complete-two-step-verification') && <TwoFactorChallenge
-      mode="challenge" email={status.account.email ?? ''} onCancel={() => setChallengeOpen(false)}
+    {authenticatorMode && status?.nextSteps.includes(authenticatorMode === 'setup'
+      ? 'set-up-two-step-verification' : 'complete-two-step-verification') && <TwoFactorChallenge
+      mode={authenticatorMode} email={status.account.email ?? ''} onCancel={() => setAuthenticatorMode(null)}
+      onSendCode={authenticatorMode === 'setup' ? prepareAuthenticator : undefined}
       onVerifyCode={verifyAuthenticator} onVerified={() => window.location.assign('/account')} />}
   </main>;
 }

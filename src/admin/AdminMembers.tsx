@@ -4,7 +4,7 @@ import { NameFields } from '../shared/components/NameFields';
 import { emptyName, formatName, splitName } from '../shared/nameParts';
 import { StatTile, Badge, Table, Modal, Field, TextInput, Select, TabbedCard, Avatar, PaymentSimulationModal } from '../shared';
 import { peso } from '../data.ts';
-import { createSimulatedTransaction, getConfiguredPaymentFee, updateSimulatedTransaction } from '../payments.ts';
+import { getConfiguredPaymentFee } from '../payments.ts';
 
 function AdminMembers({ members, setMembers, plans, setTransactions, today, toast, addAudit, onAdminAction, preferredPaymentMethod = 'GCash', initialAction }){
   const save = async (action, payload) => {
