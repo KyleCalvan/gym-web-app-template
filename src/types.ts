@@ -3,7 +3,7 @@
 
 export type Role = 'admin' | 'staff' | 'trainer' | 'member' | 'superadmin';
 
-export type MemberStatus = 'Active' | 'Expiring' | 'Frozen' | 'Expired';
+export type MemberStatus = 'Active' | 'Expiring' | 'Frozen' | 'Expired' | 'No Membership';
 export type TrainerStatus = 'Active' | 'On Leave' | 'Inactive';
 export type PlanStatus = 'Active' | 'Inactive';
 export type SessionStatus = 'Confirmed' | 'Pending' | 'Cancelled' | 'Completed';
@@ -13,6 +13,7 @@ export type PromoStatus = 'Published' | 'Draft';
 export type DiscountType = 'Percentage' | 'Bundle' | 'Fixed';
 
 export interface Member {
+  linkedAccount?: boolean;
   firstName?: string;
   middleName?: string;
   lastName?: string;
@@ -35,6 +36,7 @@ export interface Member {
 export type AdminStatus = 'Active' | 'Inactive';
 
 export interface Admin {
+  linkedAccount?: boolean;
   id: string;
   name: string;
   email: string;
@@ -52,6 +54,7 @@ export interface TrainerReview {
 }
 
 export interface Trainer {
+  linkedAccount?: boolean;
   id: string;
   name: string;
   specialty: string;
@@ -152,6 +155,7 @@ export type StaffShift = 'Morning' | 'Evening' | 'Night';
 export type StaffStatus = 'Active' | 'On Leave' | 'Inactive';
 
 export interface Staff {
+  linkedAccount?: boolean;
   id: string;
   name: string;
   role: StaffRole;

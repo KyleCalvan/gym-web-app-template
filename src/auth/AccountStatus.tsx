@@ -11,6 +11,7 @@ import { splitName, formatName } from '../shared/nameParts';
 import { LoadingScreen } from '../shared/LoadingScreen';
 import MemberApp from '../member/MemberApp';
 import AdminQrDestinations from '../admin/AdminQrDestinations';
+import DatabaseUserManagement from '../superadmin/DatabaseUserManagement';
 import TrainerSessions from '../trainer/TrainerSessions';
 import TrainerSchedule from '../trainer/TrainerSchedule';
 import TrainerDashboard from '../trainer/TrainerDashboard';
@@ -136,7 +137,7 @@ export default function AccountStatus({ initialStatus }: { initialStatus?: Visib
     profileId={status.profiles?.find(profile => profile.role === 'member')?.profileId ?? status.account.id}
     onLogout={() => void logout()} pending={pending} />;
 
-  return <main className={`account-status${activeRole === 'trainer' ? ' account-status-trainer' : ''}`} aria-busy={pending}>
+  return <main className={`account-status${activeRole === 'trainer' ? ' account-status-trainer' : activeRole === 'superadmin' ? ' account-status-superadmin' : ''}`} aria-busy={pending}>
     <p className="account-status-brand">VinAthletics</p>
     <h1>Your Account</h1>
     {pending && <p role="status">Updating Account…</p>}
@@ -185,7 +186,8 @@ export default function AccountStatus({ initialStatus }: { initialStatus?: Visib
         {activeRole && <div className="account-interface" role="region" aria-label={`${ROLE_LABELS[activeRole]} interface`}>
           <h3>{ROLE_LABELS[activeRole]}</h3>
           <p>Your {ROLE_LABELS[activeRole].toLowerCase()} profile is connected to this Account.</p>
-          {activeRole === 'admin' || activeRole === 'superadmin'
+          {activeRole === 'superadmin' ? <DatabaseUserManagement toast={setNotice} />
+            : activeRole === 'admin'
             ? <AdminQrDestinations databaseMode toast={setNotice} />
             : activeRole === 'trainer'
               ? <>

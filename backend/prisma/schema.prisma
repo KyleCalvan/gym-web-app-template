@@ -206,6 +206,7 @@ model MemberProfile {
   role                   GymRole               @default(member)
   profile                RoleProfile           @relation(fields: [profileId, role], references: [id, role], onDelete: Restrict)
   joinedAt               DateTime              @default(now()) @db.Timestamptz(3)
+  planInterest           String?
   emergencyContact       String?
   weightKg               Decimal?              @db.Decimal(6, 2)
   heightCm               Decimal?              @db.Decimal(5, 2)

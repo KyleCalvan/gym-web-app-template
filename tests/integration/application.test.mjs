@@ -1048,6 +1048,47 @@ async function issueSession(accountId, app = application) {
   return { cookie: responseCookieHeader(response), response };
 }
 
+test('Super Admin user records persist across requests without granting Account authority', async () => {
+  const superadminId = await seedSessionAccount({ roles: ['superadmin'] });
+  const memberId = await seedSessionAccount();
+  const superadminCookie = (await issueSession(superadminId)).cookie;
+  const memberCookie = (await issueSession(memberId)).cookie;
+  const endpoint = `${application.url}/api/superadmin/users`;
+  const email = `${randomUUID()}@example.test`;
+  const plan = (await fetch(`${application.url}/api/gym-plans`).then(response => response.json())).plans[0].name;
+  const write = (method, body, cookie = superadminCookie, origin = application.url) => fetch(endpoint, {
+    method, headers: { cookie, origin, 'content-type': 'application/json' }, body: JSON.stringify(body),
+  });
+  const form = { kind: 'member', firstName: 'Managed', middleName: '', lastName: 'Member', suffix: '',
+    email, phone: '+63 917 123 4567', plan };
+
+  assert.equal((await fetch(endpoint, { headers: { cookie: memberCookie } })).status, 403);
+  assert.equal((await write('POST', form, memberCookie)).status, 403);
+  assert.equal((await write('POST', form, superadminCookie, 'https://elsewhere.example')).status, 403);
+  const created = await write('POST', form);
+  assert.equal(created.status, 201, application.logs());
+  const { id } = await created.json();
+  const listed = await fetch(endpoint, { headers: { cookie: superadminCookie } }).then(response => response.json());
+  assert.deepEqual(listed.members.find(member => member.id === id && member.email === email)?.status, 'No Membership');
+  const authority = await withDatabaseClient(database.env, client => client.query(`
+    SELECT a."accountId" FROM "AssignedRole" a WHERE a."profileId" = $1`, [id]));
+  assert.equal(authority.rows.length, 0);
+  assert.equal((await write('POST', form)).status, 409);
+
+  const changed = await write('PATCH', { ...form, id, firstName: 'Updated' });
+  assert.equal(changed.status, 200, application.logs());
+  const updated = await fetch(endpoint, { headers: { cookie: superadminCookie } }).then(response => response.json());
+  assert.equal(updated.members.find(member => member.id === id)?.name, 'Updated Member');
+  assert.equal((await write('PATCH', { id, kind: 'member', action: 'archive' })).status, 200);
+  const archived = await fetch(endpoint, { headers: { cookie: superadminCookie } }).then(response => response.json());
+  assert.ok(archived.members.find(member => member.id === id)?.deletedAt);
+  assert.equal((await write('PATCH', { id, kind: 'member', action: 'restore' })).status, 200);
+  assert.equal((await write('PATCH', { id, kind: 'member', action: 'archive' })).status, 200);
+  assert.equal((await write('DELETE', { id, kind: 'member' })).status, 200);
+  const deleted = await fetch(endpoint, { headers: { cookie: superadminCookie } }).then(response => response.json());
+  assert.equal(deleted.members.some(member => member.id === id), false);
+});
+
 test('admin QR uploads stay member-specific while trainer gym links come from the database', async () => {
   const adminId = await seedSessionAccount({ roles: ['admin'], mfa: true });
   const trainerId = await seedSessionAccount({ roles: ['trainer'], mfa: true });

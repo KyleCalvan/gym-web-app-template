@@ -9,6 +9,7 @@
 }
 .account-status-brand { font-weight: 400; letter-spacing: .04em; }
 .account-status-trainer { max-width: 90rem; }
+.account-status-superadmin { max-width: 110rem; }
 .account-status li { margin: .75rem 0; }
 .account-status-actions { display: flex; gap: .75rem; margin-top: 1.5rem; }
 .account-status button:where(:not(.btn, .trainer-calendar-day-select, .trainer-calendar-event, .trainer-calendar-view-switch button)) { min-height:44px;padding:.65rem 1rem;cursor:pointer;background:var(--surface-2);color:var(--ink);border:1px solid var(--line-strong);border-radius:var(--radius); }

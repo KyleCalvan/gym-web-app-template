@@ -116,7 +116,8 @@ export async function getAccountStatus(id: string, session?: { mfaVerifiedAt: Da
   });
   if (!account) return null;
   const roles = account.assignedRoles.filter((assignment) =>
-    assignment.profile.gymUserId === account.gymUserId && assignment.profile.role === assignment.role,
+    assignment.profile.gymUserId === account.gymUserId && assignment.profile.role === assignment.role
+      && assignment.profile.archivedAt === null && assignment.profile.status !== 'Inactive',
   ).map((assignment) => assignment.role);
   const nextSteps: AccountNextStep[] = [];
   if (account.status === 'disabled') nextSteps.push('contact-support');

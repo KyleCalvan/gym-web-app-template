@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { RotateCcw, Trash2 } from 'lucide-react';
 import { Table, Modal, TabbedCard, TextInput, Select, Avatar, StatTile } from '../shared';
 
@@ -20,8 +20,35 @@ function SuperAdminTrash({
   members, setMembers,
   trainers, setTrainers,
   staff, setStaff,
-  toast, addAudit,
+  toast, addAudit = null, databaseMode = false,
 }) {
+  const [loading, setLoading] = useState(databaseMode);
+  const [loadError, setLoadError] = useState('');
+  const [saving, setSaving] = useState(false);
+  const refresh = useCallback(async () => {
+    const response = await fetch('/api/superadmin/users', { cache: 'no-store' });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Archive could not be loaded.');
+    setAdmins(result.admins);
+    setMembers(result.members);
+    setTrainers(result.trainers);
+    setStaff(result.staff);
+  }, [setAdmins, setMembers, setTrainers, setStaff]);
+  useEffect(() => {
+    if (!databaseMode) return;
+    let active = true;
+    refresh().then(() => { if (active) setLoadError(''); })
+      .catch(error => { if (active) setLoadError(error.message); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [databaseMode, refresh]);
+  const mutate = async (method, body) => {
+    const response = await fetch('/api/superadmin/users', {
+      method, headers: { 'content-type': 'application/json' }, body: JSON.stringify(body),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Archive could not be updated.');
+  };
   const [q, setQ] = useState('');
   const [kindF, setKindF] = useState('all');
 
@@ -35,25 +62,25 @@ function SuperAdminTrash({
     for (const a of admins) {
       if (a.deletedAt) out.push({
         kind: 'admin', id: a.id, name: a.name, email: a.email, label: a.email,
-        deletedAt: a.deletedAt,
+        deletedAt: a.deletedAt, linkedAccount: a.linkedAccount,
       });
     }
     for (const m of members) {
       if (m.deletedAt) out.push({
         kind: 'member', id: m.id, name: m.name, email: m.email, plan: m.plan, label: m.plan,
-        deletedAt: m.deletedAt,
+        deletedAt: m.deletedAt, linkedAccount: m.linkedAccount,
       });
     }
     for (const t of trainers) {
       if (t.deletedAt) out.push({
-        kind: 'trainer', id: t.id, name: t.name, email: '—', label: t.specialty,
-        deletedAt: t.deletedAt,
+        kind: 'trainer', id: t.id, name: t.name, email: t.email || '—', label: t.specialty,
+        deletedAt: t.deletedAt, linkedAccount: t.linkedAccount,
       });
     }
     for (const s of staff) {
       if (s.deletedAt) out.push({
         kind: 'staff', id: s.id, name: s.name, email: s.email, role: s.role, label: s.role,
-        deletedAt: s.deletedAt,
+        deletedAt: s.deletedAt, linkedAccount: s.linkedAccount,
       });
     }
     return out;
@@ -72,17 +99,23 @@ function SuperAdminTrash({
     staff:   trashed.filter((u) => u.kind === 'staff').length,
   };
 
-  const applyRestore = () => {
+  const applyRestore = async () => {
     if (!pendingRestore) return;
     const u = pendingRestore;
-    const clear = (prev) => prev.map((x) => (x.id === u.id ? { ...x, deletedAt: null } : x));
-    if (u.kind === 'admin')        setAdmins(clear);
-    else if (u.kind === 'member')  setMembers(clear);
-    else if (u.kind === 'trainer') setTrainers(clear);
-    else if (u.kind === 'staff')   setStaff(clear);
-    addAudit?.('info', 'Restored from archive', `${u.name} (${u.id})`);
-    toast(`Restored — ${u.name}`);
-    setPendingRestore(null);
+    setSaving(true);
+    try {
+      if (databaseMode) {
+        await mutate('PATCH', { id: u.id, kind: u.kind, action: 'restore' });
+        await refresh();
+      } else {
+        const setters = { admin: setAdmins, member: setMembers, trainer: setTrainers, staff: setStaff };
+        setters[u.kind](previous => previous.map(user => user.id === u.id ? { ...user, deletedAt: null } : user));
+        addAudit?.('info', 'Restored from archive', `${u.name} (${u.id})`);
+      }
+      toast(`Restored — ${u.name}`);
+      setPendingRestore(null);
+    } catch (error) { toast(error.message); }
+    finally { setSaving(false); }
   };
 
   const restoreKey = (user) => `${user.kind}:${user.id}`;
@@ -98,7 +131,7 @@ function SuperAdminTrash({
   };
 
   const toggleSelectFilteredRestoreUsers = () => {
-    const visibleKeys = filtered.map(restoreKey);
+    const visibleKeys = filtered.filter(user => !databaseMode || !user.linkedAccount).map(restoreKey);
     const allVisibleSelected = visibleKeys.length > 0 && visibleKeys.every((key) => selectedRestoreIds.has(key));
     setSelectedRestoreIds((previous) => {
       const next = new Set(previous);
@@ -110,38 +143,53 @@ function SuperAdminTrash({
     });
   };
 
-  const restoreSelected = () => {
+  const restoreSelected = async () => {
     const selected = trashed.filter((user) => selectedRestoreIds.has(restoreKey(user)));
     if (selected.length === 0) return;
-    const selectedByKind = (kind) => new Set(selected.filter((user) => user.kind === kind).map((user) => user.id));
-    const restore = (ids) => (previous) => previous.map((user) =>
-      ids.has(user.id) ? { ...user, deletedAt: null } : user,
-    );
-    setAdmins(restore(selectedByKind('admin')));
-    setMembers(restore(selectedByKind('member')));
-    setTrainers(restore(selectedByKind('trainer')));
-    setStaff(restore(selectedByKind('staff')));
-    addAudit?.('info', 'Bulk restored archive', `Restored ${selected.length} selected users`);
-    toast(`Restored ${selected.length} selected user${selected.length === 1 ? '' : 's'}`);
-    setSelectedRestoreIds(new Set());
-    setBulkRestoreOpen(false);
+    setSaving(true);
+    try {
+      if (databaseMode) {
+        await mutate('PATCH', { action: 'restore-many', users: selected.map(user => ({ id: user.id, kind: user.kind })) });
+        await refresh();
+      } else {
+        const setters = { admin: setAdmins, member: setMembers, trainer: setTrainers, staff: setStaff };
+        for (const kind of ['admin', 'member', 'trainer', 'staff']) {
+          const ids = new Set(selected.filter(user => user.kind === kind).map(user => user.id));
+          setters[kind](previous => previous.map(user => ids.has(user.id) ? { ...user, deletedAt: null } : user));
+        }
+        addAudit?.('info', 'Bulk restored archive', `Restored ${selected.length} selected users`);
+      }
+      toast(`Restored ${selected.length} selected user${selected.length === 1 ? '' : 's'}`);
+      setSelectedRestoreIds(new Set());
+      setBulkRestoreOpen(false);
+    } catch (error) { if (databaseMode) await refresh().catch(() => {}); toast(error.message); }
+    finally { setSaving(false); }
   };
 
-  const applyPurge = () => {
+  const applyPurge = async () => {
     if (!pendingPurge) return;
     const u = pendingPurge;
-    const drop = (prev) => prev.filter((x) => x.id !== u.id);
-    if (u.kind === 'admin')        setAdmins(drop);
-    else if (u.kind === 'member')  setMembers(drop);
-    else if (u.kind === 'trainer') setTrainers(drop);
-    else if (u.kind === 'staff')   setStaff(drop);
-    addAudit?.('error', 'Deleted', `${u.name} (${u.id})`);
-    toast(`Deleted — ${u.name}`);
-    setPendingPurge(null);
+    setSaving(true);
+    try {
+      if (databaseMode) {
+        await mutate('DELETE', { id: u.id, kind: u.kind });
+        await refresh();
+      } else {
+        const setters = { admin: setAdmins, member: setMembers, trainer: setTrainers, staff: setStaff };
+        setters[u.kind](previous => previous.filter(user => user.id !== u.id));
+        addAudit?.('error', 'Deleted', `${u.name} (${u.id})`);
+      }
+      toast(`Deleted role — ${u.name}`);
+      setPendingPurge(null);
+    } catch (error) { toast(error.message); }
+    finally { setSaving(false); }
   };
 
   return (
     <>
+      {loading && <p role="status">Loading archive…</p>}
+      {loadError && <div role="alert">{loadError} <button className="btn btn-outline btn-sm" onClick={() => { setLoading(true); refresh().then(() => setLoadError('')).catch(error => setLoadError(error.message)).finally(() => setLoading(false)); }}>Retry</button></div>}
+      {!loading && !loadError && <>
       <div className="grid grid-4" style={{ marginBottom: 18 }}>
         <StatTile label="Archived Managers" value={counts.admin} />
         <StatTile label="Archived Members" value={counts.member} />
@@ -200,10 +248,10 @@ function SuperAdminTrash({
                 <td className="mono" style={{ fontSize: 13.2 }}>{fmt(u.deletedAt)}</td>
                 <td>
                   <div style={{ display: 'flex', gap: 6 }}>
-                    <button className="btn btn-outline btn-sm archive-restore" onClick={() => setPendingRestore(u)}>
+                    <button className="btn btn-outline btn-sm archive-restore" disabled={databaseMode && u.linkedAccount} title={databaseMode && u.linkedAccount ? 'Online Accounts require the verified authority flow' : undefined} onClick={() => setPendingRestore(u)}>
                       <RotateCcw size={15} aria-hidden="true" /> Restore
                     </button>
-                    <button className="btn btn-danger-ghost btn-sm archive-delete" onClick={() => setPendingPurge(u)}>
+                    <button className="btn btn-danger-ghost btn-sm archive-delete" disabled={databaseMode && u.linkedAccount} title={databaseMode && u.linkedAccount ? 'Online Accounts require the verified authority flow' : undefined} onClick={() => setPendingPurge(u)}>
                       <Trash2 size={15} aria-hidden="true" /> Delete
                     </button>
                   </div>
@@ -221,7 +269,7 @@ function SuperAdminTrash({
               <label>
                 <input
                   type="checkbox"
-                  checked={filtered.length > 0 && filtered.every((user) => selectedRestoreIds.has(restoreKey(user)))}
+                  checked={filtered.some(user => !databaseMode || !user.linkedAccount) && filtered.filter(user => !databaseMode || !user.linkedAccount).every((user) => selectedRestoreIds.has(restoreKey(user)))}
                   onChange={toggleSelectFilteredRestoreUsers}
                 />
                 Select all shown
@@ -235,6 +283,7 @@ function SuperAdminTrash({
                 <label className="bulk-restore-user" key={restoreKey(user)}>
                   <input
                     type="checkbox"
+                    disabled={databaseMode && user.linkedAccount}
                     checked={selectedRestoreIds.has(restoreKey(user))}
                     onChange={() => toggleRestoreSelection(user)}
                   />
@@ -247,7 +296,7 @@ function SuperAdminTrash({
             </div>
             <div className="bulk-restore-actions">
               <button className="btn btn-outline" type="button" onClick={() => setBulkRestoreOpen(false)}>Cancel</button>
-              <button className="btn btn-signal" type="button" disabled={selectedRestoreIds.size === 0} onClick={restoreSelected}>
+              <button className="btn btn-signal" type="button" disabled={saving || selectedRestoreIds.size === 0} onClick={restoreSelected}>
                 Restore Selected ({selectedRestoreIds.size})
               </button>
             </div>
@@ -269,6 +318,7 @@ function SuperAdminTrash({
               className="btn btn-signal"
               type="button"
               onClick={applyRestore}
+              disabled={saving}
               style={{ background: 'var(--court)', borderColor: 'var(--court)' }}
             >
               Restore
@@ -280,20 +330,20 @@ function SuperAdminTrash({
       {pendingPurge && (
         <Modal title="Delete?" showCloseButton={false} onClose={() => setPendingPurge(null)}>
           <p style={{ fontSize: 14.3, color: 'var(--steel)', marginBottom: 14 }}>
-            You're about to delete <b>{pendingPurge.name}</b>. This action cannot be
-            undone — their record and references will be removed from the system.
+            You're about to permanently delete <b>{pendingPurge.name}</b>'s archived role. Roles with linked history cannot be deleted.
           </p>
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
             <button className="btn btn-outline" type="button" onClick={() => setPendingPurge(null)}>
               Cancel
             </button>
-            <button className="btn btn-danger" type="button" onClick={applyPurge}>
+            <button className="btn btn-danger" type="button" disabled={saving} onClick={applyPurge}>
               Delete
             </button>
           </div>
         </Modal>
       )}
 
+      </>}
     </>
   );
 }
