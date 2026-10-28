@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { CalendarDays, ChevronLeft, ChevronRight, Pencil, Plus, Trash2 } from 'lucide-react';
 import { getBookingCurrentTime, getBookingToday } from '../member/bookingDates.ts';
 import { Badge, Field, Modal, TabbedCard } from '../shared';
@@ -57,27 +57,57 @@ function shiftCalendarDate(date: string, view: CalendarView, direction: number):
   return toISODate(shifted);
 }
 
+type CalendarSession = Session & { memberEmail?: string | null; memberPhone?: string | null };
+type ScheduleProps = Partial<Pick<ViewProps, 'sessions' | 'trainerAvailability' | 'setTrainerAvailability' | 'currentUser' | 'members' | 'addAudit'>>
+  & Pick<ViewProps, 'toast'> & { databaseMode?: boolean };
+
 function TrainerSchedule({
-  sessions,
-  trainerAvailability,
-  setTrainerAvailability,
-  currentUser,
-  members,
+  sessions = [],
+  trainerAvailability = [],
+  setTrainerAvailability = () => {},
+  currentUser = { name: '', id: '' },
+  members = [],
   toast,
-  addAudit,
-}: Pick<ViewProps, 'sessions' | 'trainerAvailability' | 'setTrainerAvailability' | 'currentUser' | 'members' | 'toast' | 'addAudit'>) {
+  addAudit = () => {},
+  databaseMode = false,
+}: ScheduleProps) {
   const today = getBookingToday();
   const currentTime = getBookingCurrentTime();
-  const trainerId = currentUser.id || currentUser.name;
+  const [savedAvailability, setSavedAvailability] = useState<TrainerAvailability[]>([]);
+  const [savedSessions, setSavedSessions] = useState<CalendarSession[]>([]);
+  const [savedTrainerId, setSavedTrainerId] = useState('');
+  const [loading, setLoading] = useState(databaseMode);
+  const [loadError, setLoadError] = useState('');
+  const [saving, setSaving] = useState(false);
+  const trainerId = databaseMode ? savedTrainerId : currentUser.id || currentUser.name;
+  const visibleAvailability = databaseMode ? savedAvailability : trainerAvailability;
+  const visibleSessions = databaseMode ? savedSessions : sessions;
+  const loadSchedule = async () => {
+    setLoading(true);
+    setLoadError('');
+    try {
+      const response = await fetch('/api/trainer/availability', { cache: 'no-store' });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Schedule could not be loaded.');
+      setSavedTrainerId(data.trainerId);
+      setSavedAvailability(data.availability);
+      setSavedSessions(data.sessions);
+    } catch (cause) {
+      setLoadError(cause instanceof Error ? cause.message : 'Schedule could not be loaded.');
+    } finally {
+      setLoading(false);
+    }
+  };
+  useEffect(() => { if (databaseMode) void loadSchedule(); }, [databaseMode]);
   const trainerSessions = useMemo(
-    () => sessions.filter((session) => session.trainer.trim().toLowerCase() === currentUser.name.trim().toLowerCase()),
-    [sessions, currentUser.name],
+    () => databaseMode ? visibleSessions : visibleSessions.filter((session) => session.trainer.trim().toLowerCase() === currentUser.name.trim().toLowerCase()),
+    [visibleSessions, databaseMode, currentUser.name],
   );
   const ownAvailability = useMemo(
-    () => trainerAvailability
+    () => visibleAvailability
       .filter((schedule) => schedule.trainerId === trainerId)
       .sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime)),
-    [trainerAvailability, trainerId],
+    [visibleAvailability, trainerId],
   );
 
   const [view, setView] = useState<CalendarView>('month');
@@ -87,7 +117,7 @@ function TrainerSchedule({
   const [editing, setEditing] = useState<TrainerAvailability | null>(null);
   const [form, setForm] = useState<AvailabilityForm>({ ...EMPTY_FORM, date: today });
   const [formError, setFormError] = useState('');
-  const [selectedSession, setSelectedSession] = useState<Session | null>(null);
+  const [selectedSession, setSelectedSession] = useState<CalendarSession | null>(null);
   const [deleting, setDeleting] = useState<TrainerAvailability | null>(null);
   const dates = useMemo(() => getCalendarDates(anchorDate, view), [anchorDate, view]);
 
@@ -100,8 +130,29 @@ function TrainerSchedule({
     setFormError('');
   };
 
-  const saveAvailability = (event: FormEvent<HTMLFormElement>) => {
+  const saveAvailability = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (databaseMode) {
+      setSaving(true);
+      setFormError('');
+      try {
+        const response = await fetch('/api/trainer/availability', {
+          method: editing ? 'PATCH' : 'POST', headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ ...(editing ? { id: editing.id } : {}), ...form }),
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Schedule could not be saved.');
+        await loadSchedule();
+        setEditing(null);
+        setAvailabilityModalOpen(false);
+        toast(editing ? 'Availability updated' : 'Availability added');
+      } catch (cause) {
+        setFormError(cause instanceof Error ? cause.message : 'Schedule could not be saved.');
+      } finally {
+        setSaving(false);
+      }
+      return;
+    }
     const updated: TrainerAvailability = {
       id: editing?.id || crypto.randomUUID(),
       trainerId,
@@ -126,8 +177,27 @@ function TrainerSchedule({
     setAvailabilityModalOpen(false);
   };
 
-  const removeAvailability = () => {
+  const removeAvailability = async () => {
     if (!deleting) return;
+    if (databaseMode) {
+      setSaving(true);
+      try {
+        const response = await fetch('/api/trainer/availability', {
+          method: 'DELETE', headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ id: deleting.id }),
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Schedule could not be removed.');
+        await loadSchedule();
+        setDeleting(null);
+        toast('Availability removed');
+      } catch (cause) {
+        toast(cause instanceof Error ? cause.message : 'Schedule could not be removed.');
+      } finally {
+        setSaving(false);
+      }
+      return;
+    }
     const next = trainerAvailability.filter((schedule) => schedule.id !== deleting.id);
     const error = validateAvailabilityChange(next, trainerSessions, trainerId, currentUser.name, deleting.date);
     if (error) {
@@ -164,6 +234,9 @@ function TrainerSchedule({
   return (
     <>
       <TabbedCard title="TRAINER CALENDAR">
+        {databaseMode && (loading ? <p role="status">Loading schedule…</p> : loadError
+          ? <p role="alert">{loadError} <button type="button" onClick={() => void loadSchedule()}>Retry</button></p> : null)}
+        {!loading && !loadError && <>
         <div className="trainer-calendar-toolbar">
           <div className="trainer-calendar-navigation">
             <button className="btn btn-outline btn-sm" type="button" onClick={() => moveCalendar(-1)} aria-label="Previous date range">
@@ -191,7 +264,7 @@ function TrainerSchedule({
                 </button>
               ))}
             </div>
-            <button className="btn btn-signal btn-sm" type="button" onClick={() => openScheduleForm()}>
+            <button className="btn btn-signal btn-sm" type="button" disabled={saving} onClick={() => openScheduleForm()}>
               <Plus size={15} /> Add availability
             </button>
           </div>
@@ -309,8 +382,10 @@ function TrainerSchedule({
             </div>
           )}
         </section>
+        </>}
       </TabbedCard>
 
+      {!loading && !loadError &&
       <div className="trainer-availability-card">
         <div className="trainer-availability-heading">
           <div>
@@ -342,6 +417,7 @@ function TrainerSchedule({
           </div>
         )}
       </div>
+      }
 
       {availabilityModalOpen && (
         <Modal title={editing ? 'EDIT AVAILABILITY' : 'ADD AVAILABILITY'} onClose={() => { setAvailabilityModalOpen(false); setEditing(null); setFormError(''); }} wide>
@@ -372,8 +448,8 @@ function TrainerSchedule({
             </Field>
             {formError && <p className="trainer-validation-error" role="alert">{formError}</p>}
             <div className="trainer-modal-actions">
-              <button className="btn btn-outline" type="button" onClick={() => { setAvailabilityModalOpen(false); setEditing(null); setFormError(''); }}>Close</button>
-              <button className="btn btn-signal" type="submit">{editing ? 'Save changes' : 'Add availability'}</button>
+              <button className="btn btn-outline" type="button" disabled={saving} onClick={() => { setAvailabilityModalOpen(false); setEditing(null); setFormError(''); }}>Close</button>
+              <button className="btn btn-signal" type="submit" disabled={saving}>{saving ? 'Saving…' : editing ? 'Save changes' : 'Add availability'}</button>
             </div>
           </form>
         </Modal>
@@ -385,11 +461,11 @@ function TrainerSchedule({
             <div className="trainer-booking-member">
               <span>Client</span>
               <strong>{selectedSession.member}</strong>
-              {members.find((member) => member.name.trim().toLowerCase() === selectedSession.member.trim().toLowerCase()) && (
+              {(selectedSession.memberEmail || selectedSession.memberPhone || members.find((member) => member.name.trim().toLowerCase() === selectedSession.member.trim().toLowerCase())) && (
                 <small>
-                  {members.find((member) => member.name.trim().toLowerCase() === selectedSession.member.trim().toLowerCase())?.email}
+                  {selectedSession.memberEmail || members.find((member) => member.name.trim().toLowerCase() === selectedSession.member.trim().toLowerCase())?.email}
                   {' · '}
-                  {members.find((member) => member.name.trim().toLowerCase() === selectedSession.member.trim().toLowerCase())?.phone}
+                  {selectedSession.memberPhone || members.find((member) => member.name.trim().toLowerCase() === selectedSession.member.trim().toLowerCase())?.phone}
                 </small>
               )}
             </div>
@@ -409,8 +485,8 @@ function TrainerSchedule({
           <div className="trainer-booking-modal">
             <p>Remove {formatCalendarDate(deleting.date, { month: 'short', day: 'numeric', year: 'numeric' })}, {deleting.startTime}–{deleting.endTime}? Active bookings in this time will prevent removal.</p>
             <div className="trainer-modal-actions">
-              <button className="btn btn-outline" type="button" onClick={() => setDeleting(null)}>Keep schedule</button>
-              <button className="btn btn-danger" type="button" onClick={removeAvailability}>Remove schedule</button>
+              <button className="btn btn-outline" type="button" disabled={saving} onClick={() => setDeleting(null)}>Keep schedule</button>
+              <button className="btn btn-danger" type="button" disabled={saving} onClick={() => void removeAvailability()}>{saving ? 'Removing…' : 'Remove schedule'}</button>
             </div>
           </div>
         </Modal>

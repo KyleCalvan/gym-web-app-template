@@ -13,7 +13,9 @@ if (!connectionString) throw new Error("DATABASE_URL is required. See the root .
 // pg does not interpret Prisma's ?schema= option. Pass it to the adapter so
 // runtime queries use the same schema as Prisma's migration CLI.
 const schema = new URL(connectionString).searchParams.get("schema") ?? "public";
-const pool = globalForPrisma.pool ?? new Pool({ connectionString });
+// PrismaPg normalizes timestamptz text as UTC; request UTC from PostgreSQL so
+// timestamps retain their actual instant on hosts whose local zone is not UTC.
+const pool = globalForPrisma.pool ?? new Pool({ connectionString, options: '-c TimeZone=UTC' });
 const prisma = globalForPrisma.prisma ?? new PrismaClient({
   adapter: new PrismaPg(pool, { schema }),
 });

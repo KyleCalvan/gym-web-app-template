@@ -307,6 +307,116 @@ test('member activity reads only personal records and persists metrics and one d
   assert.equal(other.rows[0].visits, 1);
 });
 
+test('trainer accounts enter without authenticator setup while other staff roles still require it', async () => {
+  const trainerId = await seedSessionAccount({ roles: ['trainer'] });
+  const trainerCookie = (await issueSession(trainerId)).cookie;
+  const trainerStatus = await fetch(`${application.url}/api/me`, {
+    headers: { cookie: trainerCookie },
+  }).then(response => response.json());
+  assert.equal(trainerStatus.restricted, false);
+  assert.deepEqual(trainerStatus.roles, ['trainer']);
+  assert.equal((await fetch(`${application.url}/api/gym-qr`, {
+    headers: { cookie: trainerCookie },
+  })).status, 200);
+
+  const staffId = await seedSessionAccount({ roles: ['trainer', 'staff'] });
+  const staffCookie = (await issueSession(staffId)).cookie;
+  const staffStatus = await fetch(`${application.url}/api/me`, {
+    headers: { cookie: staffCookie },
+  }).then(response => response.json());
+  assert.equal(staffStatus.restricted, true);
+  assert.ok(staffStatus.nextSteps.includes('set-up-two-step-verification'));
+
+  const enrolledTrainerId = await seedSessionAccount({ roles: ['trainer'], mfa: true });
+  const enrolledCookie = (await issueSession(enrolledTrainerId)).cookie;
+  const enrolledStatus = await fetch(`${application.url}/api/me`, {
+    headers: { cookie: enrolledCookie },
+  }).then(response => response.json());
+  assert.equal(enrolledStatus.restricted, true);
+  assert.ok(enrolledStatus.nextSteps.includes('complete-two-step-verification'));
+});
+
+test('trainer assigned sessions are private and session actions persist', async () => {
+  const trainerAccountId = await seedSessionAccount({ roles: ['trainer'], mfa: true });
+  const otherTrainerAccountId = await seedSessionAccount({ roles: ['trainer'], mfa: true });
+  const memberAccountId = await seedSessionAccount();
+  const { ownSessionId, cancelSessionId, otherSessionId, memberId } = await withDatabaseClient(database.env, async client => {
+    const { rows } = await client.query(
+      'SELECT "accountId", "profileId", role FROM "AssignedRole" WHERE "accountId" IN ($1, $2, $3)',
+      [trainerAccountId, otherTrainerAccountId, memberAccountId],
+    );
+    const profile = (accountId) => rows.find(row => row.accountId === accountId).profileId;
+    const trainerId = profile(trainerAccountId);
+    const otherTrainerId = profile(otherTrainerAccountId);
+    const memberId = profile(memberAccountId);
+    await client.query('INSERT INTO "TrainerProfile" ("profileId") VALUES ($1), ($2)', [trainerId, otherTrainerId]);
+    await client.query('INSERT INTO "MemberProfile" ("profileId") VALUES ($1)', [memberId]);
+    const ownSessionId = randomUUID();
+    const cancelSessionId = randomUUID();
+    const otherSessionId = randomUUID();
+    await client.query(`INSERT INTO "CoachingSession" (id, "memberId", "trainerId", "startsAt", status, amount, "updatedAt")
+      VALUES ($1, $3, $4, '2099-01-01T02:00:00Z', 'Confirmed', 500, NOW()),
+             ($2, $3, $5, '2099-01-02T02:00:00Z', 'Confirmed', 500, NOW()),
+             ($6, $3, $4, '2099-01-04T02:00:00Z', 'Confirmed', 500, NOW())`,
+    [ownSessionId, otherSessionId, memberId, trainerId, otherTrainerId, cancelSessionId]);
+    return { ownSessionId, cancelSessionId, otherSessionId, memberId };
+  });
+  const endpoint = `${application.url}/api/trainer/sessions`;
+  assert.equal((await fetch(endpoint)).status, 401);
+  const memberSession = await issueSession(memberAccountId);
+  assert.equal((await fetch(endpoint, { headers: { cookie: memberSession.cookie } })).status, 403);
+  const initial = await issueSession(trainerAccountId);
+  assert.equal((await fetch(endpoint, { headers: { cookie: initial.cookie } })).status, 403);
+  const assured = await sessionCommand('rotate', {
+    accountId: trainerAccountId, cookie: initial.cookie, mfaVerified: true,
+  });
+  assert.equal(assured.status, 200, application.logs());
+  const cookie = responseCookieHeader(assured);
+  const headers = { cookie, origin: application.url, 'content-type': 'application/json' };
+  const listed = await fetch(endpoint, { headers: { cookie } });
+  assert.equal(listed.status, 200, application.logs());
+  assert.equal(listed.headers.get('cache-control'), 'private, no-store');
+  const { sessions } = await listed.json();
+  assert.deepEqual(sessions.map(session => session.id), [cancelSessionId, ownSessionId]);
+  assert.equal(sessions[1].member, 'Session Member');
+  assert.equal(sessions[1].date, '2099-01-01');
+  assert.equal(sessions[1].time, '10:00');
+  assert.equal((await fetch(endpoint, { method: 'PATCH', headers: { ...headers, origin: 'https://attacker.example' },
+    body: JSON.stringify({ id: ownSessionId, action: 'complete' }) })).status, 403);
+  assert.equal((await fetch(endpoint, { method: 'PATCH', headers,
+    body: JSON.stringify({ id: otherSessionId, action: 'complete' }) })).status, 409);
+  assert.equal((await fetch(endpoint, { method: 'POST', headers,
+    body: JSON.stringify({ id: otherSessionId, newDateTime: '2099-01-03T10:00', reason: 'Conflict' }) })).status, 409);
+  assert.equal((await fetch(endpoint, { method: 'POST', headers,
+    body: JSON.stringify({ id: ownSessionId, newDateTime: '2099-01-03T10:00', reason: 'Conflict' }) })).status, 201);
+  const completed = await fetch(endpoint, { method: 'PATCH', headers,
+    body: JSON.stringify({ id: ownSessionId, action: 'complete' }) });
+  assert.equal(completed.status, 200, application.logs());
+  assert.equal((await completed.json()).status, 'Completed');
+  assert.equal((await fetch(endpoint, { method: 'PATCH', headers,
+    body: JSON.stringify({ id: ownSessionId, action: 'cancel', reason: 'Too late' }) })).status, 409);
+  assert.equal((await fetch(endpoint, { method: 'PATCH', headers,
+    body: JSON.stringify({ id: cancelSessionId, action: 'cancel', reason: '' }) })).status, 400);
+  const cancelled = await fetch(endpoint, { method: 'PATCH', headers,
+    body: JSON.stringify({ id: cancelSessionId, action: 'cancel', reason: 'Trainer unavailable' }) });
+  assert.equal(cancelled.status, 200, application.logs());
+  assert.equal((await cancelled.json()).status, 'Cancelled');
+  const saved = await withDatabaseClient(database.env, client => client.query(
+    `SELECT id, status, "completedAt", "cancelledAt", "cancellationReason", (SELECT count(*)::int FROM "ScheduleChangeRequest"
+      WHERE "coachingSessionId" = $1 AND "requestedByAccountId" = $2) AS requests
+      FROM "CoachingSession" WHERE id IN ($1, $4) AND "memberId" = $3`,
+    [ownSessionId, trainerAccountId, memberId, cancelSessionId],
+  ));
+  const completedRow = saved.rows.find(row => row.id === ownSessionId);
+  const cancelledRow = saved.rows.find(row => row.id === cancelSessionId);
+  assert.equal(completedRow.status, 'Completed');
+  assert.ok(completedRow.completedAt);
+  assert.equal(completedRow.requests, 1);
+  assert.equal(cancelledRow.status, 'Cancelled');
+  assert.ok(cancelledRow.cancelledAt);
+  assert.equal(cancelledRow.cancellationReason, 'Trainer unavailable');
+});
+
 test('member cancellation saves only the signed-in member’s plan and appears in their overview', async () => {
   const accountId = await seedSessionAccount();
   const otherAccountId = await seedSessionAccount();
@@ -914,8 +1024,9 @@ async function issueSession(accountId, app = application) {
   return { cookie: responseCookieHeader(response), response };
 }
 
-test('admin QR uploads and gym links persist for the intended member only', async () => {
+test('admin QR uploads stay member-specific while trainer gym links come from the database', async () => {
   const adminId = await seedSessionAccount({ roles: ['admin'], mfa: true });
+  const trainerId = await seedSessionAccount({ roles: ['trainer'], mfa: true });
   const firstId = await seedSessionAccount();
   const secondId = await seedSessionAccount();
   const profileIds = await withDatabaseClient(database.env, async (client) => {
@@ -931,6 +1042,12 @@ test('admin QR uploads and gym links persist for the intended member only', asyn
   const rotation = await sessionCommand('rotate', { accountId: adminId, cookie: adminSession.cookie, mfaVerified: true });
   assert.equal(rotation.status, 200);
   const adminCookie = responseCookieHeader(rotation);
+  const trainerSession = await issueSession(trainerId);
+  const trainerRotation = await sessionCommand('rotate', {
+    accountId: trainerId, cookie: trainerSession.cookie, mfaVerified: true,
+  });
+  assert.equal(trainerRotation.status, 200);
+  const trainerCookie = responseCookieHeader(trainerRotation);
   const firstCookie = (await issueSession(firstId)).cookie;
   const secondCookie = (await issueSession(secondId)).cookie;
   const links = [{ id: 'facebook', label: 'Gym Facebook page', url: 'https://www.facebook.com/vinathletics' }];
@@ -939,8 +1056,12 @@ test('admin QR uploads and gym links persist for the intended member only', asyn
     body: JSON.stringify({ destinations }),
   });
   assert.equal((await saveLinks(firstCookie)).status, 403);
+  assert.equal((await saveLinks(trainerCookie)).status, 403);
   assert.equal((await saveLinks(adminCookie, [{ ...links[0], url: 'https://facebook.com.attacker.example' }])).status, 400);
   assert.equal((await saveLinks(adminCookie)).status, 200);
+  assert.deepEqual((await fetch(`${application.url}/api/gym-qr`, {
+    headers: { cookie: trainerCookie },
+  }).then(response => response.json())).destinations, links);
   assert.deepEqual((await fetch(`${application.url}/api/member/qr`, { headers: { cookie: firstCookie } }).then(r => r.json())).destinations, links);
 
   const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9fJpEAAAAASUVORK5CYII=', 'base64');

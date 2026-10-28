@@ -1,78 +1,61 @@
-// @ts-nocheck
+import { useEffect, useState } from 'react';
 import { StatTile, TabbedCard, Table, Badge } from '../shared';
+import type { ViewProps } from '../types.ts';
 import { formatTime12h } from './availability.ts';
+import { trainerDashboardData, type TrainerDashboardSession } from './dashboardData.ts';
 
-function TrainerDashboard({ sessions, today: todayLabel }) {
-  const todayDate = new Date();
-  const weekdayLong = todayDate.toLocaleDateString('en-US', { weekday: 'long' });
+type DashboardProps = Partial<Pick<ViewProps, 'sessions'>> & { databaseMode?: boolean };
 
-  // "Today" = either flagged as Today, OR its weekday matches today.
-  const todays = sessions.filter(
-    (s) => s.day === 'Today' || s.day === weekdayLong
-  );
+export default function TrainerDashboard({ sessions = [], databaseMode = false }: DashboardProps) {
+  const [savedSessions, setSavedSessions] = useState<TrainerDashboardSession[]>([]);
+  const [loading, setLoading] = useState(databaseMode);
+  const [error, setError] = useState('');
+  const [attempt, setAttempt] = useState(0);
 
-  // This week = next 7 days, including today.
-  const inAWeek = new Date(todayDate);
-  inAWeek.setDate(inAWeek.getDate() + 7);
-  const thisWeek = sessions.filter((s) => {
-    if (!s.date) return false;
-    const d = new Date(s.date);
-    return d >= todayDate && d <= inAWeek;
-  });
+  useEffect(() => {
+    if (!databaseMode) return;
+    const controller = new AbortController();
+    fetch('/api/trainer/sessions', { cache: 'no-store', signal: controller.signal })
+      .then(async response => {
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Dashboard could not be loaded.');
+        return data as { sessions: TrainerDashboardSession[] };
+      })
+      .then(data => { setSavedSessions(data.sessions); setLoading(false); setError(''); })
+      .catch(cause => {
+        if (controller.signal.aborted) return;
+        setError(cause instanceof Error ? cause.message : 'Dashboard could not be loaded.');
+        setLoading(false);
+      });
+    return () => controller.abort();
+  }, [databaseMode, attempt]);
 
-  // Upcoming = future sessions, sorted ascending.
-  const upcoming = sessions
-    .filter((s) => {
-      if (!s.date) return false;
-      return new Date(s.date) >= todayDate;
-    })
-    .sort((a, b) => new Date(a.date) - new Date(b.date));
+  const data = trainerDashboardData(databaseMode ? savedSessions : sessions);
+  const todayLabel = new Intl.DateTimeFormat('en-US', { month: 'short', day: '2-digit', year: 'numeric', timeZone: 'UTC' })
+    .format(new Date(`${data.today}T12:00:00.000Z`)).toUpperCase();
 
-  // Average rating across this trainer's sessions.
-  const rated = sessions.filter((s) => typeof s.rating === 'number');
-  const avg = rated.length
-    ? rated.reduce((sum, s) => sum + s.rating, 0) / rated.length
-    : 0;
+  if (databaseMode && loading) return <p role="status">Loading trainer dashboard…</p>;
+  if (databaseMode && error) return <p role="alert">{error} <button type="button" onClick={() => { setLoading(true); setAttempt(value => value + 1); }}>Retry</button></p>;
 
-  const sessionsToday = todays.length;
-  const thisWeekCount = thisWeek.length;
-  const upcomingCount = upcoming.length;
-  const avgDisplay = rated.length ? avg.toFixed(1) : '—';
+  return <>
+    <div className="grid grid-4" style={{ marginBottom: 18 }}>
+      <StatTile label="Sessions Today" value={data.sessionsToday} tone="court" />
+      <StatTile label="This Week" value={data.thisWeekCount} tone="amber" />
+      <StatTile label="Avg. Rating" value={'★ ' + data.avgRating} />
+      <StatTile label="Upcoming" value={data.upcomingCount} tone="steel" />
+    </div>
 
-  const todayLong = todayDate.toLocaleDateString('en-US', {
-    month: 'short',
-    day: '2-digit',
-    year: 'numeric',
-  }).toUpperCase();
-
-  return (
-    <>
-      <div className="grid grid-4" style={{ marginBottom: 18 }}>
-        <StatTile label="Sessions Today" value={sessionsToday} tone="court" />
-        <StatTile label="This Week"     value={thisWeekCount} tone="amber" />
-        <StatTile
-          label="Avg. Rating"
-          value={'★ ' + avgDisplay}
-        />
-        <StatTile label="Upcoming" value={upcomingCount} tone="steel" />
-      </div>
-
-      <TabbedCard title={`YOUR SESSIONS — ${todayLong}`}>
-        <Table
-          columns={['TIME', 'MEMBER', 'TYPE', 'STATUS']}
-          rows={todays}
-          renderRow={(s) => (
-            <tr key={s.id}>
-              <td className="mono">{formatTime12h(s.time)}</td>
-              <td>{s.member}</td>
-              <td>{s.type}</td>
-              <td><Badge status={s.status} /></td>
-            </tr>
-          )}
-        />
-      </TabbedCard>
-    </>
-  );
+    <TabbedCard title={`YOUR SESSIONS — ${todayLabel}`}>
+      {data.todays.length === 0
+        ? <p>No sessions scheduled today.</p>
+        : <Table columns={['TIME', 'MEMBER', 'TYPE', 'STATUS']} rows={data.todays} renderRow={session => (
+          <tr key={session.id}>
+            <td className="mono">{formatTime12h(session.time)}</td>
+            <td>{session.member}</td>
+            <td>{session.type}</td>
+            <td><Badge status={session.status} /></td>
+          </tr>
+        )} />}
+    </TabbedCard>
+  </>;
 }
-
-export default TrainerDashboard;

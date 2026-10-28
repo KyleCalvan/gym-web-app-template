@@ -11,6 +11,10 @@ import { splitName, formatName } from '../shared/nameParts';
 import { LoadingScreen } from '../shared/LoadingScreen';
 import MemberApp from '../member/MemberApp';
 import AdminQrDestinations from '../admin/AdminQrDestinations';
+import TrainerSessions from '../trainer/TrainerSessions';
+import TrainerSchedule from '../trainer/TrainerSchedule';
+import TrainerDashboard from '../trainer/TrainerDashboard';
+import TrainerContactLinks from '../trainer/Chat';
 import { clearAccountBrowserState, establishAccountBrowserState } from './browser-state';
 
 type Status = NonNullable<Awaited<ReturnType<typeof getAccountStatus>>>;
@@ -40,6 +44,7 @@ export default function AccountStatus({ initialStatus }: { initialStatus?: Visib
   const [phone, setPhone] = useState(initialStatus?.account.phone ?? '');
   const [accepted, setAccepted] = useState(false);
   const [selectedRole, setSelectedRole] = useState<Status['roles'][number] | null>(null);
+  const [trainerView, setTrainerView] = useState<'dashboard' | 'sessions' | 'schedule' | 'links'>('dashboard');
   const seenAccountId = useRef(initialStatus?.account.id ?? null);
 
   useEffect(() => {
@@ -131,7 +136,7 @@ export default function AccountStatus({ initialStatus }: { initialStatus?: Visib
     profileId={status.profiles?.find(profile => profile.role === 'member')?.profileId ?? status.account.id}
     onLogout={() => void logout()} pending={pending} />;
 
-  return <main className="account-status" aria-busy={pending}>
+  return <main className={`account-status${activeRole === 'trainer' ? ' account-status-trainer' : ''}`} aria-busy={pending}>
     <p className="account-status-brand">VinAthletics</p>
     <h1>Your Account</h1>
     {pending && <p role="status">Updating Account…</p>}
@@ -182,7 +187,20 @@ export default function AccountStatus({ initialStatus }: { initialStatus?: Visib
           <p>Your {ROLE_LABELS[activeRole].toLowerCase()} profile is connected to this Account.</p>
           {activeRole === 'admin' || activeRole === 'superadmin'
             ? <AdminQrDestinations databaseMode toast={setNotice} />
-            : <p>Personal records and operations for this interface are unavailable while integration is being completed.</p>}
+            : activeRole === 'trainer'
+              ? <>
+                <div className="account-trainer-views" role="group" aria-label="Trainer views">
+                  <button type="button" aria-pressed={trainerView === 'dashboard'} onClick={() => setTrainerView('dashboard')}>Dashboard</button>
+                  <button type="button" aria-pressed={trainerView === 'sessions'} onClick={() => setTrainerView('sessions')}>Assigned Sessions</button>
+                  <button type="button" aria-pressed={trainerView === 'schedule'} onClick={() => setTrainerView('schedule')}>Schedule &amp; Availability</button>
+                  <button type="button" aria-pressed={trainerView === 'links'} onClick={() => setTrainerView('links')}>Gym Links &amp; QR</button>
+                </div>
+                {trainerView === 'dashboard' ? <TrainerDashboard databaseMode />
+                  : trainerView === 'sessions' ? <TrainerSessions databaseMode toast={setNotice} />
+                    : trainerView === 'schedule' ? <TrainerSchedule databaseMode toast={setNotice} />
+                      : <TrainerContactLinks databaseMode />}
+              </>
+              : <p>Personal records and operations for this interface are unavailable while integration is being completed.</p>}
           {activeRole === 'member' && <p>Membership information is unavailable here.</p>}
         </div>}
       </section>}

@@ -8,9 +8,10 @@
   border-radius: 1rem;
 }
 .account-status-brand { font-weight: 400; letter-spacing: .04em; }
+.account-status-trainer { max-width: 90rem; }
 .account-status li { margin: .75rem 0; }
 .account-status-actions { display: flex; gap: .75rem; margin-top: 1.5rem; }
-.account-status button { min-height:44px;padding:.65rem 1rem;cursor:pointer;background:var(--surface-2);color:var(--ink);border:1px solid var(--line-strong);border-radius:var(--radius); }
+.account-status button:where(:not(.btn, .trainer-calendar-day-select, .trainer-calendar-event, .trainer-calendar-view-switch button)) { min-height:44px;padding:.65rem 1rem;cursor:pointer;background:var(--surface-2);color:var(--ink);border:1px solid var(--line-strong);border-radius:var(--radius); }
 .account-status button:disabled { cursor: not-allowed; opacity: .55; }
 .account-status form, .account-status section { margin-top: 1.5rem; }
 .account-status form label { display: block; margin: .75rem 0 .25rem; font-weight: 600; }
@@ -19,6 +20,8 @@
 .account-agree { display: flex; gap: .5rem; align-items: baseline; margin: 1rem 0; }
 .account-role-selector { display: flex; flex-wrap: wrap; gap: .5rem; }
 .account-role-selector [aria-pressed="true"] { background:var(--signal);color:var(--on-signal); }
+.account-trainer-views { display:flex;flex-wrap:wrap;gap:.5rem;margin-top:1rem; }
+.account-trainer-views [aria-pressed="true"] { background:var(--signal);color:var(--on-signal); }
 .account-interface { margin-top: 1rem; padding: 1rem; border: 1px solid var(--line); border-radius: .5rem; }
 .account-status [role="alert"] { color:var(--danger); }
 @media (max-width: 600px) { .account-status { margin: 1rem; padding: 1.5rem; } }
