@@ -307,7 +307,7 @@ test('member activity reads only personal records and persists metrics and one d
   assert.equal(other.rows[0].visits, 1);
 });
 
-test('trainer accounts enter without authenticator setup while other staff roles still require it', async () => {
+test('trainer and super admin accounts enter without authenticator setup while staff and managers require it', async () => {
   const trainerId = await seedSessionAccount({ roles: ['trainer'] });
   const trainerCookie = (await issueSession(trainerId)).cookie;
   const trainerStatus = await fetch(`${application.url}/api/me`, {
@@ -326,6 +326,30 @@ test('trainer accounts enter without authenticator setup while other staff roles
   }).then(response => response.json());
   assert.equal(staffStatus.restricted, true);
   assert.ok(staffStatus.nextSteps.includes('set-up-two-step-verification'));
+
+  const adminId = await seedSessionAccount({ roles: ['admin'] });
+  const adminCookie = (await issueSession(adminId)).cookie;
+  const adminStatus = await fetch(`${application.url}/api/me`, {
+    headers: { cookie: adminCookie },
+  }).then(response => response.json());
+  assert.equal(adminStatus.restricted, true);
+  assert.ok(adminStatus.nextSteps.includes('set-up-two-step-verification'));
+
+  const superadminId = await seedSessionAccount({ roles: ['superadmin'] });
+  const superadminCookie = (await issueSession(superadminId)).cookie;
+  const superadminStatus = await fetch(`${application.url}/api/me`, {
+    headers: { cookie: superadminCookie },
+  }).then(response => response.json());
+  assert.equal(superadminStatus.restricted, false);
+  assert.ok(!superadminStatus.nextSteps.includes('set-up-two-step-verification'));
+
+  const enrolledSuperadminId = await seedSessionAccount({ roles: ['superadmin'], mfa: true });
+  const enrolledSuperadminCookie = (await issueSession(enrolledSuperadminId)).cookie;
+  const enrolledSuperadminStatus = await fetch(`${application.url}/api/me`, {
+    headers: { cookie: enrolledSuperadminCookie },
+  }).then(response => response.json());
+  assert.equal(enrolledSuperadminStatus.restricted, true);
+  assert.ok(enrolledSuperadminStatus.nextSteps.includes('complete-two-step-verification'));
 
   const enrolledTrainerId = await seedSessionAccount({ roles: ['trainer'], mfa: true });
   const enrolledCookie = (await issueSession(enrolledTrainerId)).cookie;

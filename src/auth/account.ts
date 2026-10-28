@@ -125,7 +125,7 @@ export async function getAccountStatus(id: string, session?: { mfaVerifiedAt: Da
   if (!account.name?.trim() || !account.phone?.trim()) nextSteps.push('complete-profile');
   if (!account.termsAcceptedAt || account.termsVersion !== CURRENT_TERMS_VERSION) nextSteps.push('accept-terms');
   if (roles.length === 0) nextSteps.push('contact-support');
-  if (roles.some((role) => role === 'staff' || role === 'admin' || role === 'superadmin') && !account.mfaEnabledAt) nextSteps.push('set-up-two-step-verification');
+  if (roles.some((role) => role === 'staff' || role === 'admin') && !account.mfaEnabledAt) nextSteps.push('set-up-two-step-verification');
   if (account.mfaEnabledAt && (!session?.mfaVerifiedAt || session.mfaVerifiedAt < account.mfaEnabledAt
     || session.mfaVerifiedAt > new Date())) nextSteps.push('complete-two-step-verification');
   return {
