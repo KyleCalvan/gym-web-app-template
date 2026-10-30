@@ -6,7 +6,7 @@ import { dur, ease } from './motion';
 import TermsOfUse from './auth/TermsOfUse';
 import { CURRENT_TERMS_VERSION } from './auth/terms';
 import { NameFields } from './shared/components/NameFields';
-import { emptyName, formatName } from './shared/nameParts';
+import { emptyName, formatName, splitName } from './shared/nameParts';
 import { normalizeRegistrationPhone } from './auth/registration-phone';
 
 const OAUTH_ERRORS: Record<string, string> = {
@@ -38,6 +38,7 @@ export default function LoginPage({ defaultTab = 'login', onBack }: LoginPagePro
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [termsRead, setTermsRead] = useState(false);
+  const [googleRegistration, setGoogleRegistration] = useState<{ email: string } | null>(null);
   const termsBodyRef = useRef<HTMLDivElement | null>(null);
   const EMAIL_PATTERN = /^\S+@\S+\.\S+$/;
   const clearFieldError = (field: string) => setFormErrors(previous => {
@@ -85,12 +86,28 @@ export default function LoginPage({ defaultTab = 'login', onBack }: LoginPagePro
     if (formatName(regName).length > 120) errors['register-lastName'] = 'Keep your full name within 120 characters.';
     if (!EMAIL_PATTERN.test(regEmail.trim())) errors['register-email'] = 'Enter a valid email address.';
     if (!normalizeRegistrationPhone(regPhone)) errors['register-phone'] = 'Enter a phone number with 7 to 15 digits.';
-    if (regPassword.length < 8 || regPassword.length > 128) errors['register-password'] = 'Use 8 to 128 characters.';
+    if (!googleRegistration && (regPassword.length < 8 || regPassword.length > 128)) errors['register-password'] = 'Use 8 to 128 characters.';
     if (!termsRead || !agreedToTerms) errors.terms = 'Read and accept the Terms of Use to continue.';
     setFormErrors(errors);
     if (Object.keys(errors).length) return;
     setPendingMethod('password');
     try {
+      if (googleRegistration) {
+        const profileResponse = await fetch('/api/me', {
+          method: 'PATCH', headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ name: formatName(regName), phone: regPhone.trim() }),
+        });
+        const profileResult: { message?: string } = await profileResponse.json();
+        if (!profileResponse.ok) throw new Error(profileResult.message ?? 'Profile could not be saved.');
+        const termsResponse = await fetch('/api/me/terms', {
+          method: 'POST', headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ version: CURRENT_TERMS_VERSION, accepted: true }),
+        });
+        const termsResult: { message?: string } = await termsResponse.json();
+        if (!termsResponse.ok) throw new Error(termsResult.message ?? 'Terms could not be accepted.');
+        window.location.assign('/account');
+        return;
+      }
       const response = await fetch('/api/register', {
         method: 'POST', headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ ...regName, email: regEmail.trim(), phone: regPhone.trim(), password: regPassword,
@@ -108,8 +125,9 @@ export default function LoginPage({ defaultTab = 'login', onBack }: LoginPagePro
         return;
       }
       window.location.assign(result.next?.startsWith('/account') ? result.next : '/account');
-    } catch {
-      setError('Could not connect to registration. Check your connection and retry.');
+    } catch (cause) {
+      setError(googleRegistration && cause instanceof Error ? cause.message
+        : 'Could not connect to registration. Check your connection and retry.');
     } finally {
       setPendingMethod(null);
     }
@@ -117,9 +135,32 @@ export default function LoginPage({ defaultTab = 'login', onBack }: LoginPagePro
 
   const registering = tab === 'register';
   useEffect(() => {
-    const code = new URLSearchParams(window.location.search).get('error');
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('error');
     if (code) setError(OAUTH_ERRORS[code] ?? OAUTH_ERRORS.Default);
     let active = true;
+    if (params.get('google') === '1' && params.get('flow') === 'register') {
+      fetch('/api/me', { cache: 'no-store' })
+        .then(async response => {
+          if (!response.ok) throw new Error('Google registration session expired. Continue with Google again.');
+          return response.json() as Promise<{ account: { email: string | null; name: string | null; phone: string | null;
+            emailVerified: boolean }; nextSteps: string[] }>;
+        })
+        .then(status => {
+          if (!active) return;
+          if (!status.account.emailVerified || !status.account.email) throw new Error('Google email verification is unavailable.');
+          if (!status.nextSteps.includes('complete-profile') && !status.nextSteps.includes('accept-terms')) {
+            window.location.assign('/account');
+            return;
+          }
+          setGoogleRegistration({ email: status.account.email });
+          setRegEmail(status.account.email);
+          setRegName(splitName(status.account.name ?? ''));
+          setRegPhone(status.account.phone ?? '');
+          setTab('register');
+        })
+        .catch(cause => { if (active) setError(cause instanceof Error ? cause.message : 'Google registration could not be loaded.'); });
+    }
     fetch('/api/supabase/google/status', { cache: 'no-store' })
       .then(response => response.json())
       .then((status: { google?: boolean }) => { if (active) setConfigured(status.google === true); })
@@ -165,7 +206,7 @@ export default function LoginPage({ defaultTab = 'login', onBack }: LoginPagePro
                 });
               }} errors={formErrors} />
               <Field label="Email" htmlFor="register-email">
-                <input id="register-email" className="form-control" type="email" required autoComplete="username" placeholder="you@example.com"
+                <input id="register-email" className="form-control" type="email" required autoComplete="username" placeholder="you@example.com" readOnly={Boolean(googleRegistration)}
                   aria-invalid={Boolean(formErrors['register-email'])}
                   aria-describedby={formErrors['register-email'] ? 'register-email-error' : undefined}
                   value={regEmail} onChange={(e) => { setRegEmail(e.target.value); clearFieldError('register-email'); }}
@@ -180,7 +221,7 @@ export default function LoginPage({ defaultTab = 'login', onBack }: LoginPagePro
                   onBlur={() => { if (!normalizeRegistrationPhone(regPhone)) setFormErrors((prev) => ({ ...prev, 'register-phone': 'Enter a phone number with 7 to 15 digits.' })); }} />
                 {formErrors['register-phone'] && <p className="field-error" id="register-phone-error" role="alert">{formErrors['register-phone']}</p>}
               </Field>
-              <Field label="Password" htmlFor="register-password">
+              {!googleRegistration && <Field label="Password" htmlFor="register-password">
                 <div className="password-control">
                 <input id="register-password" className="form-control" type={showRegisterPassword ? 'text' : 'password'} required autoComplete="new-password" placeholder="At least 8 characters"
                   aria-invalid={Boolean(formErrors['register-password'])}
@@ -195,7 +236,7 @@ export default function LoginPage({ defaultTab = 'login', onBack }: LoginPagePro
                 </button>
                 </div>
                 {formErrors['register-password'] && <p className="field-error" id="register-password-error" role="alert">{formErrors['register-password']}</p>}
-              </Field>
+              </Field>}
 
               <div className="terms-row">
                 <input

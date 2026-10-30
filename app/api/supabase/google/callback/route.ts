@@ -6,6 +6,7 @@ import { authRequestContext } from '@/src/auth/request-context';
 import { prisma } from '@/src/auth/prisma';
 import { readSession, createSession } from '@/src/auth/sessions';
 import { requestSessionToken, setSessionCookie } from '@/src/auth/session-cookie';
+import { CURRENT_TERMS_VERSION } from '@/src/auth/terms';
 
 export const runtime = 'nodejs';
 
@@ -28,10 +29,14 @@ export async function GET(request: NextRequest) {
         name: data.user.user_metadata?.full_name ?? data.user.user_metadata?.name,
         email_verified: true });
       if (established !== true) return failure(established ? 'AccountConflict' : 'AccessDenied');
-      const account = await prisma.authUser.findUnique({ where: { email }, select: { id: true } });
+      const account = await prisma.authUser.findUnique({ where: { email },
+        select: { id: true, phone: true, termsVersion: true, termsAcceptedAt: true } });
       if (!account) return failure('OAuthCallback');
       const session = await prisma.$transaction((tx) => createSession(tx, { accountId: account.id }));
-      const response = NextResponse.redirect(new URL('/account', base));
+      const needsRegistration = !account.phone || !account.termsAcceptedAt
+        || account.termsVersion !== CURRENT_TERMS_VERSION;
+      const response = NextResponse.redirect(new URL(needsRegistration
+        ? '/login?flow=register&google=1' : '/account', base));
       response.headers.set('cache-control', 'private, no-store');
       // The app uses its short-lived database session after the verified
       // Supabase exchange; do not retain a second browser session cookie.
