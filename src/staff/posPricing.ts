@@ -1,4 +1,5 @@
 export type TaxMode = 'exclusive' | 'inclusive';
+export const MAX_STAFF_POS_AMOUNT = 10_000_000;
 export interface PosTaxDetails { subtotal: number; base: number; rate: number; amount: number; mode: TaxMode; }
 export function calculatePosPricing(subtotal: number, rateText: string, mode: TaxMode) {
   if (!Number.isFinite(subtotal) || subtotal < 0) throw new Error('Subtotal must be a non-negative amount.');

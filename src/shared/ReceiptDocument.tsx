@@ -4,6 +4,7 @@ import { getReceiptReference } from '../receipt.ts';
 
 interface ReceiptMember {
   id?: string;
+  displayId?: string;
   name: string;
   email?: string;
   phone?: string;
@@ -61,7 +62,7 @@ export function ReceiptDocument({ transaction, member, documentType = 'Receipt' 
       <section className="receipt-member">
         <span className="receipt-section-label">Billed to</span>
         <strong>{member?.name || transaction.member || 'Walk-in'}</strong>
-        {member?.id && <span>Member ID · {member.id}</span>}
+        {member?.id && <span>Member ID · {member.displayId || member.id}</span>}
         {member?.email && <span>{member.email}</span>}
         {member?.phone && <span>{member.phone}</span>}
       </section>

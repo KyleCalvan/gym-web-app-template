@@ -11,31 +11,34 @@ function formatDate(iso) {
   return d.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
 }
 
-function TrainerSessions({ sessions, setSessions, toast, addAudit }) {
+function TrainerSessions({ sessions, toast, onTrainerAction }) {
   const [confirm, setConfirm] = useState<{ action: 'complete' | 'cancel'; id: string } | null>(null);
   const [cancelReason, setCancelReason] = useState('');
   const [scheduleRequest, setScheduleRequest] = useState<boolean>(false);
   const [reqForm, setReqForm] = useState({ session: '', newDateTime: '', reason: '' });
 
-  const complete = (id) => {
-    setSessions((prev) => prev.map((s) => (s.id === id ? { ...s, status: 'Completed' } : s)));
-    toast('Session marked complete');
-    addAudit?.('info', 'Session completed', id);
+  const complete = async (id) => {
+    try { await onTrainerAction('session.complete', { id }); toast('Session marked complete'); setConfirm(null); }
+    catch (error) { toast(error instanceof Error ? error.message : 'Could not complete the session'); }
   };
 
-  const cancel = (id, reason) => {
-    setSessions((prev) => prev.map((s) => (s.id === id ? { ...s, status: 'Cancelled' } : s)));
-    toast('Session cancelled');
-    addAudit?.('warn', `Session cancelled. Reason: ${reason}`, id);
+  const cancel = async (id, reason) => {
+    try { await onTrainerAction('session.cancel', { id, reason }); toast('Session cancelled'); setConfirm(null); }
+    catch (error) { toast(error instanceof Error ? error.message : 'Could not cancel the session'); }
   };
 
-  const submitScheduleRequest = (e) => {
+  const submitScheduleRequest = async (e) => {
     e.preventDefault();
     if (!reqForm.session.trim() || !reqForm.newDateTime.trim() || !reqForm.reason.trim()) {
       toast('Please fill in all fields');
       return;
     }
-    toast('Schedule change requests are not yet connected to the database.');
+    try {
+      await onTrainerAction('session.request-change', { id: reqForm.session,
+        requestedStartsAt: new Date(`${reqForm.newDateTime}+08:00`).toISOString(), reason: reqForm.reason });
+      toast('Schedule change request sent'); setScheduleRequest(false);
+      setReqForm({ session: '', newDateTime: '', reason: '' });
+    } catch (error) { toast(error instanceof Error ? error.message : 'Could not send the request'); }
   };
 
   return (
@@ -115,9 +118,8 @@ function TrainerSessions({ sessions, setSessions, toast, addAudit }) {
                 className="btn btn-signal"
                 type="button"
                 onClick={() => {
-                  if (confirm.action === 'complete') complete(confirm.id);
-                  else cancel(confirm.id, cancelReason || 'No reason provided');
-                  setConfirm(null);
+                  if (confirm.action === 'complete') void complete(confirm.id);
+                  else void cancel(confirm.id, cancelReason || 'No reason provided');
                 }}
               >
                 {confirm.action === 'complete' ? 'Complete' : 'Cancel Session'}

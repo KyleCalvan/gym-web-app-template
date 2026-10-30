@@ -8,8 +8,9 @@ import { useToast } from '../shared/hooks/useToast';
 import { clearAccountBrowserState } from './browser-state';
 import { ROLE_LABEL } from '../data';
 import type { NavSection, NotifPrefs, Notification, Role } from '../types';
+import type { AccountNextStep } from './account-contract';
 
-export default function AuthenticatedShell({ role, roles, user, nav, view, onNav, onSwitchRole, children }: {
+export default function AuthenticatedShell({ role, roles, user, nav, view, onNav, onSwitchRole, setupSteps = [], children }: {
   role: Role;
   roles: Role[];
   user: { name: string; avatarUrl?: string };
@@ -17,6 +18,7 @@ export default function AuthenticatedShell({ role, roles, user, nav, view, onNav
   view: string;
   onNav: (view: string) => void;
   onSwitchRole: (role: Role) => void;
+  setupSteps?: AccountNextStep[];
   children: ReactNode;
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -58,7 +60,13 @@ export default function AuthenticatedShell({ role, roles, user, nav, view, onNav
         notificationsOpen={notificationsOpen}
         onToggleNotifications={() => { setProfileOpen(false); setNotificationsOpen((open) => !open); }}
         onCloseNotifications={() => setNotificationsOpen(false)} toast={toast} />
-      <main className="content">{children}</main>
+      <main className="content">
+        {setupSteps.some((step) => step !== 'verify-email') && <div className="account-setup-notice" role="status">
+          <div><strong>Complete your account setup</strong><span>Finish the required steps before using account actions.</span></div>
+          <a className="btn btn-outline btn-sm" href="/account?setup=1">Complete setup</a>
+        </div>}
+        {children}
+      </main>
     </div>
     <ProfileMenu role={role} availableRoles={roles} onSwitchRole={onSwitchRole}
       user={{ ...user, role: ROLE_LABEL[role] }} open={profileOpen} onClose={() => setProfileOpen(false)}

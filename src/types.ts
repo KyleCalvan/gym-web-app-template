@@ -13,6 +13,7 @@ export type PromoStatus = 'Published' | 'Draft';
 export type DiscountType = 'Percentage' | 'Bundle' | 'Fixed';
 
 export interface Member {
+  displayId?: string;
   firstName?: string;
   middleName?: string;
   lastName?: string;
@@ -34,6 +35,7 @@ export interface Member {
 export type AdminStatus = 'Active' | 'Inactive';
 
 export interface Admin {
+  displayId?: string;
   id: string;
   name: string;
   email: string;
@@ -51,6 +53,7 @@ export interface TrainerReview {
 }
 
 export interface Trainer {
+  displayId?: string;
   id: string;
   name: string;
   specialty: string;
@@ -150,6 +153,7 @@ export type StaffShift = 'Morning' | 'Evening' | 'Night';
 export type StaffStatus = 'Active' | 'On Leave' | 'Inactive';
 
 export interface Staff {
+  displayId?: string;
   id: string;
   name: string;
   role: StaffRole;
@@ -290,6 +294,8 @@ export interface Conversation {
 // Each role's view receives this bag from <App/>.
 export interface ViewProps {
   onAdminAction?: (action: string, payload: Record<string, unknown>) => Promise<void>;
+  onTrainerAction?: (action: string, payload: Record<string, unknown>) => Promise<void>;
+  onSuperAdminAction?: (action: string, payload: Record<string, unknown>) => Promise<void>;
   onStaffRegisterMember?: (input: { name: string; email: string; phone: string; planName: string }) => Promise<Member>;
   onStaffCheckIn?: (memberId: string) => Promise<void>;
   onStaffSale?: (input: { reference: string; memberId: string; planNames: string[];

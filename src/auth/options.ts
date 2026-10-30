@@ -5,6 +5,7 @@ import { establishGoogleAccount, recordGoogleRejection } from './account';
 import { sessionCookiePolicy, requestSessionToken } from './session-cookie';
 import { readSession } from './sessions';
 import { cookies } from 'next/headers';
+import { legacyAuthTestMode } from './supabase-auth';
 
 const googleClientId = process.env.GOOGLE_CLIENT_ID?.trim();
 const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET?.trim();
@@ -12,7 +13,7 @@ const googleConfigured = Boolean(googleClientId && googleClientSecret);
 
 export const authOptions: NextAuthOptions = {
   adapter: authAdapter,
-  providers: googleConfigured
+  providers: googleConfigured && legacyAuthTestMode()
     ? [GoogleProvider({
         clientId: googleClientId!,
         clientSecret: googleClientSecret!,

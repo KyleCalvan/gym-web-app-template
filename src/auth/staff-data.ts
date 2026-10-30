@@ -1,6 +1,7 @@
 import { prisma } from './prisma';
 import { BOOKING_TIME_ZONE, getBookingToday } from '../member/bookingDates';
 import type { Member, Plan, Staff, Trainer, TrainerAvailability, Transaction } from '../types';
+import { roleDisplayId } from '../shared/roleDisplayId';
 
 const displayDate = (date: Date) => new Intl.DateTimeFormat('en-US',
   { timeZone: BOOKING_TIME_ZONE, month: 'short', day: '2-digit', year: 'numeric' }).format(date);
@@ -35,7 +36,7 @@ export async function loadStaffData(profileId: string, accountId: string) {
     prisma.attendance.count({ where: { visitDate: new Date(`${today}T00:00:00.000Z`) } }),
   ]);
   const staff: Staff = {
-    id: staffRow.profileId, name: staffRow.profile.gymUser.name ?? 'Staff',
+    id: staffRow.profileId, displayId: roleDisplayId('staff', staffRow.profile.gymUserId), name: staffRow.profile.gymUser.name ?? 'Staff',
     email: staffRow.profile.gymUser.email, phone: staffRow.profile.gymUser.phone ?? '',
     phoneSecondary: staffRow.profile.gymUser.phoneSecondary ?? '',
     role: staffRow.jobRole === 'FrontDesk' ? 'Front Desk' : staffRow.jobRole,
@@ -44,7 +45,7 @@ export async function loadStaffData(profileId: string, accountId: string) {
     deletedAt: staffRow.profile.archivedAt?.toISOString() ?? null,
   };
   const members: Member[] = memberRows.map((row) => ({
-    id: row.profileId, name: row.profile.gymUser.name ?? 'Member',
+    id: row.profileId, displayId: roleDisplayId('member', row.profile.gymUserId), name: row.profile.gymUser.name ?? 'Member',
     email: row.profile.gymUser.email, phone: row.profile.gymUser.phone ?? '',
     plan: row.memberships[0]?.planName ?? 'No plan', status: row.memberships[0]?.status ?? 'Expired',
     joined: displayDate(row.joinedAt), avatarUrl: row.profile.gymUser.avatarUrl ?? undefined,
@@ -61,7 +62,7 @@ export async function loadStaffData(profileId: string, accountId: string) {
     excludedBenefits: row.excludedBenefits, terms: row.terms ?? undefined,
   }));
   const trainers: Trainer[] = trainerRows.map((row) => ({
-    id: row.profileId, name: row.profile.gymUser.name ?? 'Trainer',
+    id: row.profileId, displayId: roleDisplayId('trainer', row.profile.gymUserId), name: row.profile.gymUser.name ?? 'Trainer',
     specialty: row.specialty, certs: row.certifications, rating: 0, sessionsWeek: 0,
     status: row.profile.status === 'Active' ? 'Active' : 'Inactive',
     sessionPrice: row.sessionPrice.toNumber(), reviews: [],

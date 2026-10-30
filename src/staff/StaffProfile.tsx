@@ -73,7 +73,7 @@ function StaffProfile({ staff, setStaff, currentUserId, toast, addAudit, notifPr
         <ProfileSettingsPanel
           account={
             <div className="profile-settings-account-grid">
-              <div className="profile-settings-account-item"><div className="eyebrow">Staff ID</div><p className="mono">{me?.id || '—'}</p></div>
+              <div className="profile-settings-account-item"><div className="eyebrow">Staff ID</div><p className="mono">{me?.displayId || me?.id || '—'}</p></div>
               <div className="profile-settings-account-item"><div className="eyebrow">Role</div><p>Staff</p></div>
               <div className="profile-settings-account-item"><div className="eyebrow">Staff Since</div><p className="mono">{me?.hireDate || '—'}</p></div>
             </div>

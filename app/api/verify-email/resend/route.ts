@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     const result = await prisma.$transaction(async tx => {
       const record = await lookupSession(tx, requestSessionToken(request));
       if (!record) return { code: 'UNAUTHENTICATED' as const };
-      if (!record.user.passwordHash || !record.user.email || record.user.emailVerified) return { code: 'NOT_REQUIRED' as const };
+      if (!record.user.establishedAt || !record.user.email || record.user.emailVerified) return { code: 'NOT_REQUIRED' as const };
       const latest = await tx.authVerificationToken.findFirst({ where: { identifier: record.user.email },
         orderBy: { expires: 'desc' } });
       if (latest && latest.expires > new Date(Date.now() + 24 * 60 * 60_000 - 60_000)) {

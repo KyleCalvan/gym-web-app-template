@@ -7,11 +7,12 @@ import { useToast } from '../shared/hooks/useToast';
 import type { NotifPrefs, Setter, ViewProps } from '../types';
 import AuthenticatedShell from './AuthenticatedShell';
 import type { loadAdminData } from './admin-data';
+import type { AccountNextStep } from './account-contract';
 
 type AdminData = Awaited<ReturnType<typeof loadAdminData>>;
 
-export default function AdminPortal({ data, name, email, profileId, avatarUrl }: {
-  data: AdminData; name: string; email: string; profileId: string; avatarUrl?: string;
+export default function AdminPortal({ data, name, email, profileId, avatarUrl, setupSteps = [] }: {
+  data: AdminData; name: string; email: string; profileId: string; avatarUrl?: string; setupSteps?: AccountNextStep[];
 }) {
   const [view, setView] = useState('dashboard');
   const router = useRouter();
@@ -74,7 +75,7 @@ export default function AdminPortal({ data, name, email, profileId, avatarUrl }:
   };
 
   return <AuthenticatedShell role="admin" roles={['admin']} user={{ name, avatarUrl: profilePhoto }}
-    nav={ADMIN_NAV} view={view} onNav={(next) => navigate(next)} onSwitchRole={() => {}}>
+    nav={ADMIN_NAV} view={view} onNav={(next) => navigate(next)} onSwitchRole={() => {}} setupSteps={setupSteps}>
     <View key={view + (initialAction ?? '')} {...props} />
     {toastNode}
   </AuthenticatedShell>;

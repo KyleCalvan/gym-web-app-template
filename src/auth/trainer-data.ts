@@ -1,6 +1,7 @@
 import { prisma } from './prisma';
 import { BOOKING_TIME_ZONE } from '../member/bookingDates';
 import type { Member, QrDestination, Session, Trainer, TrainerAvailability } from '../types';
+import { roleDisplayId } from '../shared/roleDisplayId';
 
 function datePart(value: Date, part: Intl.DateTimeFormatPartTypes) {
   return new Intl.DateTimeFormat('en-US', {
@@ -29,7 +30,7 @@ export async function loadTrainerData(profileId: string) {
   ]);
   const rated = profile.coachingSessions.filter((item) => item.rating !== null);
   const trainer: Trainer & { email: string; bio: string } = {
-    id: profile.profileId, name: profile.profile.gymUser.name ?? 'Trainer',
+    id: profile.profileId, displayId: roleDisplayId('trainer', profile.profile.gymUserId), name: profile.profile.gymUser.name ?? 'Trainer',
     email: profile.profile.gymUser.email, bio: profile.bio,
     specialty: profile.specialty, certs: profile.certifications,
     rating: rated.length ? rated.reduce((sum, item) => sum + (item.rating ?? 0), 0) / rated.length : 0,
@@ -47,7 +48,7 @@ export async function loadTrainerData(profileId: string) {
   const members: Member[] = Array.from(new Map(profile.coachingSessions.map((row) => {
     const user = row.member.profile.gymUser;
     const member: Member = {
-      id: row.memberId, name: user.name ?? 'Member', email: user.email, phone: user.phone ?? '',
+      id: row.memberId, displayId: roleDisplayId('member', row.member.profile.gymUserId), name: user.name ?? 'Member', email: user.email, phone: user.phone ?? '',
       plan: '', status: 'Expired', joined: '', avatarUrl: user.avatarUrl ?? undefined,
     };
     return [row.memberId, member];

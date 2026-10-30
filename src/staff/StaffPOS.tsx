@@ -2,16 +2,19 @@ import { useMemo, useState } from 'react';
 import { Search, ShoppingCart, Trash2, UserRound } from 'lucide-react';
 import { TabbedCard, Field, Select } from '../shared';
 import { formatMoney as peso } from '../shared/utils/money';
-import { calculatePosPricing, type TaxMode } from './posPricing';
+import { calculatePosPricing, MAX_STAFF_POS_AMOUNT, type TaxMode } from './posPricing';
 import { createReceiptReference } from '../receipt';
 import { getConfiguredPaymentFee } from '../payments';
-import type { Member, Plan, Transaction } from '../types.ts';
+import type { Member, Plan, Trainer, TrainerAvailability, Transaction } from '../types.ts';
 import StaffCashPaymentModal from './StaffCashPaymentModal';
 import StaffGcashSimulationModal from './StaffGcashSimulationModal';
+import StaffSchedules from './StaffSchedules';
 
 interface StaffPOSProps {
   members: Member[];
   plans: Plan[];
+  trainers?: Trainer[];
+  trainerAvailability?: TrainerAvailability[];
   toast: (message: string) => void;
   preferredPaymentMethod?: string;
   onStaffSale?: (input: { reference: string; memberId: string; planNames: string[];
@@ -36,7 +39,7 @@ interface CheckoutPayment {
   taxMode: TaxMode;
 }
 
-function StaffPOS({ members, plans, toast, onStaffSale }: StaffPOSProps) {
+function StaffPOS({ members, plans, trainers = [], trainerAvailability = [], toast, onStaffSale }: StaffPOSProps) {
   const [cart, setCart] = useState<POSCartItem[]>([]);
   const [method, setMethod] = useState<'Cash' | 'GCash'>('Cash');
   const [memberId, setMemberId] = useState(members.find((member) => !member.deletedAt)?.id || '');
@@ -68,7 +71,7 @@ function StaffPOS({ members, plans, toast, onStaffSale }: StaffPOSProps) {
     return (members || [])
       .filter((entry) => !entry.deletedAt)
       .filter((entry) => memberStatus === 'All' || entry.status === memberStatus)
-      .filter((entry) => !query || [entry.name, entry.id, entry.email, entry.phone, entry.plan]
+      .filter((entry) => !query || [entry.name, entry.displayId, entry.id, entry.email, entry.phone, entry.plan]
         .some((value) => String(value || '').toLocaleLowerCase().includes(query)))
       .slice(0, 8);
   }, [members, memberSearch, memberStatus]);
@@ -98,6 +101,7 @@ const addPlan = (item: POSCartItem) => {
     }
     if (memberId && !member) { toast('Select an active member or choose walk-in customer.'); return; }
     if (pricing.error || feeError) { toast(pricing.error || feeError); return; }
+    if (pricing.total + fees > MAX_STAFF_POS_AMOUNT) { toast('The POS total cannot exceed ₱10,000,000.'); return; }
     const receipt = createReceiptReference();
     setPayment({ reference: `PAY-${receipt.slice(3)}`, method, amount: pricing.total, fees,
       memberId, planNames: cart.map((item) => item.planName), taxRate, taxMode });
@@ -203,7 +207,7 @@ const addPlan = (item: POSCartItem) => {
                   <UserRound size={16} aria-hidden="true" />
                   <span>
                     <strong>{entry.name}</strong>
-                    <small>{entry.id} · {entry.plan} · {entry.status}</small>
+                    <small>{entry.displayId || entry.id} · {entry.plan} · {entry.status}</small>
                   </span>
                 </button>
               ))}
@@ -268,26 +272,33 @@ const addPlan = (item: POSCartItem) => {
               <div className="staff-pos-grand-total"><span>Total</span><strong>{peso(pricing.total + fees)}</strong></div>
             </div>
             {feeError && <p className="staff-pos-fee-error" role="alert">{feeError}</p>}
+            {pricing.total + fees > MAX_STAFF_POS_AMOUNT && <p className="staff-pos-fee-error" role="alert">The POS total cannot exceed ₱10,000,000.</p>}
           </section>
 
           <button
             type="button"
             className="btn btn-signal btn-block staff-pos-charge"
             onClick={charge}
-            disabled={cart.length === 0 || Boolean(pricing.error || feeError)}
+            disabled={cart.length === 0 || Boolean(pricing.error || feeError) || pricing.total + fees > MAX_STAFF_POS_AMOUNT}
           >
             {method === 'Cash' ? 'Charge' : 'Simulate'} {peso(pricing.total + fees)}
           </button>
         </TabbedCard>
       </div>
+      <details className="staff-pos-schedules">
+        <summary>Trainer schedules · View only</summary>
+        <StaffSchedules trainers={trainers} trainerAvailability={trainerAvailability} embedded />
+      </details>
       {payment?.method === 'Cash' && <StaffCashPaymentModal
-        amount={payment.amount}
+        amount={payment.amount + payment.fees}
+        member={members.find((entry) => entry.id === payment.memberId)}
         onConfirm={confirmCash}
         onClose={() => setPayment(null)}
       />}
       {payment?.method === 'GCash' && <StaffGcashSimulationModal
         amount={payment.amount}
         fees={payment.fees}
+        member={members.find((entry) => entry.id === payment.memberId)}
         onSimulate={simulateGcash}
         onClose={() => setPayment(null)}
       />}

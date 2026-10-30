@@ -80,7 +80,7 @@ function MemberProfile({ members, setMembers, currentUserId, toast, addAudit, on
           account={
             <div className="profile-settings-account-grid">
               <div className="profile-settings-account-item"><div className="eyebrow">Last Name</div><p>{splitName(me?.name || currentUser?.name || '').lastName || '—'}</p></div>
-              <div className="profile-settings-account-item"><div className="eyebrow">Member ID</div><p className="mono">{me?.id || '—'}</p></div>
+              <div className="profile-settings-account-item"><div className="eyebrow">Member ID</div><p className="mono">{me?.displayId || me?.id || '—'}</p></div>
               <div className="profile-settings-account-item"><div className="eyebrow">Plan</div><p>{me?.plan || '—'}</p></div>
               <div className="profile-settings-account-item"><div className="eyebrow">Member Since</div><p className="mono">{me?.joined || '—'}</p></div>
               <div className="profile-settings-account-item"><div className="eyebrow">Account Status</div><p>{me?.status || 'Active'}</p></div>

@@ -60,7 +60,7 @@ function AdminProfile({ admins, setAdmins, currentUserId, toast, addAudit, notif
         <ProfileSettingsPanel
           account={
             <div className="profile-settings-account-grid">
-              <div className="profile-settings-account-item"><div className="eyebrow">Manager ID</div><p className="mono">{me?.id || '—'}</p></div>
+              <div className="profile-settings-account-item"><div className="eyebrow">Manager ID</div><p className="mono">{me?.displayId || me?.id || '—'}</p></div>
               <div className="profile-settings-account-item"><div className="eyebrow">Role</div><p>Manager</p></div>
               <div className="profile-settings-account-item"><div className="eyebrow">Manager Since</div><p className="mono">{me?.createdAt || '—'}</p></div>
             </div>

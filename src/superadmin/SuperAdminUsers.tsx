@@ -7,10 +7,10 @@ import { emptyName, formatName, splitName } from '../shared/nameParts';
 // Normalized user shape used in the unified table.
 function buildUsers({ admins, members, trainers, staff }) {
   const out = [];
-  for (const a of admins)    if (!a.deletedAt) out.push({ kind: 'admin',   id: a.id, name: a.name,   email: a.email,                              status: a.status,   label: a.status === 'Active' ? 'Manager' : 'Inactive Manager' });
-  for (const m of members)   if (!m.deletedAt) out.push({ kind: 'member',  id: m.id, name: m.name,   email: m.email, phone: m.phone, plan: m.plan, status: m.status, label: m.plan });
-  for (const t of trainers)  if (!t.deletedAt) out.push({ kind: 'trainer', id: t.id, name: t.name,   email: '—',          status: t.status, label: t.specialty });
-  for (const s of staff)     if (!s.deletedAt) out.push({ kind: 'staff',   id: s.id, name: s.name,   email: s.email, phone: s.phone, status: s.status, label: s.role });
+  for (const a of admins)    if (!a.deletedAt) out.push({ kind: 'admin',   id: a.id, displayId: a.displayId, name: a.name,   email: a.email,                              status: a.status,   label: a.status === 'Active' ? 'Manager' : 'Inactive Manager' });
+  for (const m of members)   if (!m.deletedAt) out.push({ kind: 'member',  id: m.id, displayId: m.displayId, name: m.name,   email: m.email, phone: m.phone, plan: m.plan, status: m.status, label: m.plan });
+  for (const t of trainers)  if (!t.deletedAt) out.push({ kind: 'trainer', id: t.id, displayId: t.displayId, name: t.name,   email: '—',          status: t.status, label: t.specialty });
+  for (const s of staff)     if (!s.deletedAt) out.push({ kind: 'staff',   id: s.id, displayId: s.displayId, name: s.name,   email: s.email, phone: s.phone, status: s.status, label: s.role });
   return out;
 }
 
@@ -19,18 +19,14 @@ function SuperAdminUsers({
   members, setMembers,
   trainers, setTrainers,
   staff, setStaff,
-  today, toast, addAudit,
+  today, toast, onSuperAdminAction,
 }) {
   const [pendingRemove, setPendingRemove] = useState(null);
-  const removeUser = () => {
+  const removeUser = async () => {
     if (!pendingRemove) return;
-    const setters = { admin: setAdmins, member: setMembers, trainer: setTrainers, staff: setStaff };
-    const setter = setters[pendingRemove.kind];
-    if (!setter) { toast('That user cannot be removed here.'); return; }
-    setter(previous => previous.map(user => user.id === pendingRemove.id ? { ...user, deletedAt: new Date().toISOString() } : user));
-    addAudit?.('warn', 'User archived', pendingRemove.name + ' (' + pendingRemove.id + ')');
-    toast(pendingRemove.name + ' moved to Archive');
-    setPendingRemove(null);
+    try { await onSuperAdminAction('user.archive', { kind: pendingRemove.kind, id: pendingRemove.id });
+      toast(pendingRemove.name + ' moved to Archive'); setPendingRemove(null); }
+    catch (error) { toast(error instanceof Error ? error.message : 'Could not archive user'); }
   };
   const [q, setQ] = useState('');
   const [kindF, setKindF] = useState('all');
@@ -55,7 +51,8 @@ function SuperAdminUsers({
   const filtered = users.filter((u) =>
     (kindF === 'all' || u.kind === kindF) &&
     (statusF === 'All' || u.status === statusF || u.kind === 'admin' && statusF === 'All' && u.status === 'Inactive') &&
-    (u.name.toLowerCase().includes(q.toLowerCase()) || (u.email || '').toLowerCase().includes(q.toLowerCase()))
+    (u.name.toLowerCase().includes(q.toLowerCase()) || (u.email || '').toLowerCase().includes(q.toLowerCase())
+      || (u.displayId || '').toLowerCase().includes(q.toLowerCase()))
   );
 
   const counts = {
@@ -74,30 +71,20 @@ function SuperAdminUsers({
     if (u.kind === 'staff')   setEditForm({ ...staff.find((s) => s.id === u.id), firstName, lastName, middleName, suffix, changeRole: '', resetPassword: false });
   };
 
-  const submitEdit = (e) => {
+  const submitEdit = async (e) => {
     e.preventDefault();
     if (!editing || !editForm) return;
     const fullName = formatName(editForm);
-    const password = editForm.resetPassword ? editForm.lastName : undefined;
-    if (editing.kind === 'admin') {
-      setAdmins((prev) => prev.map((a) => a.id === editing.id ? { ...a, ...editForm, name: fullName, password } : a));
-      addAudit?.('info', 'Admin updated', `${fullName} (${editing.id})`);
-      toast('Manager updated — ' + fullName);
-    } else if (editing.kind === 'member') {
-      setMembers((prev) => prev.map((m) => m.id === editing.id ? { ...m, ...editForm, name: fullName, password } : m));
-      addAudit?.('info', 'Member updated', `${fullName} (${editing.id})`);
-      toast('Member updated — ' + fullName);
-    } else if (editing.kind === 'trainer') {
-      setTrainers((prev) => prev.map((t) => t.id === editing.id ? { ...t, name: fullName, email: editForm.email, phone: editForm.phone, specialty: editForm.specialty, certs: editForm.certs, sessionPrice: Number(editForm.sessionPrice) || 900, status: editForm.status, password } : t));
-      addAudit?.('info', 'Trainer updated', `${fullName} (${editing.id})`);
-      toast('Trainer updated — ' + fullName);
-    } else if (editing.kind === 'staff') {
-      setStaff((prev) => prev.map((s) => s.id === editing.id ? { ...s, ...editForm, name: fullName, password } : s));
-      addAudit?.('info', 'Staff updated', `${fullName} (${editing.id})`);
-      toast('Staff updated — ' + fullName);
+    if (editForm.changeRole || editForm.resetPassword || (editing.kind === 'member' && editForm.plan !== editing.plan)) {
+      toast('Role, password, and membership changes require their dedicated account flows.'); return;
     }
-    setEditing(null);
-    setEditForm(null);
+    if (editing.kind === 'trainer' && editForm.email && editForm.email !== '—') {
+      toast('Trainer email changes require account verification.'); return;
+    }
+    try { await onSuperAdminAction('user.update', { kind: editing.kind, id: editing.id,
+      ...editForm, name: fullName, jobRole: editForm.role });
+      toast('User updated — ' + fullName); setEditing(null); setEditForm(null); }
+    catch (error) { toast(error instanceof Error ? error.message : 'Could not update user'); }
   };
 
   const submitAdd = (e) => {
@@ -108,30 +95,12 @@ function SuperAdminUsers({
     setConfirmAdd(true);
   };
 
-  const finalizeAdd = () => {
+  const finalizeAdd = async () => {
     if (!pendingAddForm) return;
     const form = pendingAddForm;
-    if (addKind === 'admin') {
-      const id = 'SA-' + String(admins.length + 1).padStart(2, '0');
-      setAdmins((prev) => [...prev, { id, name: form.name.trim(), email: form.email.trim(), phone: form.phone.trim(), status: form.status, createdAt: today }]);
-      addAudit?.('info', 'Admin registered', `${form.name.trim()} (${id})`);
-      toast('Manager added — ' + form.name);
-    } else if (addKind === 'member') {
-      const id = 'M-' + (1042 + members.length);
-      setMembers((prev) => [...prev, { id, name: form.name.trim(), email: form.email.trim(), phone: form.phone.trim(), plan: form.plan, status: 'Active', joined: today }]);
-      addAudit?.('info', 'Member registered', `${form.name.trim()} (${id})`);
-      toast('Member added — ' + form.name);
-    } else if (addKind === 'trainer') {
-      const id = 'T-0' + (trainers.length + 1);
-      setTrainers((prev) => [...prev, { id, name: form.name.trim(), email: form.email.trim(), phone: form.phone.trim(), specialty: form.specialty || 'General', certs: form.certs || '', rating: 0, sessionsWeek: 0, status: form.status, sessionPrice: Number(form.sessionPrice) || 900, reviews: [] }]);
-      addAudit?.('info', 'Trainer added', `${form.name.trim()} (${id})`);
-      toast('Trainer added — ' + form.name);
-    } else if (addKind === 'staff') {
-      const id = 'S-' + String(staff.length + 1).padStart(2, '0');
-      setStaff((prev) => [...prev, { id, name: form.name.trim(), role: form.role, shift: form.shift, status: form.status, email: form.email.trim(), phone: form.phone.trim(), hireDate: today }]);
-      addAudit?.('info', 'Staff registered', `${form.name.trim()} (${id})`);
-      toast('Staff added — ' + form.name);
-    }
+    try { await onSuperAdminAction('user.create', { kind: addKind, ...form, jobRole: form.role });
+      toast(addKind === 'member' ? 'Member role added; membership purchase is separate.' : 'User role added — ' + form.name); }
+    catch (error) { toast(error instanceof Error ? error.message : 'Could not add user'); return; }
     setAdding(false);
     setConfirmAdd(false);
     setPendingAddForm(null);
@@ -180,7 +149,7 @@ function SuperAdminUsers({
               <td>
                 <Avatar src={null} name={u.name} />
                 {u.name}
-                <div className="mono" style={{ fontSize: 11.6, color: 'var(--steel)' }}>{u.id}</div>
+                <div className="mono" style={{ fontSize: 11.6, color: 'var(--steel)' }}>{u.displayId || u.id}</div>
               </td>
               <td>
                 <div style={{ fontSize: 13.8 }}>{u.email}</div>

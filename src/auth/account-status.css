@@ -24,3 +24,7 @@
 @media (max-width: 600px) { .account-status { margin: 1rem; padding: 1.5rem; } }
 
 .account-status-actions{flex-wrap:wrap;}
+.account-setup-notice { display:flex; align-items:center; justify-content:space-between; gap:1rem; margin-bottom:1rem; padding:1rem; border:1px solid var(--line-strong); border-radius:var(--radius); background:var(--surface); }
+.account-setup-notice div { display:flex; flex-direction:column; gap:.25rem; }
+.account-setup-notice span { color:var(--steel); font-size:.9rem; }
+@media (max-width: 600px) { .account-setup-notice { align-items:stretch; flex-direction:column; } }

@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { getProviders, signIn } from 'next-auth/react';
 import { Eye, EyeOff } from 'lucide-react';
 import { Field, Modal } from './shared';
 import { dur, ease } from './motion';
@@ -70,7 +69,7 @@ export default function LoginPage({ defaultTab = 'login', onBack }: LoginPagePro
         setError(result.message ?? result.error ?? 'Sign-in could not be completed. Please retry.');
         return;
       }
-      window.location.assign(result.next === '/account' ? '/account' : '/');
+      window.location.assign('/account');
     } catch {
       setError('Could not connect to sign-in. Check your connection and retry.');
     } finally {
@@ -121,8 +120,9 @@ export default function LoginPage({ defaultTab = 'login', onBack }: LoginPagePro
     const code = new URLSearchParams(window.location.search).get('error');
     if (code) setError(OAUTH_ERRORS[code] ?? OAUTH_ERRORS.Default);
     let active = true;
-    getProviders()
-      .then(providers => { if (active) setConfigured(Boolean(providers?.google)); })
+    fetch('/api/supabase/google/status', { cache: 'no-store' })
+      .then(response => response.json())
+      .then((status: { google?: boolean }) => { if (active) setConfigured(status.google === true); })
       .catch(() => { if (active) setError('Could not load sign-in settings. Please try again later.'); })
       .finally(() => { if (active) setChecked(true); });
     return () => { active = false; };
@@ -130,15 +130,7 @@ export default function LoginPage({ defaultTab = 'login', onBack }: LoginPagePro
   const handleSignIn = async () => {
     if (!configured || pendingMethod) return;
     setError(null); setPendingMethod('google');
-    try {
-      const result = await signIn('google', { callbackUrl: `${window.location.origin}/account`, redirect: false });
-      if (result?.error || !result?.url) {
-        setError(OAUTH_ERRORS[result?.error ?? ''] ?? OAUTH_ERRORS.Default); setPendingMethod(null); return;
-      }
-      window.location.assign(result.url);
-    } catch {
-      setError('Could not connect to Google sign-in. Check your connection and try again.'); setPendingMethod(null);
-    }
+    window.location.assign('/api/supabase/google');
   };
   return (
     <div className="auth-page">

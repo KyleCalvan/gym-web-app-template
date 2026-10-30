@@ -4,9 +4,11 @@ import { useState } from 'react';
 import AuthenticatedShell from '../auth/AuthenticatedShell';
 import { MEMBER_NAV } from './index';
 import MemberAccountProfile from './MemberAccountProfile';
+import type { AccountNextStep } from '../auth/account-contract';
 
 export type PortalData = {
   memberId: string;
+  displayMemberId: string;
   joinedAt: string;
   phone: string;
   emergencyContact: string;
@@ -29,7 +31,7 @@ const dateTime = (value: string) => new Intl.DateTimeFormat('en-PH', {
 }).format(new Date(value));
 const money = (value: number) => new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(value);
 
-export default function MemberPortal({ data }: { data: PortalData }) {
+export default function MemberPortal({ data, setupSteps = [] }: { data: PortalData; setupSteps?: AccountNextStep[] }) {
   const [view, setView] = useState('dashboard');
   const [pending, setPending] = useState(false);
   const [notice, setNotice] = useState('');
@@ -47,7 +49,7 @@ export default function MemberPortal({ data }: { data: PortalData }) {
     finally { setPending(false); }
   }
   return <AuthenticatedShell role="member" roles={['member']} user={{ name: data.name, avatarUrl: data.avatarUrl }}
-    nav={MEMBER_NAV} view={view} onNav={navigate} onSwitchRole={() => {}}>
+    nav={MEMBER_NAV} view={view} onNav={navigate} onSwitchRole={() => {}} setupSteps={setupSteps}>
       <div className="member-portal">
         {!data.emailVerified && <div className="member-portal-verify" role="status">
           <div><strong>Verify your email</strong><span>Your member dashboard is ready. Verify your address to complete your account.</span></div>

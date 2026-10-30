@@ -6,6 +6,7 @@ import { lookupSession } from './sessions';
 import { requestSessionToken } from './session-cookie';
 import { authRequestContext } from './request-context';
 import { writeAudit } from './audit';
+import type { AccountNextStep } from './account-contract';
 
 export function apiError(status: number, code: string, message: string, requestId: string) {
   return NextResponse.json({ code, message, requestId }, {
@@ -23,7 +24,8 @@ export function hasSameOrigin(request: Request) {
 // Completion/security routes must opt into their specific state when added;
 // no generic restricted-session bypass exists for business operations.
 export async function withBusinessAuthorization(request: NextRequest, roles: GymRole[],
-  action: (tx: Prisma.TransactionClient, requestId: string) => Promise<NextResponse>) {
+  action: (tx: Prisma.TransactionClient, requestId: string) => Promise<NextResponse>,
+  options?: { allowPendingSteps?: readonly AccountNextStep[] }) {
   const requestId = randomUUID();
   return authRequestContext.run({ requestId, accountId: null }, async () => {
     try {
@@ -38,7 +40,12 @@ export async function withBusinessAuthorization(request: NextRequest, roles: Gym
         };
         if (!record) return reject(401, 'UNAUTHENTICATED', 'Sign in with an authorized Account.');
         if (!hasSameOrigin(request)) return reject(403, 'ORIGIN_REJECTED', 'The request origin could not be verified.', true);
-        if (record.status.restricted) return reject(403, 'ACCOUNT_RESTRICTED', 'Complete the required Account steps before continuing.');
+        const allowedPendingSteps = options?.allowPendingSteps;
+        const mayUseActionWithPendingSetup = allowedPendingSteps
+          && record.status.account.status === 'enabled'
+          && record.status.nextSteps.every((step) => allowedPendingSteps.includes(step));
+        if (record.status.restricted && !mayUseActionWithPendingSetup)
+          return reject(403, 'ACCOUNT_RESTRICTED', 'Complete the required Account steps before continuing.');
         if (!record.status.roles.some((role) => roles.includes(role))) return reject(403, 'FORBIDDEN', 'Your Assigned Roles do not permit this operation.');
         await writeAudit(tx, { actor: record.user.id, action: 'business.authorization', target: record.user.id,
           result: 'success', requestId });

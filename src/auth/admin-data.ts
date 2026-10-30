@@ -1,5 +1,6 @@
 import { prisma } from './prisma';
 import type { Admin, AuditLogEntry, Member, Plan, Promotion, QrDestination, Session, Staff, Trainer, Transaction } from '../types';
+import { roleDisplayId } from '../shared/roleDisplayId';
 
 const day = (value: Date) => value.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
 
@@ -25,7 +26,7 @@ export async function loadAdminData() {
   ]);
 
   const members: Member[] = memberRows.map((row) => ({
-    id: row.profileId, name: row.profile.gymUser.name ?? 'Member', email: row.profile.gymUser.email,
+    id: row.profileId, displayId: roleDisplayId('member', row.profile.gymUserId), name: row.profile.gymUser.name ?? 'Member', email: row.profile.gymUser.email,
     phone: row.profile.gymUser.phone ?? '', plan: row.memberships[0]?.planName ?? 'No plan',
     status: row.memberships[0]?.status ?? 'Expired', joined: day(row.joinedAt),
     avatarUrl: row.profile.gymUser.avatarUrl ?? undefined,
@@ -37,7 +38,7 @@ export async function loadAdminData() {
     const rated = row.coachingSessions.filter((item) => item.rating !== null);
     const weekAgo = Date.now() - 7 * 86_400_000;
     return {
-      id: row.profileId, name: row.profile.gymUser.name ?? 'Trainer', specialty: row.specialty,
+      id: row.profileId, displayId: roleDisplayId('trainer', row.profile.gymUserId), name: row.profile.gymUser.name ?? 'Trainer', specialty: row.specialty,
       certs: row.certifications, rating: rated.length
         ? rated.reduce((sum, item) => sum + (item.rating ?? 0), 0) / rated.length : 0,
       sessionsWeek: row.coachingSessions.filter((item) => item.startsAt.getTime() >= weekAgo).length,
@@ -48,7 +49,7 @@ export async function loadAdminData() {
     };
   });
   const staff: Staff[] = staffRows.map((row) => ({
-    id: row.profileId, name: row.profile.gymUser.name ?? 'Staff', email: row.profile.gymUser.email,
+    id: row.profileId, displayId: roleDisplayId('staff', row.profile.gymUserId), name: row.profile.gymUser.name ?? 'Staff', email: row.profile.gymUser.email,
     phone: row.profile.gymUser.phone ?? '', phoneSecondary: row.profile.gymUser.phoneSecondary ?? '',
     role: row.jobRole === 'FrontDesk' ? 'Front Desk' : row.jobRole,
     shift: row.shift, status: row.profile.status === 'Active' ? 'Active' : 'Inactive',
@@ -56,7 +57,7 @@ export async function loadAdminData() {
     deletedAt: row.profile.archivedAt?.toISOString() ?? null,
   }));
   const admins: Admin[] = adminRows.map((row) => ({
-    id: row.id, name: row.gymUser.name ?? 'Manager', email: row.gymUser.email,
+    id: row.id, displayId: roleDisplayId('admin', row.gymUserId), name: row.gymUser.name ?? 'Manager', email: row.gymUser.email,
     phone: row.gymUser.phone ?? '', phoneSecondary: row.gymUser.phoneSecondary ?? '',
     status: row.archivedAt ? 'Inactive' : 'Active', createdAt: day(row.createdAt),
     avatarUrl: row.gymUser.avatarUrl ?? undefined, deletedAt: row.archivedAt?.toISOString() ?? null,

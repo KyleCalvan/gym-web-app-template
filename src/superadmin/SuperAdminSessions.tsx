@@ -5,7 +5,7 @@ import { Table, Modal, Badge, TabbedCard, StatTile } from '../shared';
 const fmt = (iso) =>
   new Date(iso).toLocaleString('en-US', { month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' });
 
-function SuperAdminSessions({ activeSessions, setActiveSessions, currentSessionId, toast, addAudit }) {
+function SuperAdminSessions({ activeSessions, currentSessionId, toast, onSuperAdminAction }) {
   const [pendingTerminate, setPendingTerminate] = useState(null);
   const [confirmAll, setConfirmAll] = useState(false);
 
@@ -20,19 +20,17 @@ function SuperAdminSessions({ activeSessions, setActiveSessions, currentSessionI
     : 'Active'
   );
 
-  const terminateOne = (s) => {
-    setActiveSessions((prev) => prev.filter((x) => x.id !== s.id));
-    addAudit?.('warn', 'Session terminated', `${s.userName} (${s.role})`);
-    toast(`Session terminated — ${s.userName}`);
-    setPendingTerminate(null);
+  const terminateOne = async (s) => {
+    try { await onSuperAdminAction('session.terminate', { id: s.id });
+      toast(`Session terminated — ${s.userName}`); setPendingTerminate(null); }
+    catch (error) { toast(error instanceof Error ? error.message : 'Could not terminate session'); }
   };
 
-  const terminateAllOthers = () => {
+  const terminateAllOthers = async () => {
     const count = others.length;
-    setActiveSessions((prev) => prev.filter((x) => x.id === currentSessionId || !x.id));
-    addAudit?.('warn', 'Bulk session termination', `${count} other session(s) terminated`);
-    toast(`Terminated ${count} other session${count === 1 ? '' : 's'}`);
-    setConfirmAll(false);
+    try { await onSuperAdminAction('session.terminate-others', {});
+      toast(`Terminated ${count} other session${count === 1 ? '' : 's'}`); setConfirmAll(false); }
+    catch (error) { toast(error instanceof Error ? error.message : 'Could not terminate sessions'); }
   };
 
   return (
@@ -90,7 +88,7 @@ function SuperAdminSessions({ activeSessions, setActiveSessions, currentSessionI
           </p>
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
             <button className="btn btn-outline" type="button" onClick={() => setPendingTerminate(null)}>Cancel</button>
-            <button className="btn btn-danger" type="button" onClick={() => terminateOne(pendingTerminate)}>Terminate</button>
+            <button className="btn btn-danger" type="button" onClick={() => void terminateOne(pendingTerminate)}>Terminate</button>
           </div>
         </Modal>
       )}
@@ -102,7 +100,7 @@ function SuperAdminSessions({ activeSessions, setActiveSessions, currentSessionI
           </p>
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
             <button className="btn btn-outline" type="button" onClick={() => setConfirmAll(false)}>Cancel</button>
-            <button className="btn btn-danger" type="button" onClick={terminateAllOthers}>Terminate All</button>
+            <button className="btn btn-danger" type="button" onClick={() => void terminateAllOthers()}>Terminate All</button>
           </div>
         </Modal>
       )}

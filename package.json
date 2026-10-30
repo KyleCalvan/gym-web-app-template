@@ -25,6 +25,8 @@
     "@next/env": "16.4.2",
     "@prisma/adapter-pg": "5.22.0",
     "@prisma/client": "5.22.0",
+    "@supabase/ssr": "^0.12.7",
+    "@supabase/supabase-js": "^2.118.0",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "animejs": "^4.5.0",

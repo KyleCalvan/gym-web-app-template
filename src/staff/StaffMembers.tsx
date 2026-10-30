@@ -6,6 +6,7 @@ function StaffMembers({ members, plans, toast, onStaffRegisterMember, onStaffChe
   const [q, setQ] = useState('');
   const [statusF, setStatusF] = useState('All');
   const [showRegister, setShowRegister] = useState(false);
+  const [selectedMemberId, setSelectedMemberId] = useState(null);
   const defaultPlan = plans.find((plan) => plan.status === 'Active')?.name || plans[0]?.name || '';
   const [reg, setReg] = useState({name:'', email:'', phone:'', plan: defaultPlan});
 
@@ -14,7 +15,7 @@ function StaffMembers({ members, plans, toast, onStaffRegisterMember, onStaffChe
     if (!reg.name.trim() || !reg.email.trim()) { toast('Name and email are required'); return; }
     try {
       const member = await onStaffRegisterMember({ name: reg.name, email: reg.email, phone: reg.phone, planName: reg.plan });
-      toast('Member registered — ' + member.name + ' (' + member.id + '). Complete payment in Point of Sale.');
+      toast('Member registered — ' + member.name + ' (' + (member.displayId || member.id) + '). Complete payment in Point of Sale.');
       setReg({name:'', email:'', phone:'', plan: defaultPlan});
       setShowRegister(false);
     } catch (error) { toast(error instanceof Error ? error.message : 'Could not register member.'); }
@@ -33,8 +34,10 @@ function StaffMembers({ members, plans, toast, onStaffRegisterMember, onStaffChe
     .filter(isRegisteredMember)
     .filter(m =>
       (statusF==='All' || m.status===statusF) &&
-      (m.name.toLowerCase().includes(q.toLowerCase()) || m.id.toLowerCase().includes(q.toLowerCase()))
+      (m.name.toLowerCase().includes(q.toLowerCase()) || m.id.toLowerCase().includes(q.toLowerCase())
+        || m.displayId?.toLowerCase().includes(q.toLowerCase()))
     );
+  const selectedMember = members.find((member) => member.id === selectedMemberId && !member.deletedAt);
 
   return (
     <>
@@ -47,9 +50,12 @@ function StaffMembers({ members, plans, toast, onStaffRegisterMember, onStaffChe
         </div>
         <Table columns={['Member','Plan','Status','Joined','']} rows={filtered} renderRow={m=>(
           <tr key={m.id}>
-            <td><Avatar src={m.avatarUrl} name={m.name} />{m.name}<div className="mono" style={{fontSize:11.6, color:'var(--steel)'}}>{m.id}</div></td>
+            <td><Avatar src={m.avatarUrl} name={m.name} />{m.name}<div className="mono" style={{fontSize:11.6, color:'var(--steel)'}}>{m.displayId || m.id}</div></td>
             <td>{m.plan}</td><td><Badge status={m.status}/></td><td className="mono">{m.joined}</td>
             <td>
+              <button className="btn btn-outline btn-sm" type="button" onClick={()=>setSelectedMemberId(m.id)}>
+                View details
+              </button>
               <button
                 className="btn btn-ghost btn-sm"
                 onClick={()=>checkIn(m)}
@@ -62,6 +68,24 @@ function StaffMembers({ members, plans, toast, onStaffRegisterMember, onStaffChe
           </tr>
         )} />
       </TabbedCard>
+
+      {selectedMember && <Modal title="Member details" onClose={()=>setSelectedMemberId(null)}>
+        <div className="staff-member-details">
+          <div><span>Member ID</span><strong className="mono">{selectedMember.displayId || selectedMember.id}</strong></div>
+          <div><span>Name</span><strong>{selectedMember.name}</strong></div>
+          <div><span>Email</span><strong>{selectedMember.email}</strong></div>
+          <div><span>Phone</span><strong>{selectedMember.phone || 'Not provided'}</strong></div>
+          <div><span>Current plan</span><strong>{selectedMember.plan}</strong></div>
+          <div><span>Membership status</span><strong><Badge status={selectedMember.status} /></strong></div>
+          <div><span>Member since</span><strong>{selectedMember.joined}</strong></div>
+          <div><span>Valid until</span><strong>{selectedMember.membershipValidUntil
+            ? new Date(selectedMember.membershipValidUntil).toLocaleDateString('en-PH', { timeZone: 'Asia/Manila', year: 'numeric', month: 'short', day: 'numeric' })
+            : 'No active membership'}</strong></div>
+        </div>
+        <div className="payment-simulation-actions">
+          <button className="btn btn-outline" type="button" onClick={()=>setSelectedMemberId(null)}>Close</button>
+        </div>
+      </Modal>}
 
       {showRegister && (
         <Modal title="Register Member" onClose={()=>setShowRegister(false)}>

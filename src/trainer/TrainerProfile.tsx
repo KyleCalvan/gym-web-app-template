@@ -5,7 +5,7 @@ import { onPickImage } from '../shared/imageUpload.ts';
 import { SecurityFlow } from '../shared/components/SecurityFlow';
 import ProfileSettingsPanel from '../shared/ProfileSettingsPanel';
 
-function TrainerProfile({ trainers, currentUserId, setTrainers, toast, addAudit, notifPrefs, setNotifPrefs, currentUser, onProfilePhotoChange }) {
+function TrainerProfile({ trainers, currentUserId, toast, notifPrefs, setNotifPrefs, currentUser, onTrainerAction }) {
   const trainer = trainers.find(person => person.id === currentUserId) || trainers[0];
   const [form, setForm] = useState({
     name: trainer?.name || currentUser?.name || '', specialty: trainer?.specialty || '',
@@ -14,21 +14,19 @@ function TrainerProfile({ trainers, currentUserId, setTrainers, toast, addAudit,
 
   const [showSecurityFlow, setShowSecurityFlow] = useState(false);
 
-  const save = (e) => {
+  const save = async (e) => {
     e.preventDefault();
-    setTrainers(prev => prev.map(t => t.id === trainer.id ? {...t, ...form} : t));
-    toast('Profile saved');
-    addAudit?.('info', 'Profile updated', trainer?.id || 'trainer');
+    try { await onTrainerAction('profile.update', form); toast('Profile saved'); }
+    catch (error) { toast(error instanceof Error ? error.message : 'Could not save profile'); }
   };
 
   const handleAvatarFile = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     onPickImage(file, url => {
-      onProfilePhotoChange?.(url);
-      setTrainers(prev => prev.map(t => t.id === trainer.id ? {...t, avatarUrl: url} : t));
-      toast('Photo updated');
-      addAudit?.('info', 'Profile photo updated', trainer?.id || 'trainer');
+      void onTrainerAction('profile.update', { ...form, avatarUrl: url })
+        .then(() => toast('Photo updated'))
+        .catch(error => toast(error instanceof Error ? error.message : 'Could not update photo'));
     }, msg => toast(msg));
     e.target.value = '';
   };
@@ -61,7 +59,7 @@ function TrainerProfile({ trainers, currentUserId, setTrainers, toast, addAudit,
         <ProfileSettingsPanel
           account={
             <div className="profile-settings-account-grid">
-              <div className="profile-settings-account-item"><div className="eyebrow">Trainer ID</div><p className="mono">{trainer?.id || '—'}</p></div>
+              <div className="profile-settings-account-item"><div className="eyebrow">Trainer ID</div><p className="mono">{trainer?.displayId || trainer?.id || '—'}</p></div>
               <div className="profile-settings-account-item"><div className="eyebrow">Status</div><p>{trainer?.status || '—'}</p></div>
               <div className="profile-settings-account-item"><div className="eyebrow">Rating</div><p className="mono">{trainer?.rating || '—'} ★</p></div>
             </div>

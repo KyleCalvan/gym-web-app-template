@@ -10,6 +10,8 @@ import { setSessionCookie } from '@/src/auth/session-cookie';
 import { apiError, hasSameOrigin } from '@/src/auth/http';
 import { writeAudit } from '@/src/auth/audit';
 import { authRequestContext } from '@/src/auth/request-context';
+import { createSupabaseUser, findSupabaseUser, legacyAuthTestMode, supabaseAuthConfigured,
+  supabasePasswordSignIn, updateSupabaseUser } from '@/src/auth/supabase-auth';
 
 export const runtime = 'nodejs';
 
@@ -69,6 +71,33 @@ export async function POST(request: NextRequest) {
   const emailKey = `email:${digest(email)}`;
   const ipKey = `ip:${digest(requestIp(request))}`;
   try {
+    const useSupabase = supabaseAuthConfigured();
+    if (!useSupabase && !legacyAuthTestMode())
+      return apiError(503, 'AUTH_CONFIGURATION', 'Sign-in is temporarily unavailable.', requestId);
+    let supabaseUser = useSupabase ? await supabasePasswordSignIn(email, password) : null;
+    let legacyUnconfirmed = false;
+    if (useSupabase && !supabaseUser) {
+      const legacy = await prisma.authUser.findUnique({ where: { email },
+        select: { id: true, status: true, passwordHash: true, emailVerified: true } });
+      if (legacy?.status === 'enabled' && await verifyPassword(password, legacy.passwordHash)) {
+        const existing = await findSupabaseUser(email);
+        if (!existing) {
+          const created = await createSupabaseUser(email, password, Boolean(legacy.emailVerified), legacy.id);
+          if (legacy.emailVerified) supabaseUser = await supabasePasswordSignIn(email, password);
+          else { supabaseUser = { user: created, access_token: '' }; legacyUnconfirmed = true; }
+        } else if (existing.app_metadata?.app_account_id === legacy.id) {
+          await updateSupabaseUser(existing.id, { password });
+          if (existing.email_confirmed_at) supabaseUser = await supabasePasswordSignIn(email, password);
+          else { supabaseUser = { user: existing, access_token: '' }; legacyUnconfirmed = true; }
+        } else if (!existing.email_confirmed_at && !legacy.emailVerified) {
+          // An existing unconfirmed Supabase identity can continue the app's
+          // email-verification flow, but it cannot gain verified authority.
+          await updateSupabaseUser(existing.id, { password });
+          supabaseUser = { user: existing, access_token: '' };
+          legacyUnconfirmed = true;
+        }
+      }
+    }
     return await authRequestContext.run({ requestId, accountId: null }, () => prisma.$transaction(async (tx) => {
       await lockThrottles(tx, [emailKey, ipKey]);
       const now = new Date();
@@ -83,7 +112,10 @@ export async function POST(request: NextRequest) {
         return apiError(429, 'TOO_MANY_ATTEMPTS', 'Too many attempts. Please try again later.', requestId);
       }
       const account = await tx.authUser.findUnique({ where: { email } });
-      const valid = await verifyPassword(password, account?.passwordHash ?? null);
+      const valid = useSupabase
+        ? Boolean(supabaseUser && supabaseUser.user.email?.toLowerCase() === email
+          && (!legacyUnconfirmed || !account?.emailVerified))
+        : await verifyPassword(password, account?.passwordHash ?? null);
       if (!valid || !account || account.status !== 'enabled') {
         await recordFailure(tx, emailKey, ACCOUNT_LIMIT, now);
         await recordFailure(tx, ipKey, IP_LIMIT, now);
@@ -92,14 +124,16 @@ export async function POST(request: NextRequest) {
         return apiError(401, 'INVALID_CREDENTIALS', INVALID_MESSAGE, requestId);
       }
       authRequestContext.getStore()!.accountId = account.id;
+      if (useSupabase && !legacyUnconfirmed && account.passwordHash) {
+        await tx.authUser.update({ where: { id: account.id }, data: { passwordHash: null } });
+      }
       const session = await createSession(tx, { accountId: account.id });
       await tx.passwordLoginThrottle.deleteMany({ where: { key: emailKey } });
       await writeAudit(tx, { actor: account.id, action: 'password.sign-in', target: account.id,
         result: 'success', requestId });
       const status = await getAccountStatus(account.id, session, tx);
       if (!status) throw new Error('Account unavailable');
-      const memberOnly = status.roles.length === 1 && status.roles[0] === 'member';
-      const response = NextResponse.json({ next: status.restricted || memberOnly ? '/account' : '/' }, {
+      const response = NextResponse.json({ next: '/account' }, {
         headers: { 'x-request-id': requestId, 'cache-control': 'private, no-store' },
       });
       setSessionCookie(response, session);

@@ -5,7 +5,7 @@ import { SecurityFlow } from '../shared/components/SecurityFlow';
 import ProfileSettingsPanel from '../shared/ProfileSettingsPanel';
 import type { ViewProps } from '../types.ts';
 
-function SuperAdminProfile({ superadmins, setSuperadmins, currentUserId, toast, addAudit, notifPrefs, setNotifPrefs, currentUser, onProfilePhotoChange }: ViewProps) {
+function SuperAdminProfile({ superadmins, currentUserId, toast, notifPrefs, setNotifPrefs, currentUser, onSuperAdminAction }: ViewProps) {
   const me = superadmins.find(s => s.id === currentUserId) || superadmins[0];
   const [info, setInfo] = useState({
     name: me?.name || currentUser?.name || '',
@@ -16,21 +16,19 @@ function SuperAdminProfile({ superadmins, setSuperadmins, currentUserId, toast, 
 
   const [showSecurityFlow, setShowSecurityFlow] = useState(false);
 
-  const submitInfo = (e: React.FormEvent) => {
+  const submitInfo = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSuperadmins(prev => prev.map(s => s.id === me.id ? {...s, ...info} : s));
-    toast('Profile updated');
-    addAudit?.('info', 'Profile updated', me?.id || 'superadmin');
+    try { await onSuperAdminAction?.('profile.update', info); toast('Profile updated'); }
+    catch (error) { toast(error instanceof Error ? error.message : 'Could not update profile'); }
   };
 
   const handleAvatarFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     onPickImage(file, url => {
-      onProfilePhotoChange?.(url);
-      setSuperadmins(prev => prev.map(s => s.id === me.id ? {...s, avatarUrl: url} : s));
-      toast('Photo updated');
-      addAudit?.('info', 'Profile photo updated', me?.id || 'superadmin');
+      void onSuperAdminAction?.('profile.update', { ...info, avatarUrl: url })
+        .then(() => toast('Photo updated'))
+        .catch(error => toast(error instanceof Error ? error.message : 'Could not update photo'));
     }, msg => toast(msg));
     e.target.value = '';
   };
@@ -62,7 +60,7 @@ function SuperAdminProfile({ superadmins, setSuperadmins, currentUserId, toast, 
         <ProfileSettingsPanel
           account={
             <div className="profile-settings-account-grid">
-              <div className="profile-settings-account-item"><div className="eyebrow">Super Admin ID</div><p className="mono">{me?.id || '—'}</p></div>
+              <div className="profile-settings-account-item"><div className="eyebrow">Super Admin ID</div><p className="mono">{me?.displayId || me?.id || '—'}</p></div>
               <div className="profile-settings-account-item"><div className="eyebrow">Role</div><p>Super Administrator</p></div>
               <div className="profile-settings-account-item"><div className="eyebrow">Super Admin Since</div><p className="mono">{me?.createdAt || '—'}</p></div>
             </div>

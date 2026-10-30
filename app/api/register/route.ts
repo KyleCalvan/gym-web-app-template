@@ -13,6 +13,8 @@ import { CURRENT_TERMS_VERSION } from '@/src/auth/terms';
 import { issueEmailVerification } from '@/src/auth/email-verification';
 import { sendVerificationEmail, verificationMailConfigured } from '@/src/auth/verification-mail';
 import { normalizeRegistrationPhone } from '@/src/auth/registration-phone';
+import { createSupabaseUser, deleteSupabaseUser, findSupabaseUser, legacyAuthTestMode,
+  supabaseAuthConfigured } from '@/src/auth/supabase-auth';
 
 export const runtime = 'nodejs';
 
@@ -54,8 +56,20 @@ export async function POST(request: NextRequest) {
     return apiError(503, 'EMAIL_UNAVAILABLE', 'Email verification is not configured yet. Please contact the gym.', requestId);
   }
 
+  let newSupabaseUserId: string | null = null;
+  let persisted = false;
   try {
-    const passwordHash = await hashPassword(password as string);
+    const useSupabase = supabaseAuthConfigured();
+    if (!useSupabase && !legacyAuthTestMode())
+      return apiError(503, 'AUTH_CONFIGURATION', 'Registration is temporarily unavailable.', requestId);
+    const accountId = randomUUID();
+    if (useSupabase) {
+      if (await findSupabaseUser(normalizedEmail))
+        return apiError(409, 'ACCOUNT_EXISTS', 'An account with this email already exists. Sign in or contact the gym.', requestId);
+      const user = await createSupabaseUser(normalizedEmail, password as string, false, accountId);
+      newSupabaseUserId = user.id;
+    }
+    const passwordHash = useSupabase ? null : await hashPassword(password as string);
     const created = await authRequestContext.run({ requestId, accountId: null }, () => prisma.$transaction(async tx => {
       // Share the address lock with Google sign-in and reject existing gym records
       // rather than claiming a record whose owner has not proved their identity.
@@ -71,6 +85,7 @@ export async function POST(request: NextRequest) {
 
       const gymUser = await tx.user.create({ data: { email: normalizedEmail, name, phone: contactPhone } });
       const account = await tx.authUser.create({ data: {
+        id: accountId,
         email: normalizedEmail, name, phone: contactPhone, gymUserId: gymUser.id,
         establishedAt: new Date(), passwordHash,
         termsVersion: CURRENT_TERMS_VERSION, termsAcceptedAt: new Date(),
@@ -86,7 +101,11 @@ export async function POST(request: NextRequest) {
       const session = await createSession(tx, { accountId: account.id });
       return { session, verificationToken };
     }, { timeout: 20_000 }));
-    if (!created) return apiError(409, 'ACCOUNT_EXISTS', 'An account with this email already exists. Sign in or contact the gym.', requestId);
+    if (!created) {
+      if (newSupabaseUserId) await deleteSupabaseUser(newSupabaseUserId);
+      return apiError(409, 'ACCOUNT_EXISTS', 'An account with this email already exists. Sign in or contact the gym.', requestId);
+    }
+    persisted = true;
     let delivered = true;
     try { await sendVerificationEmail(normalizedEmail, created.verificationToken); }
     catch (error) {
@@ -101,6 +120,7 @@ export async function POST(request: NextRequest) {
     setSessionCookie(response, created.session);
     return response;
   } catch (error) {
+    if (newSupabaseUserId && !persisted) await deleteSupabaseUser(newSupabaseUserId).catch(() => {});
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
       return apiError(409, 'ACCOUNT_EXISTS', 'An account with this email already exists. Sign in or contact the gym.', requestId);
     }

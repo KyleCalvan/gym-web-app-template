@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { apiError, withBusinessAuthorization } from '@/src/auth/http';
 import { authRequestContext } from '@/src/auth/request-context';
 import { writeAudit } from '@/src/auth/audit';
-import { calculatePosPricing } from '@/src/staff/posPricing';
+import { calculatePosPricing, MAX_STAFF_POS_AMOUNT } from '@/src/staff/posPricing';
 import { getConfiguredPaymentFee } from '@/src/payments';
 import { hasActiveStaffProfile } from '@/src/auth/staff-access';
 import { membershipEnd } from '@/src/staff/membership-term';
@@ -28,7 +28,8 @@ export async function POST(request: NextRequest) {
       || typeof taxRate !== 'string' || (taxMode !== 'exclusive' && taxMode !== 'inclusive'))
       return apiError(400, 'INVALID_REQUEST', 'Enter valid sale details.', requestId);
     if (method === 'Cash' && (typeof cashReceived !== 'number' || !Number.isFinite(cashReceived)
-      || cashReceived < 0 || cashReceived > 10_000_000))
+      || cashReceived < 0 || cashReceived > MAX_STAFF_POS_AMOUNT
+      || Math.abs(cashReceived - Math.round(cashReceived * 100) / 100) > 1e-8))
       return apiError(400, 'INVALID_CASH', 'Enter the cash amount received.', requestId);
     const actor = authRequestContext.getStore()?.accountId ?? null;
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${'staff-sale:' + reference}, 0))`;
@@ -74,6 +75,8 @@ export async function POST(request: NextRequest) {
       pricing = calculatePosPricing(selected.reduce((sum, plan) => sum + plan.price, 0), taxRate, taxMode);
       fees = getConfiguredPaymentFee(method, pricing.total);
     } catch { return apiError(400, 'INVALID_PRICE', 'Check the sale tax and fee settings.', requestId); }
+    if (pricing.total + fees > MAX_STAFF_POS_AMOUNT)
+      return apiError(400, 'PRICE_LIMIT', 'The POS total cannot exceed ₱10,000,000.', requestId);
     if (method === 'Cash' && Math.round((cashReceived as number) * 100) < Math.round((pricing.total + fees) * 100))
       return apiError(400, 'INSUFFICIENT_CASH', 'Cash received must cover the total.', requestId);
     const now = new Date();
@@ -120,5 +123,6 @@ export async function POST(request: NextRequest) {
         { timeZone: 'Asia/Manila', month: 'short', day: '2-digit', year: 'numeric' }).format(sale.createdAt),
       status: sale.status, paymentState: sale.paymentState, isSimulated: sale.isSimulated,
     } }, { status: 201 });
-  });
+  }, { allowPendingSteps: ['accept-terms', 'set-up-two-step-verification',
+    'complete-two-step-verification'] });
 }

@@ -51,7 +51,7 @@ export default function MemberAccountProfile({ data }: { data: PortalData }) {
       <ProfileSettingsPanel
         account={<div className="profile-settings-account-grid">
           <div className="profile-settings-account-item"><div className="eyebrow">Last Name</div><p>{splitName(data.name).lastName || '—'}</p></div>
-          <div className="profile-settings-account-item"><div className="eyebrow">Member ID</div><p className="mono">{data.memberId}</p></div>
+          <div className="profile-settings-account-item"><div className="eyebrow">Member ID</div><p className="mono">{data.displayMemberId}</p></div>
           <div className="profile-settings-account-item"><div className="eyebrow">Plan</div><p>{data.membership?.planName ?? '—'}</p></div>
           <div className="profile-settings-account-item"><div className="eyebrow">Member Since</div><p className="mono">{new Date(data.joinedAt).toLocaleDateString('en-PH', { timeZone: 'Asia/Manila' })}</p></div>
           <div className="profile-settings-account-item"><div className="eyebrow">Account Status</div><p>Active</p></div>

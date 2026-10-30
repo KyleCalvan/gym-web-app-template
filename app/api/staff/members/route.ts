@@ -5,6 +5,7 @@ import { writeAudit } from '@/src/auth/audit';
 import { normalizeEmail } from '@/src/auth/account';
 import { normalizeRegistrationPhone } from '@/src/auth/registration-phone';
 import { hasActiveStaffProfile } from '@/src/auth/staff-access';
+import { roleDisplayId } from '@/src/shared/roleDisplayId';
 
 export const runtime = 'nodejs';
 
@@ -42,7 +43,7 @@ export async function POST(request: NextRequest) {
       await writeAudit(tx, { actor: authRequestContext.getStore()?.accountId ?? null, action: 'staff.member-registered',
         target: profile.id, result: 'success', requestId });
       return NextResponse.json({ member: {
-        id: profile.id, name: cleanName, email: cleanEmail, phone: cleanPhone,
+        id: profile.id, displayId: roleDisplayId('member', gymUser.id), name: cleanName, email: cleanEmail, phone: cleanPhone,
         plan: 'No plan', status: 'Expired', joined: new Intl.DateTimeFormat('en-US',
           { timeZone: 'Asia/Manila', month: 'short', day: '2-digit', year: 'numeric' }).format(now),
         membershipValidUntil: null,

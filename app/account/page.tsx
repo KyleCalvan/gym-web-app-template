@@ -1,11 +1,11 @@
 import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
 import { readSession } from '@/src/auth/sessions';
 import { requestSessionToken } from '@/src/auth/session-cookie';
 import AccountStatus from '@/src/auth/AccountStatus';
 import { accountProjection } from '@/src/auth/completion';
 import { prisma } from '@/src/auth/prisma';
 import MemberPortal from '@/src/member/MemberPortal';
-import RolePortal from '@/src/auth/RolePortal';
 import AdminPortal from '@/src/auth/AdminPortal';
 import { loadAdminData } from '@/src/auth/admin-data';
 import TrainerPortal from '@/src/auth/TrainerPortal';
@@ -15,15 +15,19 @@ import { loadStaffData } from '@/src/auth/staff-data';
 import SuperAdminPortal from '@/src/auth/SuperAdminPortal';
 import { loadSuperAdminData } from '@/src/auth/superadmin-data';
 import '@/src/auth/account-status.css';
+import { roleDisplayId } from '@/src/shared/roleDisplayId';
+import { accountPortalRole } from '@/src/auth/account-destination';
 
-export default async function AccountPage() {
+export default async function AccountPage({ searchParams }: { searchParams: Promise<{ setup?: string }> }) {
   const current = await readSession(requestSessionToken({ cookies: await cookies() }));
   const status = current?.status;
-  if (!status) return <main className="account-status"><h1>Your Account</h1><a href="/login">Sign in to continue</a></main>;
-  const memberProfileId = status.profiles.find(({ role }) => role === 'member')?.profileId;
-  const memberReady = status.account.status === 'enabled' && memberProfileId
-    && status.nextSteps.every((step) => step === 'verify-email');
-  if (memberReady) {
+  if (!status) redirect('/login');
+  if ((await searchParams).setup === '1' && status.restricted)
+    return <AccountStatus initialStatus={accountProjection(status)} />;
+  const portalRole = accountPortalRole(status);
+  const memberProfileId = portalRole === 'member'
+    ? status.profiles.find(({ role }) => role === 'member')?.profileId : undefined;
+  if (memberProfileId) {
     const [member, membership] = await Promise.all([
       prisma.memberProfile.findUniqueOrThrow({ where: { profileId: memberProfileId },
         select: { joinedAt: true, emergencyContact: true,
@@ -45,8 +49,8 @@ export default async function AccountPage() {
       prisma.gymQrDestination.findMany({ orderBy: { sortOrder: 'asc' },
         select: { id: true, label: true, url: true } }),
     ]);
-    return <MemberPortal data={{
-      memberId: memberProfileId, joinedAt: member.joinedAt.toISOString(),
+    return <MemberPortal setupSteps={status.nextSteps} data={{
+      memberId: memberProfileId, displayMemberId: roleDisplayId('member', status.account.gymUserId!), joinedAt: member.joinedAt.toISOString(),
       phone: status.account.phone ?? '', emergencyContact: member.emergencyContact ?? '',
       avatarUrl: member.profile.gymUser.avatarUrl ?? undefined,
       name: status.account.name ?? 'Member', email: status.account.email ?? '',
@@ -60,42 +64,26 @@ export default async function AccountPage() {
       links,
     }} />;
   }
-  const staffRole = (['superadmin', 'admin', 'staff', 'trainer'] as const)
-    .find((role) => status.roles.includes(role));
-  if (staffRole && status.account.status === 'enabled'
-    && status.nextSteps.every((step) => step === 'set-up-two-step-verification')) {
+  const staffRole = portalRole === 'member' ? null : portalRole;
+  if (staffRole) {
     const profileId = status.profiles.find(({ role }) => role === staffRole)?.profileId;
     if (staffRole === 'admin' && profileId) {
       const data = await loadAdminData();
-      return <AdminPortal data={data} name={status.account.name ?? 'Manager'}
+      return <AdminPortal data={data} setupSteps={status.nextSteps} name={status.account.name ?? 'Manager'}
         email={status.account.email ?? ''} profileId={profileId} />;
     }
     if (staffRole === 'trainer' && profileId) {
       const data = await loadTrainerData(profileId);
-      return <TrainerPortal data={data} />;
+      return <TrainerPortal data={data} setupSteps={status.nextSteps} />;
     }
     if (staffRole === 'staff' && profileId) {
       const data = await loadStaffData(profileId, status.account.id);
-      return <StaffPortal data={data} />;
+      return <StaffPortal data={data} setupSteps={status.nextSteps} />;
     }
     if (staffRole === 'superadmin' && profileId && current) {
       const data = await loadSuperAdminData(profileId);
-      return <SuperAdminPortal data={data} currentSessionId={current.session.id} />;
+      return <SuperAdminPortal data={data} currentSessionId={current.session.id} setupSteps={status.nextSteps} />;
     }
-    const now = new Date();
-    const [members, trainers, staff, admins, accounts, sessions, ownSessions,
-      transactions, plans, promotions, activeSessions, auditEvents] = await Promise.all([
-      prisma.memberProfile.count(), prisma.trainerProfile.count(), prisma.staffProfile.count(),
-      prisma.roleProfile.count({ where: { role: 'admin', archivedAt: null } }),
-      prisma.authUser.count(), prisma.coachingSession.count(),
-      staffRole === 'trainer' && profileId ? prisma.coachingSession.count({ where: { trainerId: profileId } }) : Promise.resolve(0),
-      prisma.paymentTransaction.count(), prisma.gymPlan.count(), prisma.promotion.count({ where: { status: 'Published', deletedAt: null } }),
-      prisma.authSession.count({ where: { expires: { gt: now } } }), prisma.auditEvent.count(),
-    ]);
-    return <RolePortal role={staffRole} roles={status.roles} name={status.account.name ?? 'User'}
-      email={status.account.email ?? ''} setupRequired={status.nextSteps.includes('set-up-two-step-verification')}
-      counts={{ members, trainers, staff, admins, accounts, sessions, ownSessions,
-        transactions, plans, promotions, activeSessions, auditEvents }} />;
   }
   return <AccountStatus initialStatus={accountProjection(status)} />;
 }

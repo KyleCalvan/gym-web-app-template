@@ -109,7 +109,8 @@ function AdminMembers({ members, setMembers, plans, setTransactions, today, toas
     .filter(m => !m.deletedAt)
     .filter(m =>
       (statusF==='All' || m.status===statusF) &&
-      (m.name.toLowerCase().includes(q.toLowerCase()) || m.id.toLowerCase().includes(q.toLowerCase()))
+      (m.name.toLowerCase().includes(q.toLowerCase()) || m.id.toLowerCase().includes(q.toLowerCase())
+        || m.displayId?.toLowerCase().includes(q.toLowerCase()))
     );
 
   const liveMembers = members.filter(m => !m.deletedAt);
@@ -137,7 +138,7 @@ function AdminMembers({ members, setMembers, plans, setTransactions, today, toas
         </div>
         <Table columns={['First Name','Middle Name','Last Name','Suffix','Contact','Plan','Status','Joined','']} rows={filtered} renderRow={m=>(
           <tr key={m.id}>
-            <td><Avatar src={m.avatarUrl} name={m.name} />{splitName(m).firstName}<div className="mono" style={{fontSize:11.6, color:'var(--steel)'}}>{m.id}</div></td>
+            <td><Avatar src={m.avatarUrl} name={m.name} />{splitName(m).firstName}<div className="mono" style={{fontSize:11.6, color:'var(--steel)'}}>{m.displayId || m.id}</div></td>
             <td>{splitName(m).middleName || '—'}</td><td>{splitName(m).lastName || '—'}</td><td>{splitName(m).suffix || '—'}</td>
             <td>{m.email}<div style={{fontSize:12.7, color:'var(--steel)'}}>{m.phone}</div></td>
             <td>{m.plan}</td>
@@ -171,7 +172,7 @@ function AdminMembers({ members, setMembers, plans, setTransactions, today, toas
             <div><h3 style={{fontSize:19.8}}>{selected.name}</h3><Badge status={selected.status}/></div>
           </div>
           <div className="grid grid-2" style={{fontSize:14.3, marginBottom:16}}>
-            <div><div className="eyebrow">Member ID</div><div className="mono">{selected.id}</div></div>
+            <div><div className="eyebrow">Member ID</div><div className="mono">{selected.displayId || selected.id}</div></div>
             <div><div className="eyebrow">Plan</div>{selected.plan}</div>
             <div><div className="eyebrow">Email</div>{selected.email}</div>
             <div><div className="eyebrow">Phone</div>{selected.phone}</div>

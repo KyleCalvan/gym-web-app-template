@@ -20,7 +20,7 @@ function SuperAdminTrash({
   members, setMembers,
   trainers, setTrainers,
   staff, setStaff,
-  toast, addAudit,
+  toast, onSuperAdminAction,
 }) {
   const [q, setQ] = useState('');
   const [kindF, setKindF] = useState('all');
@@ -34,25 +34,25 @@ function SuperAdminTrash({
     const out = [];
     for (const a of admins) {
       if (a.deletedAt) out.push({
-        kind: 'admin', id: a.id, name: a.name, email: a.email, label: a.email,
+        kind: 'admin', id: a.id, displayId: a.displayId, name: a.name, email: a.email, label: a.email,
         deletedAt: a.deletedAt,
       });
     }
     for (const m of members) {
       if (m.deletedAt) out.push({
-        kind: 'member', id: m.id, name: m.name, email: m.email, plan: m.plan, label: m.plan,
+        kind: 'member', id: m.id, displayId: m.displayId, name: m.name, email: m.email, plan: m.plan, label: m.plan,
         deletedAt: m.deletedAt,
       });
     }
     for (const t of trainers) {
       if (t.deletedAt) out.push({
-        kind: 'trainer', id: t.id, name: t.name, email: '—', label: t.specialty,
+        kind: 'trainer', id: t.id, displayId: t.displayId, name: t.name, email: '—', label: t.specialty,
         deletedAt: t.deletedAt,
       });
     }
     for (const s of staff) {
       if (s.deletedAt) out.push({
-        kind: 'staff', id: s.id, name: s.name, email: s.email, role: s.role, label: s.role,
+        kind: 'staff', id: s.id, displayId: s.displayId, name: s.name, email: s.email, role: s.role, label: s.role,
         deletedAt: s.deletedAt,
       });
     }
@@ -61,7 +61,7 @@ function SuperAdminTrash({
 
   const filtered = trashed.filter((u) =>
     (kindF === 'all' || u.kind === kindF) &&
-    (u.name.toLowerCase().includes(q.toLowerCase()) ||
+    (u.name.toLowerCase().includes(q.toLowerCase()) || (u.displayId || '').toLowerCase().includes(q.toLowerCase()) ||
       (u.email || '').toLowerCase().includes(q.toLowerCase()))
   );
 
@@ -72,17 +72,12 @@ function SuperAdminTrash({
     staff:   trashed.filter((u) => u.kind === 'staff').length,
   };
 
-  const applyRestore = () => {
+  const applyRestore = async () => {
     if (!pendingRestore) return;
     const u = pendingRestore;
-    const clear = (prev) => prev.map((x) => (x.id === u.id ? { ...x, deletedAt: null } : x));
-    if (u.kind === 'admin')        setAdmins(clear);
-    else if (u.kind === 'member')  setMembers(clear);
-    else if (u.kind === 'trainer') setTrainers(clear);
-    else if (u.kind === 'staff')   setStaff(clear);
-    addAudit?.('info', 'Restored from archive', `${u.name} (${u.id})`);
-    toast(`Restored — ${u.name}`);
-    setPendingRestore(null);
+    try { await onSuperAdminAction('user.restore', { kind: u.kind, id: u.id });
+      toast(`Restored — ${u.name}`); setPendingRestore(null); }
+    catch (error) { toast(error instanceof Error ? error.message : 'Could not restore user'); }
   };
 
   const restoreKey = (user) => `${user.kind}:${user.id}`;
@@ -110,18 +105,11 @@ function SuperAdminTrash({
     });
   };
 
-  const restoreSelected = () => {
+  const restoreSelected = async () => {
     const selected = trashed.filter((user) => selectedRestoreIds.has(restoreKey(user)));
     if (selected.length === 0) return;
-    const selectedByKind = (kind) => new Set(selected.filter((user) => user.kind === kind).map((user) => user.id));
-    const restore = (ids) => (previous) => previous.map((user) =>
-      ids.has(user.id) ? { ...user, deletedAt: null } : user,
-    );
-    setAdmins(restore(selectedByKind('admin')));
-    setMembers(restore(selectedByKind('member')));
-    setTrainers(restore(selectedByKind('trainer')));
-    setStaff(restore(selectedByKind('staff')));
-    addAudit?.('info', 'Bulk restored archive', `Restored ${selected.length} selected users`);
+    try { for (const user of selected) await onSuperAdminAction('user.restore', { kind: user.kind, id: user.id }); }
+    catch (error) { toast(error instanceof Error ? error.message : 'Could not restore all users'); return; }
     toast(`Restored ${selected.length} selected user${selected.length === 1 ? '' : 's'}`);
     setSelectedRestoreIds(new Set());
     setBulkRestoreOpen(false);
@@ -129,14 +117,7 @@ function SuperAdminTrash({
 
   const applyPurge = () => {
     if (!pendingPurge) return;
-    const u = pendingPurge;
-    const drop = (prev) => prev.filter((x) => x.id !== u.id);
-    if (u.kind === 'admin')        setAdmins(drop);
-    else if (u.kind === 'member')  setMembers(drop);
-    else if (u.kind === 'trainer') setTrainers(drop);
-    else if (u.kind === 'staff')   setStaff(drop);
-    addAudit?.('error', 'Deleted', `${u.name} (${u.id})`);
-    toast(`Deleted — ${u.name}`);
+    toast('Permanent deletion requires a separate data-retention review. No record was deleted.');
     setPendingPurge(null);
   };
 
@@ -190,7 +171,7 @@ function SuperAdminTrash({
                 <td>
                   <Avatar src={null} name={u.name} />
                   {u.name}
-                  <div className="mono" style={{ fontSize: 11.6, color: 'var(--steel)' }}>{u.id}</div>
+                  <div className="mono" style={{ fontSize: 11.6, color: 'var(--steel)' }}>{u.displayId || u.id}</div>
                 </td>
                 <td style={{ fontSize: 13.8 }}>{u.email}</td>
                 <td>

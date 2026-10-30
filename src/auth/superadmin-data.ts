@@ -1,6 +1,7 @@
 import { prisma } from './prisma';
 import { loadAdminData } from './admin-data';
 import type { ActiveSession, Admin } from '../types';
+import { roleDisplayId } from '../shared/roleDisplayId';
 
 export async function loadSuperAdminData(profileId: string) {
   const [management, profile, sessionRows] = await Promise.all([
@@ -11,7 +12,7 @@ export async function loadSuperAdminData(profileId: string) {
       orderBy: { lastActiveAt: 'desc' }, take: 500 }),
   ]);
   const superadmin: Admin = {
-    id: profile.id, name: profile.gymUser.name ?? 'Super Admin', email: profile.gymUser.email,
+    id: profile.id, displayId: roleDisplayId('superadmin', profile.gymUserId), name: profile.gymUser.name ?? 'Super Admin', email: profile.gymUser.email,
     phone: profile.gymUser.phone ?? '', phoneSecondary: profile.gymUser.phoneSecondary ?? '',
     status: profile.archivedAt ? 'Inactive' : 'Active',
     createdAt: profile.createdAt.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),

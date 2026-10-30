@@ -121,7 +121,10 @@ test('first Google callback establishes a durable verified Account without a sec
   application = await startApplication(database.env);
   const reloaded = await fetch(`${application.url}/api/me`, { headers: { cookie: signedIn.cookie } }).then((r) => r.json());
   assert.deepEqual(reloaded, status);
-  const page = await fetch(`${application.url}/account`, { headers: { cookie: signedIn.cookie } }).then((r) => r.text());
+  const dashboard = await fetch(`${application.url}/account`, { headers: { cookie: signedIn.cookie } }).then((r) => r.text());
+  assert.match(dashboard, /class="app-shell"/);
+  assert.match(dashboard, /Complete your account setup/);
+  const page = await fetch(`${application.url}/account?setup=1`, { headers: { cookie: signedIn.cookie } }).then((r) => r.text());
   assert.match(page, /Next steps/);
   assert.match(page, /Email verified/);
   assert.match(page, /Complete your full name and contact phone/);
@@ -837,6 +840,59 @@ test('manager actions persist member, trainer, staff, promotion, and QR records 
   assert.deepEqual(stored.rows[0], { members: 1, trainers: 1, staff: 1, promotions: 1, destinations: 1 });
 });
 
+test('trainer actions save owned availability and session changes to PostgreSQL', async () => {
+  const trainerAccount = await seedSessionAccount({ roles: ['trainer'], mfa: true });
+  const memberAccount = await seedSessionAccount();
+  const rows = await withDatabaseClient(database.env, async (client) => {
+    const trainer = await client.query('SELECT "profileId" FROM "AssignedRole" WHERE "accountId"=$1 AND role=$2', [trainerAccount, 'trainer']);
+    const member = await client.query('SELECT "profileId" FROM "AssignedRole" WHERE "accountId"=$1 AND role=$2', [memberAccount, 'member']);
+    await client.query('INSERT INTO "TrainerProfile" ("profileId") VALUES ($1)', [trainer.rows[0].profileId]);
+    await client.query('INSERT INTO "MemberProfile" ("profileId") VALUES ($1)', [member.rows[0].profileId]);
+    const id = randomUUID();
+    await client.query('INSERT INTO "CoachingSession" (id, "memberId", "trainerId", "startsAt", amount, "updatedAt") VALUES ($1,$2,$3,$4,$5,NOW())',
+      [id, member.rows[0].profileId, trainer.rows[0].profileId, '2030-01-03T01:00:00Z', 900]);
+    return { trainerId: trainer.rows[0].profileId, sessionId: id };
+  });
+  const issued = await issueSession(trainerAccount);
+  const send = (cookie, action, payload) => fetch(`${application.url}/api/trainer/actions`, { method: 'POST',
+    headers: { cookie, origin: application.url, 'content-type': 'application/json' }, body: JSON.stringify({ action, ...payload }) });
+  assert.equal((await send(issued.cookie, 'availability.save', { date: '2030-01-02', startTime: '09:00', endTime: '10:00', status: 'available' })).status, 403);
+  const rotation = await sessionCommand('rotate', { accountId: trainerAccount, cookie: issued.cookie, mfaVerified: true });
+  const cookie = responseCookieHeader(rotation);
+  assert.equal((await send(cookie, 'availability.save', { date: '2030-01-02', startTime: '09:00', endTime: '10:00', status: 'available' })).status, 200, application.logs());
+  assert.equal((await send(cookie, 'session.request-change', { id: rows.sessionId, requestedStartsAt: '2030-01-04T01:00:00Z', reason: 'Client request' })).status, 200, application.logs());
+  assert.equal((await send(cookie, 'session.complete', { id: rows.sessionId })).status, 200, application.logs());
+  const stored = await withDatabaseClient(database.env, (client) => client.query(`SELECT
+    (SELECT COUNT(*)::int FROM "TrainerAvailability" WHERE "trainerId"=$1) AS availability,
+    (SELECT COUNT(*)::int FROM "ScheduleChangeRequest" WHERE "coachingSessionId"=$2) AS requests,
+    (SELECT status FROM "CoachingSession" WHERE id=$2) AS session_status`, [rows.trainerId, rows.sessionId]));
+  assert.deepEqual(stored.rows[0], { availability: 1, requests: 1, session_status: 'Completed' });
+});
+
+test('super admin can archive and restore a member and terminate another session', async () => {
+  const operator = await seedSessionAccount({ roles: ['superadmin'], mfa: true });
+  const member = await seedSessionAccount();
+  const memberProfile = await withDatabaseClient(database.env, async (client) => {
+    const result = await client.query('SELECT "profileId" FROM "AssignedRole" WHERE "accountId"=$1 AND role=$2', [member, 'member']);
+    await client.query('INSERT INTO "MemberProfile" ("profileId") VALUES ($1)', [result.rows[0].profileId]);
+    return result.rows[0].profileId;
+  });
+  const operatorSession = await issueSession(operator);
+  const memberSession = await issueSession(member);
+  const rotation = await sessionCommand('rotate', { accountId: operator, cookie: operatorSession.cookie, mfaVerified: true });
+  const cookie = responseCookieHeader(rotation);
+  const send = (action, payload) => fetch(`${application.url}/api/superadmin/actions`, { method: 'POST',
+    headers: { cookie, origin: application.url, 'content-type': 'application/json' }, body: JSON.stringify({ action, ...payload }) });
+  assert.equal((await send('user.archive', { kind: 'member', id: memberProfile })).status, 200, application.logs());
+  assert.equal((await send('user.restore', { kind: 'member', id: memberProfile })).status, 200, application.logs());
+  const otherSession = await withDatabaseClient(database.env, (client) => client.query('SELECT id FROM "AuthSession" WHERE "userId"=$1', [member]));
+  assert.equal((await send('session.terminate', { id: otherSession.rows[0].id })).status, 200, application.logs());
+  assert.equal((await fetch(`${application.url}/api/me`, { headers: { cookie: memberSession.cookie } })).status, 401);
+  const saved = await withDatabaseClient(database.env, (client) => client.query('SELECT "archivedAt", status FROM "RoleProfile" WHERE id=$1', [memberProfile]));
+  assert.equal(saved.rows[0].archivedAt, null);
+  assert.equal(saved.rows[0].status, 'Active');
+});
+
 test('authenticator enrollment and challenge unlock only the verified admin session', async () => {
   const accountId = await seedSessionAccount({ roles: ['admin'] });
   const issued = await issueSession(accountId);
@@ -870,6 +926,38 @@ test('authenticator enrollment and challenge unlock only the verified admin sess
   assert.equal(challenged.status, 200, application.logs());
   const otherAssured = responseCookieHeader(challenged);
   assert.equal((await fetch(`${application.url}/api/me`, { headers: { cookie: otherAssured } }).then((r) => r.json())).restricted, false);
+});
+
+test('staff lands on the role dashboard while terms and authenticator setup remain pending', async () => {
+  const accountId = await seedSessionAccount({ roles: ['staff'] });
+  await withDatabaseClient(database.env, async (client) => {
+    await client.query(`INSERT INTO "StaffProfile" ("profileId")
+      SELECT "profileId" FROM "AssignedRole" WHERE "accountId" = $1 AND role = 'staff'`, [accountId]);
+    await client.query('UPDATE "AuthUser" SET "termsVersion" = NULL, "termsAcceptedAt" = NULL WHERE id = $1', [accountId]);
+  });
+  const { cookie } = await issueSession(accountId);
+  const dashboard = await fetch(`${application.url}/account`, { headers: { cookie } });
+  assert.equal(dashboard.status, 200, application.logs());
+  const html = await dashboard.text();
+  assert.match(html, /class="app-shell"/);
+  assert.match(html, /Complete your account setup/);
+  assert.match(html, /Complete setup/);
+  assert.doesNotMatch(html, /<h1>Your Account<\/h1>/);
+  const setup = await fetch(`${application.url}/account?setup=1`, { headers: { cookie } }).then((r) => r.text());
+  assert.match(setup, /Terms of Use/);
+  assert.match(setup, /Set up authenticator/);
+  const protectedAction = await fetch(`${application.url}/api/staff/check-ins`, {
+    method: 'POST', headers: { cookie, origin: application.url, 'content-type': 'application/json' },
+    body: JSON.stringify({ memberId: randomUUID() }),
+  });
+  assert.equal(protectedAction.status, 403, application.logs());
+  assert.equal((await protectedAction.json()).code, 'ACCOUNT_RESTRICTED');
+  const checkout = await fetch(`${application.url}/api/staff/sales`, {
+    method: 'POST', headers: { cookie, origin: application.url, 'content-type': 'application/json' },
+    body: '{}',
+  });
+  assert.equal(checkout.status, 400, application.logs());
+  assert.equal((await checkout.json()).code, 'INVALID_REQUEST');
 });
 
 test('staff registration, check-in, cash sale, and profile edits persist with staff authorization', async () => {

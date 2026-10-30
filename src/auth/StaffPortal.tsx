@@ -6,10 +6,11 @@ import { useToast } from '../shared/hooks/useToast';
 import type { Member, NotifPrefs, Setter, Staff, Transaction, ViewProps } from '../types';
 import AuthenticatedShell from './AuthenticatedShell';
 import type { loadStaffData } from './staff-data';
+import type { AccountNextStep } from './account-contract';
 
 type StaffData = Awaited<ReturnType<typeof loadStaffData>>;
 
-export default function StaffPortal({ data }: { data: StaffData }) {
+export default function StaffPortal({ data, setupSteps = [] }: { data: StaffData; setupSteps?: AccountNextStep[] }) {
   const [view, setView] = useState('dashboard');
   const [members, setMembers] = useState(data.members);
   const [transactions, setTransactions] = useState(data.transactions);
@@ -34,9 +35,19 @@ export default function StaffPortal({ data }: { data: StaffData }) {
     } else fireToast(message);
   };
   async function requestJson<T>(url: string, input: Record<string, unknown>, method = 'POST'): Promise<T> {
-    const response = await fetch(url, { method, headers: { 'content-type': 'application/json' }, body: JSON.stringify(input) });
-    const result = await response.json() as T & { message?: string };
-    if (!response.ok) throw new Error(result.message ?? 'The staff operation could not be completed.');
+    let response: Response;
+    try {
+      response = await fetch(url, { method, headers: { 'content-type': 'application/json' }, body: JSON.stringify(input) });
+    } catch {
+      throw new Error('Could not reach the server. Check your connection and retry.');
+    }
+    const result = await response.json().catch(() => null) as (T & { message?: string }) | null;
+    if (!response.ok) {
+      const requestId = response.headers.get('x-request-id');
+      const message = result?.message ?? `The staff operation failed (HTTP ${response.status}).`;
+      throw new Error(requestId ? `${message} Reference: ${requestId}` : message);
+    }
+    if (!result) throw new Error('The server returned an unexpected response. Please retry.');
     return result;
   }
   const registerMember: NonNullable<ViewProps['onStaffRegisterMember']> = async (input) => {
@@ -94,7 +105,7 @@ export default function StaffPortal({ data }: { data: StaffData }) {
   };
   return <AuthenticatedShell role="staff" roles={['staff']}
     user={{ name: staff.name, avatarUrl: staff.avatarUrl }}
-    nav={STAFF_NAV} view={view} onNav={setView} onSwitchRole={() => {}}>
+    nav={STAFF_NAV} view={view} onNav={setView} onSwitchRole={() => {}} setupSteps={setupSteps}>
     <View key={view} {...props} />
     {toastNode}
   </AuthenticatedShell>;

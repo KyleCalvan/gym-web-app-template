@@ -6,6 +6,7 @@ import { createSession } from '@/src/auth/sessions';
 import { setSessionCookie } from '@/src/auth/session-cookie';
 import { writeAudit } from '@/src/auth/audit';
 import { authRequestContext } from '@/src/auth/request-context';
+import { findSupabaseUser, supabaseAuthConfigured, updateSupabaseUser } from '@/src/auth/supabase-auth';
 
 export const runtime = 'nodejs';
 
@@ -24,8 +25,15 @@ export async function GET(request: NextRequest) {
       const consumed = await tx.authVerificationToken.deleteMany({ where: { token: hash, expires: { gt: new Date() } } });
       if (consumed.count !== 1) return NextResponse.redirect(destination('/account?verification=invalid'));
       const account = await tx.authUser.findUnique({ where: { email: proof.identifier } });
-      if (!account || !account.passwordHash || account.status !== 'enabled') {
+      if (!account || !account.establishedAt || account.status !== 'enabled') {
         return NextResponse.redirect(destination('/account?verification=invalid'));
+      }
+      if (supabaseAuthConfigured()) {
+        const supabaseUser = await findSupabaseUser(proof.identifier);
+        if (!supabaseUser || (supabaseUser.app_metadata?.app_account_id
+          && supabaseUser.app_metadata.app_account_id !== account.id))
+          return NextResponse.redirect(destination('/account?verification=error'));
+        await updateSupabaseUser(supabaseUser.id, { email_confirm: true });
       }
       // Verification consumes every outstanding link for this address.
       await tx.authVerificationToken.deleteMany({ where: { identifier: proof.identifier } });
@@ -41,7 +49,7 @@ export async function GET(request: NextRequest) {
       response.headers.set('referrer-policy', 'no-referrer');
       setSessionCookie(response, session);
       return response;
-    }));
+    }, { timeout: 20_000 }));
   } catch {
     return NextResponse.redirect(destination('/account?verification=error'));
   }

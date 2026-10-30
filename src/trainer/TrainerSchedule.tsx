@@ -3,7 +3,8 @@ import { CalendarDays, ChevronLeft, ChevronRight, Pencil, Plus, Trash2 } from 'l
 import { getBookingCurrentTime, getBookingToday } from '../member/bookingDates.ts';
 import { Badge, Field, Modal, TabbedCard } from '../shared';
 import type { Session, TrainerAvailability, ViewProps } from '../types.ts';
-import { validateAvailabilityChange, formatTime12h } from './availability.ts';
+import { EARLIEST_AVAILABILITY_TIME, LATEST_AVAILABILITY_TIME,
+  MAX_AVAILABILITY_SLOTS_PER_DAY, validateAvailabilityChange, formatTime12h, timeInMinutes } from './availability.ts';
 
 type CalendarView = 'day' | 'week' | 'month';
 type AvailabilityForm = Pick<TrainerAvailability, 'date' | 'startTime' | 'endTime' | 'status'>;
@@ -64,8 +65,8 @@ function TrainerSchedule({
   currentUser,
   members,
   toast,
-  addAudit,
-}: Pick<ViewProps, 'sessions' | 'trainerAvailability' | 'setTrainerAvailability' | 'currentUser' | 'members' | 'toast' | 'addAudit'>) {
+  onTrainerAction,
+}: Pick<ViewProps, 'sessions' | 'trainerAvailability' | 'setTrainerAvailability' | 'currentUser' | 'members' | 'toast' | 'onTrainerAction'>) {
   const today = getBookingToday();
   const currentTime = getBookingCurrentTime();
   const trainerId = currentUser.id || currentUser.name;
@@ -100,7 +101,7 @@ function TrainerSchedule({
     setFormError('');
   };
 
-  const saveAvailability = (event: FormEvent<HTMLFormElement>) => {
+  const saveAvailability = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const updated: TrainerAvailability = {
       id: editing?.id || crypto.randomUUID(),
@@ -119,14 +120,17 @@ function TrainerSchedule({
       setFormError(error);
       return;
     }
-    setTrainerAvailability(next);
-    addAudit('info', editing ? 'Trainer availability updated' : 'Trainer availability added', `${updated.date} ${updated.startTime}–${updated.endTime} (${updated.status})`);
+    try {
+      if (!onTrainerAction) throw new Error('Trainer changes are unavailable.');
+      await onTrainerAction('availability.save', { id: editing?.id, ...form });
+    }
+    catch (cause) { setFormError(cause instanceof Error ? cause.message : 'Could not save availability.'); return; }
     toast(editing ? 'Availability updated' : 'Availability added');
     setEditing(null);
     setAvailabilityModalOpen(false);
   };
 
-  const removeAvailability = () => {
+  const removeAvailability = async () => {
     if (!deleting) return;
     const next = trainerAvailability.filter((schedule) => schedule.id !== deleting.id);
     const error = validateAvailabilityChange(next, trainerSessions, trainerId, currentUser.name, deleting.date);
@@ -135,8 +139,11 @@ function TrainerSchedule({
       setDeleting(null);
       return;
     }
-    setTrainerAvailability(next);
-    addAudit('warn', 'Trainer availability removed', `${deleting.date} ${deleting.startTime}–${deleting.endTime}`);
+    try {
+      if (!onTrainerAction) throw new Error('Trainer changes are unavailable.');
+      await onTrainerAction('availability.delete', { id: deleting.id });
+    }
+    catch (cause) { toast(cause instanceof Error ? cause.message : 'Could not remove availability.'); return; }
     toast('Availability removed');
     setDeleting(null);
   };
@@ -160,6 +167,9 @@ function TrainerSchedule({
 
   const daySessions = trainerSessions.filter((session) => session.date === selectedDate);
   const dayAvailability = ownAvailability.filter((schedule) => schedule.date === selectedDate);
+  const startMinutes = timeInMinutes(form.startTime);
+  const earliestEnd = startMinutes === null ? '08:00'
+    : `${String(Math.floor((startMinutes + 60) / 60)).padStart(2, '0')}:${String((startMinutes + 60) % 60).padStart(2, '0')}`;
 
   return (
     <>
@@ -358,12 +368,13 @@ function TrainerSchedule({
             </Field>
             <div className="trainer-availability-time-fields">
               <Field label="Start time">
-                <input className="form-control" type="time" min={form.date === today ? currentTime : undefined} value={form.startTime} onChange={(event) => setForm((current) => ({ ...current, startTime: event.target.value }))} required />
+                <input className="form-control" type="time" min={form.date === today && currentTime > EARLIEST_AVAILABILITY_TIME ? currentTime : EARLIEST_AVAILABILITY_TIME} max="21:00" value={form.startTime} onChange={(event) => setForm((current) => ({ ...current, startTime: event.target.value }))} required />
               </Field>
               <Field label="End time">
-                <input className="form-control" type="time" value={form.endTime} onChange={(event) => setForm((current) => ({ ...current, endTime: event.target.value }))} required />
+                <input className="form-control" type="time" min={earliestEnd} max={LATEST_AVAILABILITY_TIME} value={form.endTime} onChange={(event) => setForm((current) => ({ ...current, endTime: event.target.value }))} required />
               </Field>
             </div>
+            <p className="form-hint">7:00 AM–10:00 PM · At least 1 hour per slot · Up to {MAX_AVAILABILITY_SLOTS_PER_DAY} slots per day</p>
             <Field label="Schedule status">
               <select className="form-control" value={form.status} onChange={(event) => setForm((current) => ({ ...current, status: event.target.value as TrainerAvailability['status'] }))}>
                 <option value="available">Available</option>

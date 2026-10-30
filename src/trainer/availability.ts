@@ -1,6 +1,25 @@
 import type { Session, TrainerAvailability } from '../types.ts';
 import { BOOKING_TIME_ZONE, getBookingCurrentTime, getBookingToday } from '../member/bookingDates.ts';
 
+export const MAX_AVAILABILITY_SLOTS_PER_DAY = 8;
+export const EARLIEST_AVAILABILITY_TIME = '07:00';
+export const LATEST_AVAILABILITY_TIME = '22:00';
+
+export function validateAvailabilityWindow(startTime: string, endTime: string): string | null {
+  const start = timeInMinutes(startTime);
+  const end = timeInMinutes(endTime);
+  if (start === null || end === null || start >= end) {
+    return 'Enter a valid start and end time. The end time must be later than the start time.';
+  }
+  if (start < 7 * 60 || end > 22 * 60) {
+    return 'Trainer schedules must be between 7:00 AM and 10:00 PM.';
+  }
+  if (end - start < 60) {
+    return 'Each trainer schedule must be at least 1 hour long.';
+  }
+  return null;
+}
+
 export function timeInMinutes(value: string): number | null {
   const twentyFourHour = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(value.trim());
   if (twentyFourHour) return Number(twentyFourHour[1]) * 60 + Number(twentyFourHour[2]);
@@ -67,6 +86,10 @@ export function validateAvailabilityChange(
     (schedule) => schedule.trainerId === trainerId && schedule.date === date,
   );
 
+  if (daySchedules.length > MAX_AVAILABILITY_SLOTS_PER_DAY) {
+    return `A trainer can have at most ${MAX_AVAILABILITY_SLOTS_PER_DAY} schedule slots per day.`;
+  }
+
   if (daySchedules.length > 0) {
     const today = getBookingToday(now, timeZone);
     if (date < today) {
@@ -84,11 +107,8 @@ export function validateAvailabilityChange(
   }
 
   for (const schedule of daySchedules) {
-    const start = timeInMinutes(schedule.startTime);
-    const end = timeInMinutes(schedule.endTime);
-    if (start === null || end === null || start >= end) {
-      return 'Enter a valid start and end time. The end time must be later than the start time.';
-    }
+    const windowError = validateAvailabilityWindow(schedule.startTime, schedule.endTime);
+    if (windowError) return windowError;
   }
 
   for (let i = 0; i < daySchedules.length; i += 1) {
